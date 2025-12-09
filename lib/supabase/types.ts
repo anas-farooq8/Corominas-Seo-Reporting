@@ -36,6 +36,13 @@ export interface MangoolsDomain {
   updated_at: string
 }
 
+// Alias for MangoolsDomain used in datasource components
+export type DatasourceDomain = MangoolsDomain & {
+  rank?: number
+  traffic?: number
+  difficulty?: number
+}
+
 // ============================================
 // API Response Types
 // ============================================

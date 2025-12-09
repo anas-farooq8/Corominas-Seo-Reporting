@@ -35,14 +35,17 @@ export async function attachDomain(input: AttachDomainInput) {
     // Insert into database
     const supabase = await createClient()
     const { data, error } = await supabase
-      .from("datasource_domains")
+      .from("mangools_domains")
       .insert([
         {
           datasource_id: validated.datasource_id,
+          mangools_id: parsedDomain.mangools_id,
           domain: parsedDomain.domain,
-          rank: parsedDomain.rank,
-          traffic: parsedDomain.traffic,
-          difficulty: parsedDomain.difficulty,
+          location_code: parsedDomain.location_code,
+          location_label: parsedDomain.location_label,
+          platform_id: parsedDomain.platform_id,
+          keywords_count: parsedDomain.keywords_count,
+          mangools_created_at: parsedDomain.mangools_created_at,
         },
       ])
       .select()
@@ -67,7 +70,8 @@ export async function detachDomain(id: string, datasourceId: string) {
   try {
     const supabase = await createClient()
 
-    const { error } = await supabase.from("datasource_domains").delete().eq("id", id)
+    // Soft delete by setting is_active to false
+    const { error } = await supabase.from("mangools_domains").update({ is_active: false }).eq("id", id)
 
     if (error) throw new Error(error.message)
 

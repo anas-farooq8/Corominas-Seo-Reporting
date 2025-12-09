@@ -22,9 +22,6 @@ export const fetchMangoolsDomains = cache(async (): Promise<MangoolsApiDomain[]>
         "Content-Type": "application/json",
         Accept: "*/*",
       },
-      next: {
-        revalidate: 180, // Cache for 3 minutes
-      },
     })
 
     if (!response.ok) {

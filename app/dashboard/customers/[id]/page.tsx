@@ -4,6 +4,9 @@ import { notFound } from "next/navigation"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { DatasourcesList } from "@/components/datasources/datasources-list"
 import { CreateDatasourceDialog } from "@/components/datasources/create-datasource-dialog"
+import { Button } from "@/components/ui/button"
+import { ArrowLeft } from "lucide-react"
+import Link from "next/link"
 
 interface CustomerDetailPageProps {
   params: Promise<{ id: string }>
@@ -30,14 +33,22 @@ export default async function CustomerDetailPage({ params }: CustomerDetailPageP
 
   return (
     <div className="space-y-6 p-4 md:p-8">
-      <div>
-        <h1 className="text-2xl md:text-3xl font-bold text-foreground">{customer.name}</h1>
-        <p className="text-sm md:text-base text-muted-foreground">{customer.email}</p>
-        {customer.notes && (
-          <p className="text-sm text-muted-foreground mt-2 p-3 bg-muted/50 rounded-md border border-border">
-            {customer.notes}
-          </p>
-        )}
+      <div className="space-y-4">
+        <Button variant="ghost" size="sm" asChild className="gap-2 -ml-2">
+          <Link href="/dashboard">
+            <ArrowLeft className="h-4 w-4" />
+            Back
+          </Link>
+        </Button>
+        <div>
+          <h1 className="text-2xl md:text-3xl font-bold text-foreground">{customer.name}</h1>
+          <p className="text-sm md:text-base text-muted-foreground">{customer.email}</p>
+          {customer.notes && (
+            <p className="text-sm text-muted-foreground mt-2 p-3 bg-muted/50 rounded-md border border-border">
+              {customer.notes}
+            </p>
+          )}
+        </div>
       </div>
 
       <Card>
