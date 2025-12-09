@@ -1,54 +1,73 @@
-# compiled output
-/dist
+# Dependencies
 /node_modules
-/build
+/.pnp
+.pnp.js
 
-# next.js
+# Testing
+/coverage
+
+# Next.js
 /.next/
 /out/
+.next
+next-env.d.ts
 
-# Logs
-logs
-*.log
+# Production
+/build
+/dist
+
+# Misc
+.DS_Store
+*.pem
+
+# Debug
 npm-debug.log*
-pnpm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+pnpm-debug.log*
 lerna-debug.log*
 
-# OS
-.DS_Store
+# Local env files
+.env
+.env*.local
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
 
-# Tests
-/coverage
-/.nyc_output
+# Vercel
+.vercel
+
+# Typescript
+*.tsbuildinfo
 
 # IDEs and editors
 /.idea
+/.vscode
 .project
 .classpath
 .c9/
 *.launch
 .settings/
 *.sublime-workspace
+*.sublime-project
 
-# IDE - VSCode
-.vscode/*
-!.vscode/settings.json
-!.vscode/tasks.json
-!.vscode/launch.json
-!.vscode/extensions.json
+# OS
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
 
-# dotenv environment variable files
-.env
-.env.development.local
-.env.test.local
-.env.production.local
-.env.local
-
-# temp directory
+# Temporary files
 .temp
 .tmp
+*.tmp
+*.bak
+*.swp
+*~
 
 # Runtime data
 pids
@@ -56,5 +75,10 @@ pids
 *.seed
 *.pid.lock
 
-# Diagnostic reports (https://nodejs.org/api/report.html)
+# Diagnostic reports
 report.[0-9]*.[0-9]*.[0-9]*.[0-9]*.json
+
+# Lock files - Keep pnpm-lock.yaml (your package manager)
+# Ignore other package manager lock files
+package-lock.json
+yarn.lock
