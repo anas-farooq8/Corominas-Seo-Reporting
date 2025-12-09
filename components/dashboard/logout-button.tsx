@@ -6,7 +6,11 @@ import { createClient } from "@/lib/supabase/client"
 import { Button } from "@/components/ui/button"
 import { LogOut } from "lucide-react"
 
-export function LogoutButton() {
+interface LogoutButtonProps {
+  collapsed?: boolean
+}
+
+export function LogoutButton({ collapsed = false }: LogoutButtonProps) {
   const [loading, setLoading] = useState(false)
   const router = useRouter()
 
@@ -27,12 +31,13 @@ export function LogoutButton() {
   return (
     <Button
       variant="outline"
-      className="w-full justify-start"
+      className={`w-full ${collapsed ? "justify-center px-2" : "justify-start"}`}
       onClick={handleLogout}
       disabled={loading}
+      title={collapsed ? "Logout" : ""}
     >
-      <LogOut className="h-4 w-4 mr-2" />
-      {loading ? "Logging out..." : "Logout"}
+      <LogOut className={`h-4 w-4 ${collapsed ? "" : "mr-2"}`} />
+      {!collapsed && (loading ? "Logging out..." : "Logout")}
     </Button>
   )
 }

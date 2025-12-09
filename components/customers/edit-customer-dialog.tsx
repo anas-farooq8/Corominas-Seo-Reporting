@@ -16,6 +16,7 @@ import {
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { Textarea } from "@/components/ui/textarea"
 import { useToast } from "@/hooks/use-toast"
 import { Pencil } from "lucide-react"
 
@@ -28,13 +29,18 @@ export function EditCustomerDialog({ customer }: EditCustomerDialogProps) {
   const [loading, setLoading] = useState(false)
   const [name, setName] = useState(customer.name)
   const [email, setEmail] = useState(customer.email)
+  const [notes, setNotes] = useState(customer.notes || "")
   const { toast } = useToast()
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     setLoading(true)
 
-    const result = await updateCustomer(customer.id, { name, email })
+    const result = await updateCustomer(customer.id, { 
+      name, 
+      email, 
+      notes: notes || null 
+    })
 
     if (result.success) {
       toast({ title: "Customer updated", description: "Changes have been saved." })
@@ -72,6 +78,17 @@ export function EditCustomerDialog({ customer }: EditCustomerDialogProps) {
               onChange={(e) => setEmail(e.target.value)}
               disabled={loading}
               required
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="notes">Notes (optional)</Label>
+            <Textarea
+              id="notes"
+              value={notes}
+              onChange={(e) => setNotes(e.target.value)}
+              placeholder="Add any additional notes about this customer..."
+              disabled={loading}
+              rows={3}
             />
           </div>
           <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2 pt-4">

@@ -2,6 +2,7 @@ import { getCustomers } from "@/lib/db/customers"
 import { CreateCustomerDialog } from "@/components/customers/create-customer-dialog"
 import { CustomersTable } from "@/components/customers/customers-table"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { CustomerSearch } from "@/components/customers/customer-search"
 
 export default async function DashboardPage() {
   const customers = await getCustomers()
@@ -24,7 +25,7 @@ export default async function DashboardPage() {
           <CardDescription>List of all customers and their associated data</CardDescription>
         </CardHeader>
         <CardContent>
-          <CustomersTable customers={customers} />
+          <CustomerSearch customers={customers} />
         </CardContent>
       </Card>
     </div>

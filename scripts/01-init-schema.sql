@@ -11,7 +11,8 @@ CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 CREATE TABLE IF NOT EXISTS customers (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   name TEXT NOT NULL,
-  email TEXT,
+  email TEXT NOT NULL,
+  notes TEXT,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
@@ -55,6 +56,14 @@ CREATE INDEX IF NOT EXISTS idx_datasources_customer_id ON datasources(customer_i
 CREATE INDEX IF NOT EXISTS idx_datasources_type ON datasources(type);
 CREATE INDEX IF NOT EXISTS idx_mangools_domains_datasource_id ON mangools_domains(datasource_id);
 CREATE INDEX IF NOT EXISTS idx_mangools_domains_domain ON mangools_domains(domain);
+-- Create unique index on email column (case-insensitive)
+CREATE UNIQUE INDEX IF NOT EXISTS idx_customers_email_unique 
+ON customers (LOWER(email));
+
+-- Add comment to explain the constraint
+COMMENT ON INDEX idx_customers_email_unique IS 'Ensures email addresses are unique (case-insensitive)';
+
+
 
 -- ============================================
 -- ROW LEVEL SECURITY (RLS)

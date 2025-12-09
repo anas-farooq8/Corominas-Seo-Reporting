@@ -6,7 +6,8 @@ import { z } from "zod"
 
 const customerSchema = z.object({
   name: z.string().min(1, "Name is required"),
-  email: z.string().email("Invalid email address"),
+  email: z.string().min(1, "Email is required").email("Invalid email address"),
+  notes: z.string().optional().nullable(),
 })
 
 type CustomerInput = z.infer<typeof customerSchema>
@@ -16,9 +17,26 @@ export async function createCustomer(input: CustomerInput) {
     const validated = customerSchema.parse(input)
     const supabase = await createClient()
 
+    // Check if email already exists (case-insensitive)
+    const { data: existingCustomer } = await supabase
+      .from("customers")
+      .select("id")
+      .ilike("email", validated.email)
+      .single()
+
+    if (existingCustomer) {
+      return { success: false, error: "A customer with this email already exists" }
+    }
+
     const { data, error } = await supabase.from("customers").insert([validated]).select().single()
 
-    if (error) throw new Error(error.message)
+    if (error) {
+      // Handle unique constraint violation
+      if (error.code === "23505") {
+        return { success: false, error: "A customer with this email already exists" }
+      }
+      throw new Error(error.message)
+    }
 
     revalidateTag("customers")
     return { success: true, data }
@@ -33,6 +51,20 @@ export async function updateCustomer(id: string, input: Partial<CustomerInput>) 
     const validated = customerSchema.partial().parse(input)
     const supabase = await createClient()
 
+    // Check if email already exists (case-insensitive) for a different customer
+    if (validated.email) {
+      const { data: existingCustomer } = await supabase
+        .from("customers")
+        .select("id")
+        .ilike("email", validated.email)
+        .neq("id", id)
+        .single()
+
+      if (existingCustomer) {
+        return { success: false, error: "A customer with this email already exists" }
+      }
+    }
+
     const { data, error } = await supabase
       .from("customers")
       .update({ ...validated, updated_at: new Date().toISOString() })
@@ -40,7 +72,13 @@ export async function updateCustomer(id: string, input: Partial<CustomerInput>) 
       .select()
       .single()
 
-    if (error) throw new Error(error.message)
+    if (error) {
+      // Handle unique constraint violation
+      if (error.code === "23505") {
+        return { success: false, error: "A customer with this email already exists" }
+      }
+      throw new Error(error.message)
+    }
 
     revalidateTag("customers")
     return { success: true, data }

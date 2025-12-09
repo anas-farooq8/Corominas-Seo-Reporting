@@ -80,20 +80,20 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-[linear-gradient(135deg,hsl(var(--background))_0%,hsl(var(--muted))_50%,hsl(var(--accent))_100%)] p-4 sm:p-6 md:p-8">
+    <div className="flex min-h-screen items-center justify-center p-4 sm:p-6 md:p-8 bg-gradient-to-br from-purple-50 via-purple-100 to-purple-200">
       <Card className="w-full max-w-md shadow-lg border-border/50 backdrop-blur-sm">
-        <CardHeader className="space-y-3 pb-6">
-          <div className="flex items-center justify-center gap-2 mb-2">
-            <BarChart3 className="h-7 w-7 sm:h-8 sm:w-8 text-primary" />
-            <span className="text-xl sm:text-2xl font-bold">SEO Reporting</span>
+        <CardHeader className="space-y-2 sm:space-y-3 pb-4 sm:pb-6">
+          <div className="flex items-center justify-center gap-2 mb-1 sm:mb-2">
+            <BarChart3 className="h-6 w-6 sm:h-8 sm:w-8 text-primary" />
+            <span className="text-lg sm:text-2xl font-bold">SEO Reporting</span>
           </div>
-          <CardTitle className="text-xl sm:text-2xl text-center">Welcome Back</CardTitle>
-          <CardDescription className="text-center text-sm sm:text-base">
+          <CardTitle className="text-lg sm:text-2xl text-center">Welcome Back</CardTitle>
+          <CardDescription className="text-center text-xs sm:text-base">
             Sign in to your Corominas Consulting dashboard
           </CardDescription>
         </CardHeader>
-        <CardContent className="pb-6">
-          <form onSubmit={handleLogin} className="space-y-5">
+        <CardContent className="pb-4 sm:pb-6">
+          <form onSubmit={handleLogin} className="space-y-4 sm:space-y-5">
             {error && (
               <Alert variant="destructive" className="animate-in fade-in-50">
                 <AlertCircle className="h-4 w-4" />
@@ -101,8 +101,8 @@ export default function LoginPage() {
               </Alert>
             )}
 
-            <div className="space-y-2">
-              <Label htmlFor="email" className="text-sm font-medium">
+            <div className="space-y-1.5 sm:space-y-2">
+              <Label htmlFor="email" className="text-xs sm:text-sm font-medium">
                 Email Address
               </Label>
               <Input
@@ -117,14 +117,14 @@ export default function LoginPage() {
                 required
                 disabled={loading}
                 autoComplete="email"
-                className="h-11 text-base"
+                className="h-10 sm:h-11 text-sm sm:text-base"
                 aria-invalid={error ? "true" : "false"}
                 aria-describedby={error ? "login-error" : undefined}
               />
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="password" className="text-sm font-medium">
+            <div className="space-y-1.5 sm:space-y-2">
+              <Label htmlFor="password" className="text-xs sm:text-sm font-medium">
                 Password
               </Label>
               <div className="relative">
@@ -140,7 +140,7 @@ export default function LoginPage() {
                   required
                   disabled={loading}
                   autoComplete="current-password"
-                  className="h-11 pr-11 text-base"
+                  className="h-10 sm:h-11 pr-10 sm:pr-11 text-sm sm:text-base"
                   aria-invalid={error ? "true" : "false"}
                   aria-describedby={error ? "login-error" : undefined}
                 />
@@ -162,7 +162,7 @@ export default function LoginPage() {
 
             <Button 
               type="submit" 
-              className="w-full h-11 text-base font-medium cursor-pointer" 
+              className="w-full h-10 sm:h-11 text-sm sm:text-base font-medium cursor-pointer" 
               disabled={loading}
             >
               {loading ? (

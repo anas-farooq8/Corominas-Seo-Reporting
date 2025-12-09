@@ -33,6 +33,11 @@ export default async function CustomerDetailPage({ params }: CustomerDetailPageP
       <div>
         <h1 className="text-2xl md:text-3xl font-bold text-foreground">{customer.name}</h1>
         <p className="text-sm md:text-base text-muted-foreground">{customer.email}</p>
+        {customer.notes && (
+          <p className="text-sm text-muted-foreground mt-2 p-3 bg-muted/50 rounded-md border border-border">
+            {customer.notes}
+          </p>
+        )}
       </div>
 
       <Card>

@@ -5,7 +5,8 @@
 export interface Customer {
   id: string
   name: string
-  email: string | null
+  email: string
+  notes: string | null
   created_at: string
   updated_at: string
 }
@@ -85,7 +86,8 @@ export interface MangoolsApiDomain {
 
 export interface CustomerInput {
   name: string
-  email?: string | null
+  email: string
+  notes?: string | null
 }
 
 export interface DatasourceInput {
