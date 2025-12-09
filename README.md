@@ -7,16 +7,21 @@
 
 ## Overview
 
-Professional SEO reporting and analytics dashboard for Corominas Consulting. This application provides secure authentication, customer management, and data source integration with Mangools API.
+Professional SEO reporting and analytics dashboard for Corominas Consulting. This application provides secure authentication, client and project management, and data source integration with Mangools API.
+
+The system uses a three-tier hierarchical structure: **Clients → Projects → Datasources → Domains**, allowing for organized management of multiple projects per client, with each project having its own dedicated data sources.
 
 ## Features
 
 - 🔐 **Secure Authentication** - Supabase-powered authentication with session management
 - 📱 **Responsive Design** - Mobile-first UI that works on all devices
-- 👥 **Customer Management** - Create, edit, and manage client accounts
-- 📊 **Data Source Integration** - Connect and manage SEO data sources
-- 🌐 **Domain Management** - Attach and track domains for each data source
+- 👥 **Client Management** - Create, edit, and manage client accounts with search functionality
+- 📊 **Project Organization** - Multiple projects per client with detailed tracking
+- 📡 **Data Source Integration** - Connect and manage SEO data sources (Mangools, SEMrush)
+- 🌐 **Domain Management** - Attach and track domains with smart conflict detection
 - 🎨 **Dark Mode Support** - Full theme support with next-themes
+- 🔄 **Cascading Operations** - Proper parent-child relationships with cascading deletes
+- ⚡ **Optimized Performance** - Efficient database queries with proper indexing
 
 ## Getting Started
 
@@ -93,27 +98,119 @@ The application uses Supabase SSR for proper cookie management:
 - **Cookies Set**: `sb-access-token`, `sb-refresh-token` with secure httpOnly flags
 - **Auto-refresh**: Middleware automatically refreshes expired sessions
 
+## System Architecture
+
+### Hierarchical Structure
+
+```
+Clients (Organizations/Companies)
+  └── Projects (Individual campaigns/websites)
+      └── Datasources (SEO data integrations)
+          └── Domains (Tracked websites)
+```
+
+### Key Business Rules
+
+1. **Domain Uniqueness**: Each domain can only be attached to one datasource globally
+2. **Type Limitation**: Within a project, only one domain per datasource type (e.g., one domain for Mangools)
+3. **Cascading Deletes**: Deleting a client removes all its projects, datasources, and domain attachments
+4. **Smart UI**: Once a datasource has a domain attached, the available domains section is hidden
+
 ## Project Structure
 
 ```
 app/
-├── api/              # API routes (Mangools integration)
-├── dashboard/        # Protected dashboard pages
-├── login/           # Authentication page
-└── layout.tsx       # Root layout with metadata
+├── api/
+│   ├── clients/           # Client API endpoints
+│   ├── projects/          # Project API endpoints
+│   ├── datasources/       # Datasource API endpoints
+│   ├── domains/           # Domain management
+│   └── mangools/          # Mangools API integration
+├── dashboard/
+│   ├── clients/[id]/      # Client detail with projects list
+│   ├── projects/[id]/     # Project detail with datasources list
+│   ├── layout.tsx         # Dashboard layout with sidebar
+│   └── page.tsx           # Main dashboard (clients list)
+└── login/                 # Authentication page
 
 components/
-├── ui/              # Reusable UI components (shadcn/ui)
-├── customers/       # Customer management components
-├── datasources/     # Data source management components
-└── dashboard/       # Dashboard-specific components
+├── ui/                    # Reusable UI components (shadcn/ui)
+├── clients/               # Client management components
+├── projects/              # Project management components
+├── datasources/           # Datasource management components
+└── dashboard/             # Dashboard layout components
 
 lib/
-├── actions/         # Server actions for data mutations
-├── db/              # Database queries
-├── supabase/        # Supabase client configuration
-└── mangools/        # Mangools API integration
+├── db/                    # Database operations
+│   ├── clients.ts         # Client CRUD operations
+│   ├── projects.ts        # Project CRUD operations
+│   └── datasources.ts     # Datasource CRUD operations
+├── actions/               # Server actions for mutations
+│   ├── clients.ts         # Client actions
+│   ├── projects.ts        # Project actions
+│   ├── datasources.ts     # Datasource actions
+│   └── domains.ts         # Domain attachment actions
+├── supabase/              # Supabase configuration
+│   ├── client.ts          # Browser client
+│   ├── server.ts          # Server client
+│   └── types.ts           # TypeScript types
+└── mangools/
+    └── api.ts             # Mangools API integration
+
+scripts/
+├── 01-init-schema.sql     # Complete database schema
+└── 02-migrate-to-clients-projects.sql  # Migration from old structure
 ```
+
+## Database Setup
+
+### For New Installations
+
+Run the complete schema:
+```bash
+psql -d your_database < scripts/01-init-schema.sql
+```
+
+### For Existing Installations (Migration)
+
+If you're upgrading from the old customer-based structure:
+```bash
+psql -d your_database < scripts/02-migrate-to-clients-projects.sql
+```
+
+This migration will:
+- Rename `customers` table to `clients`
+- Create the new `projects` table
+- Create a default project for each existing client
+- Migrate all datasources to the default projects
+- Update all foreign key relationships
+
+For detailed migration information, see [MIGRATION-GUIDE.md](./MIGRATION-GUIDE.md)
+
+## API Endpoints
+
+### Clients
+- `GET /api/clients` - Get all clients with project counts
+- `GET /api/clients/[id]` - Get specific client with projects
+
+### Projects
+- `GET /api/projects/[id]` - Get project with datasources
+
+### Datasources
+- `GET /api/datasources/[projectId]` - Get all datasources for a project
+- `GET /api/datasources/domains/[datasourceId]` - Get domains for a datasource
+
+### Domains
+- `GET /api/domains/attached` - Get all globally attached domains
+- `GET /api/mangools/domains` - Get available Mangools domains
+
+## Usage Flow
+
+1. **Create a Client** - Add a new client organization
+2. **Add Projects** - Create projects under the client (e.g., "Main Website", "Blog")
+3. **Configure Datasources** - Add data sources (Mangools, SEMrush) to each project
+4. **Attach Domains** - Link domains to datasources for tracking
+5. **Monitor** - View and manage all data from the dashboard
 
 ## Deployment
 
@@ -126,6 +223,11 @@ Your project is live at:
 Continue building your app on:
 
 **[https://v0.app/chat/jCWVmL2xuA1](https://v0.app/chat/jCWVmL2xuA1)**
+
+## Documentation
+
+- **[IMPLEMENTATION-SUMMARY.md](./IMPLEMENTATION-SUMMARY.md)** - Complete list of changes and implementation details
+- **[MIGRATION-GUIDE.md](./MIGRATION-GUIDE.md)** - Detailed migration instructions and breaking changes
 
 ## Tech Stack
 

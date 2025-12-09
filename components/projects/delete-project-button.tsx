@@ -13,26 +13,26 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
-import { deleteDatasource } from "@/lib/actions/datasources"
+import { deleteProject } from "@/lib/actions/projects"
 import { Trash2, Loader2 } from "lucide-react"
 
-interface DeleteDatasourceButtonProps {
-  datasourceId: string
-  datasourceType: string
-  onDatasourceDeleted?: () => void
+interface DeleteProjectButtonProps {
+  projectId: string
+  projectName: string
+  onProjectDeleted?: () => void
 }
 
-export function DeleteDatasourceButton({ datasourceId, datasourceType, onDatasourceDeleted }: DeleteDatasourceButtonProps) {
+export function DeleteProjectButton({ projectId, projectName, onProjectDeleted }: DeleteProjectButtonProps) {
   const [loading, setLoading] = useState(false)
 
   async function handleDelete() {
     setLoading(true)
     try {
-      await deleteDatasource(datasourceId)
-      onDatasourceDeleted?.()
+      await deleteProject(projectId)
+      onProjectDeleted?.()
     } catch (error) {
-      console.error("Error deleting datasource:", error)
-      alert("Failed to delete datasource. Please try again.")
+      console.error("Error deleting project:", error)
+      alert("Failed to delete project. Please try again.")
     } finally {
       setLoading(false)
     }
@@ -51,22 +51,23 @@ export function DeleteDatasourceButton({ datasourceId, datasourceType, onDatasou
       </AlertDialogTrigger>
       <AlertDialogContent>
         <AlertDialogHeader>
-          <AlertDialogTitle>Delete Data Source</AlertDialogTitle>
+          <AlertDialogTitle>Delete Project</AlertDialogTitle>
           <AlertDialogDescription>
-            Are you sure you want to delete this <strong>{datasourceType}</strong> data source?
+            Are you sure you want to delete <strong>{projectName}</strong>?
             <br />
             <br />
-            This will permanently delete the data source and all associated domains.
+            This will permanently delete the project and all associated datasources and domains.
             This action cannot be undone.
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
           <AlertDialogCancel>Cancel</AlertDialogCancel>
           <AlertDialogAction onClick={handleDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
-            Delete Data Source
+            Delete Project
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>
     </AlertDialog>
   )
 }
+

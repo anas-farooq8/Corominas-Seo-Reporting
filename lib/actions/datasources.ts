@@ -1,84 +1,153 @@
 "use server"
 
-import { createClient } from "@/lib/supabase/server"
+// ============================================
+// Datasource Actions
+// ============================================
+
 import { revalidatePath } from "next/cache"
-import { z } from "zod"
-
-const datasourceSchema = z.object({
-  customer_id: z.string().uuid(),
-  type: z.enum(["mangools", "semrush"]),
-})
-
-type DatasourceInput = z.infer<typeof datasourceSchema>
+import * as db from "@/lib/db/datasources"
+import type { Datasource, DatasourceInput, MangoolsDomain } from "@/lib/supabase/types"
 
 /**
- * Create a new datasource for a customer
+ * Get all datasources for a project
  */
-export async function createDatasource(input: DatasourceInput) {
-  try {
-    const validated = datasourceSchema.parse(input)
-    const supabase = await createClient()
-
-    const { data, error } = await supabase
-      .from("datasources")
-      .insert([validated])
-      .select()
-      .single()
-
-    if (error) throw new Error(error.message)
-
-    revalidatePath(`/dashboard/customers/${validated.customer_id}`)
-    return { success: true, data }
-  } catch (error) {
-    const message = error instanceof Error ? error.message : "Failed to create datasource"
-    console.error("Create datasource error:", error)
-    return { success: false, error: message }
-  }
+export async function getDatasourcesByProjectId(projectId: string) {
+  return await db.getDatasourcesByProjectId(projectId)
 }
 
 /**
- * Update a datasource
+ * Get all datasources for a project with domains
  */
-export async function updateDatasource(id: string, input: Partial<DatasourceInput>) {
+export async function getDatasourcesWithDomains(projectId: string) {
+  return await db.getDatasourcesWithDomains(projectId)
+}
+
+/**
+ * Get a datasource by ID
+ */
+export async function getDatasourceById(id: string) {
+  return await db.getDatasourceById(id)
+}
+
+/**
+ * Get a datasource with domains
+ */
+export async function getDatasourceWithDomains(id: string) {
+  return await db.getDatasourceWithDomains(id)
+}
+
+/**
+ * Create a new datasource
+ */
+export async function createDatasource(input: DatasourceInput): Promise<Datasource> {
   try {
-    const validated = datasourceSchema.partial().parse(input)
-    const supabase = await createClient()
-
-    const { data, error } = await supabase
-      .from("datasources")
-      .update({ ...validated, updated_at: new Date().toISOString() })
-      .eq("id", id)
-      .select()
-      .single()
-
-    if (error) throw new Error(error.message)
-
-    revalidatePath("/dashboard")
-    return { success: true, data }
+    const datasource = await db.createDatasource(input)
+    revalidatePath(`/dashboard/projects/${input.project_id}`)
+    return datasource
   } catch (error) {
-    const message = error instanceof Error ? error.message : "Failed to update datasource"
-    console.error("Update datasource error:", error)
-    return { success: false, error: message }
+    console.error("Error creating datasource:", error)
+    throw new Error("Failed to create datasource")
   }
 }
 
 /**
  * Delete a datasource
  */
-export async function deleteDatasource(id: string) {
+export async function deleteDatasource(id: string): Promise<void> {
   try {
-    const supabase = await createClient()
-
-    // Soft delete by setting is_active to false
-    const { error } = await supabase.from("datasources").update({ is_active: false }).eq("id", id)
-
-    if (error) throw new Error(error.message)
-
-    revalidatePath("/dashboard")
-    return { success: true }
+    const datasource = await db.getDatasourceById(id)
+    await db.deleteDatasource(id)
+    if (datasource) {
+      revalidatePath(`/dashboard/projects/${datasource.project_id}`)
+    }
   } catch (error) {
-    const message = error instanceof Error ? error.message : "Failed to delete datasource"
-    console.error("Delete datasource error:", error)
-    return { success: false, error: message }
+    console.error("Error deleting datasource:", error)
+    throw new Error("Failed to delete datasource")
   }
+}
+
+/**
+ * Get domains for a datasource
+ */
+export async function getDomainsByDatasourceId(datasourceId: string): Promise<MangoolsDomain[]> {
+  return await db.getDomainsByDatasourceId(datasourceId)
+}
+
+/**
+ * Attach a domain to a datasource
+ */
+export async function attachDomain(
+  datasourceId: string,
+  mangoolsId: string,
+  domain: string,
+  locationCode: string | null,
+  locationLabel: string | null,
+  platformId: number | null,
+  keywordsCount: number,
+  mangoolsCreatedAt: number | null
+): Promise<MangoolsDomain> {
+  try {
+    const attachedDomain = await db.attachDomain(
+      datasourceId,
+      mangoolsId,
+      domain,
+      locationCode,
+      locationLabel,
+      platformId,
+      keywordsCount,
+      mangoolsCreatedAt
+    )
+    
+    const datasource = await db.getDatasourceById(datasourceId)
+    if (datasource) {
+      revalidatePath(`/dashboard/projects/${datasource.project_id}`)
+    }
+    
+    return attachedDomain
+  } catch (error) {
+    console.error("Error attaching domain:", error)
+    throw new Error("Failed to attach domain")
+  }
+}
+
+/**
+ * Detach a domain from a datasource
+ */
+export async function detachDomain(domainId: string): Promise<void> {
+  try {
+    // Get the domain to find its datasource
+    const supabase = await import("@/lib/supabase/server").then(m => m.createClient())
+    const client = await supabase
+    const { data: domain } = await client
+      .from("mangools_domains")
+      .select("datasource_id")
+      .eq("id", domainId)
+      .single()
+
+    await db.detachDomain(domainId)
+    
+    if (domain) {
+      const datasource = await db.getDatasourceById(domain.datasource_id)
+      if (datasource) {
+        revalidatePath(`/dashboard/projects/${datasource.project_id}`)
+      }
+    }
+  } catch (error) {
+    console.error("Error detaching domain:", error)
+    throw new Error("Failed to detach domain")
+  }
+}
+
+/**
+ * Get all attached domains
+ */
+export async function getAllAttachedDomains(): Promise<MangoolsDomain[]> {
+  return await db.getAllAttachedDomains()
+}
+
+/**
+ * Check if a datasource has any attached domains
+ */
+export async function hasDatasourceAttachedDomains(datasourceId: string): Promise<boolean> {
+  return await db.hasDatasourceAttachedDomains(datasourceId)
 }

@@ -6,9 +6,9 @@
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
 -- ============================================
--- CUSTOMERS TABLE
+-- CLIENTS TABLE
 -- ============================================
-CREATE TABLE IF NOT EXISTS customers (
+CREATE TABLE IF NOT EXISTS clients (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   name TEXT NOT NULL,
   email TEXT NOT NULL UNIQUE,
@@ -18,11 +18,23 @@ CREATE TABLE IF NOT EXISTS customers (
 );
 
 -- ============================================
+-- PROJECTS TABLE
+-- ============================================
+CREATE TABLE IF NOT EXISTS projects (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  client_id UUID NOT NULL REFERENCES clients(id) ON DELETE CASCADE,
+  name TEXT NOT NULL,
+  details TEXT,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- ============================================
 -- DATASOURCES TABLE
 -- ============================================
 CREATE TABLE IF NOT EXISTS datasources (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  customer_id UUID NOT NULL REFERENCES customers(id) ON DELETE CASCADE,
+  project_id UUID NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
   type TEXT NOT NULL CHECK (type IN ('mangools', 'semrush')),
   is_active BOOLEAN DEFAULT TRUE,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
@@ -50,22 +62,28 @@ CREATE TABLE IF NOT EXISTS mangools_domains (
 -- ============================================
 -- INDEXES
 -- ============================================
-CREATE INDEX IF NOT EXISTS idx_datasources_customer_id ON datasources(customer_id);
+CREATE INDEX IF NOT EXISTS idx_projects_client_id ON projects(client_id);
+CREATE INDEX IF NOT EXISTS idx_datasources_project_id ON datasources(project_id);
 CREATE INDEX IF NOT EXISTS idx_datasources_type ON datasources(type);
 CREATE INDEX IF NOT EXISTS idx_mangools_domains_datasource_id ON mangools_domains(datasource_id);
 
 -- ============================================
 -- ROW LEVEL SECURITY (RLS)
 -- ============================================
-ALTER TABLE customers ENABLE ROW LEVEL SECURITY;
+ALTER TABLE clients ENABLE ROW LEVEL SECURITY;
+ALTER TABLE projects ENABLE ROW LEVEL SECURITY;
 ALTER TABLE datasources ENABLE ROW LEVEL SECURITY;
 ALTER TABLE mangools_domains ENABLE ROW LEVEL SECURITY;
 
 -- ============================================
 -- RLS POLICIES
 -- ============================================
-DROP POLICY IF EXISTS "authenticated_users_all_customers" ON customers;
-CREATE POLICY "authenticated_users_all_customers" ON customers
+DROP POLICY IF EXISTS "authenticated_users_all_clients" ON clients;
+CREATE POLICY "authenticated_users_all_clients" ON clients
+  FOR ALL USING (auth.role() = 'authenticated');
+
+DROP POLICY IF EXISTS "authenticated_users_all_projects" ON projects;
+CREATE POLICY "authenticated_users_all_projects" ON projects
   FOR ALL USING (auth.role() = 'authenticated');
 
 DROP POLICY IF EXISTS "authenticated_users_all_datasources" ON datasources;
@@ -87,9 +105,14 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
-DROP TRIGGER IF EXISTS update_customers_updated_at ON customers;
-CREATE TRIGGER update_customers_updated_at
-  BEFORE UPDATE ON customers
+DROP TRIGGER IF EXISTS update_clients_updated_at ON clients;
+CREATE TRIGGER update_clients_updated_at
+  BEFORE UPDATE ON clients
+  FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+DROP TRIGGER IF EXISTS update_projects_updated_at ON projects;
+CREATE TRIGGER update_projects_updated_at
+  BEFORE UPDATE ON projects
   FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
 DROP TRIGGER IF EXISTS update_datasources_updated_at ON datasources;

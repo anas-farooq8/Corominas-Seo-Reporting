@@ -13,26 +13,26 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
-import { deleteDatasource } from "@/lib/actions/datasources"
+import { deleteClient } from "@/lib/actions/clients"
 import { Trash2, Loader2 } from "lucide-react"
 
-interface DeleteDatasourceButtonProps {
-  datasourceId: string
-  datasourceType: string
-  onDatasourceDeleted?: () => void
+interface DeleteClientButtonProps {
+  clientId: string
+  clientName: string
+  onClientDeleted?: () => void
 }
 
-export function DeleteDatasourceButton({ datasourceId, datasourceType, onDatasourceDeleted }: DeleteDatasourceButtonProps) {
+export function DeleteClientButton({ clientId, clientName, onClientDeleted }: DeleteClientButtonProps) {
   const [loading, setLoading] = useState(false)
 
   async function handleDelete() {
     setLoading(true)
     try {
-      await deleteDatasource(datasourceId)
-      onDatasourceDeleted?.()
+      await deleteClient(clientId)
+      onClientDeleted?.()
     } catch (error) {
-      console.error("Error deleting datasource:", error)
-      alert("Failed to delete datasource. Please try again.")
+      console.error("Error deleting client:", error)
+      alert("Failed to delete client. Please try again.")
     } finally {
       setLoading(false)
     }
@@ -51,22 +51,23 @@ export function DeleteDatasourceButton({ datasourceId, datasourceType, onDatasou
       </AlertDialogTrigger>
       <AlertDialogContent>
         <AlertDialogHeader>
-          <AlertDialogTitle>Delete Data Source</AlertDialogTitle>
+          <AlertDialogTitle>Delete Client</AlertDialogTitle>
           <AlertDialogDescription>
-            Are you sure you want to delete this <strong>{datasourceType}</strong> data source?
+            Are you sure you want to delete <strong>{clientName}</strong>?
             <br />
             <br />
-            This will permanently delete the data source and all associated domains.
+            This will permanently delete the client and all associated projects, datasources, and domains.
             This action cannot be undone.
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
           <AlertDialogCancel>Cancel</AlertDialogCancel>
           <AlertDialogAction onClick={handleDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
-            Delete Data Source
+            Delete Client
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>
     </AlertDialog>
   )
 }
+

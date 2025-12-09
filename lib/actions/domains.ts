@@ -2,7 +2,6 @@
 
 import { createClient } from "@/lib/supabase/server"
 import { fetchMangoolsDomains, parseMangoolsDomainForDb } from "@/lib/mangools/api"
-import { revalidatePath } from "next/cache"
 import { z } from "zod"
 
 const attachDomainSchema = z.object({
@@ -53,20 +52,9 @@ export async function attachDomain(input: AttachDomainInput) {
 
     if (error) {
       if (error.code === "23505") {
-        return { success: false, error: "This domain is already attached to another customer" }
+        return { success: false, error: "This domain is already attached to another project" }
       }
       throw new Error(error.message)
-    }
-
-    // Get customer_id from datasource to revalidate the correct path
-    const { data: datasource } = await supabase
-      .from("datasources")
-      .select("customer_id")
-      .eq("id", validated.datasource_id)
-      .single()
-
-    if (datasource) {
-      revalidatePath(`/dashboard/customers/${datasource.customer_id}`)
     }
     
     return { success: true, data }
@@ -84,17 +72,6 @@ export async function detachDomain(id: string, datasourceId: string) {
     const { error } = await supabase.from("mangools_domains").update({ is_active: false }).eq("id", id)
 
     if (error) throw new Error(error.message)
-
-    // Get customer_id from datasource to revalidate the correct path
-    const { data: datasource } = await supabase
-      .from("datasources")
-      .select("customer_id")
-      .eq("id", datasourceId)
-      .single()
-
-    if (datasource) {
-      revalidatePath(`/dashboard/customers/${datasource.customer_id}`)
-    }
     
     return { success: true }
   } catch (error) {
