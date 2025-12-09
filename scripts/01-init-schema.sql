@@ -11,7 +11,7 @@ CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 CREATE TABLE IF NOT EXISTS customers (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   name TEXT NOT NULL,
-  email TEXT NOT NULL,
+  email TEXT NOT NULL UNIQUE,
   notes TEXT,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
@@ -24,7 +24,6 @@ CREATE TABLE IF NOT EXISTS datasources (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   customer_id UUID NOT NULL REFERENCES customers(id) ON DELETE CASCADE,
   type TEXT NOT NULL CHECK (type IN ('mangools', 'semrush')),
-  name TEXT NOT NULL,
   is_active BOOLEAN DEFAULT TRUE,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
@@ -37,7 +36,7 @@ CREATE TABLE IF NOT EXISTS mangools_domains (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   datasource_id UUID NOT NULL REFERENCES datasources(id) ON DELETE CASCADE,
   mangools_id TEXT NOT NULL,
-  domain TEXT NOT NULL,
+  domain TEXT NOT NULL UNIQUE,
   location_code TEXT,
   location_label TEXT,
   platform_id INTEGER,
@@ -45,8 +44,7 @@ CREATE TABLE IF NOT EXISTS mangools_domains (
   mangools_created_at BIGINT,
   is_active BOOLEAN DEFAULT TRUE,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-  UNIQUE(datasource_id, mangools_id)
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
 -- ============================================
@@ -55,15 +53,6 @@ CREATE TABLE IF NOT EXISTS mangools_domains (
 CREATE INDEX IF NOT EXISTS idx_datasources_customer_id ON datasources(customer_id);
 CREATE INDEX IF NOT EXISTS idx_datasources_type ON datasources(type);
 CREATE INDEX IF NOT EXISTS idx_mangools_domains_datasource_id ON mangools_domains(datasource_id);
-CREATE INDEX IF NOT EXISTS idx_mangools_domains_domain ON mangools_domains(domain);
--- Create unique index on email column (case-insensitive)
-CREATE UNIQUE INDEX IF NOT EXISTS idx_customers_email_unique 
-ON customers (LOWER(email));
-
--- Add comment to explain the constraint
-COMMENT ON INDEX idx_customers_email_unique IS 'Ensures email addresses are unique (case-insensitive)';
-
-
 
 -- ============================================
 -- ROW LEVEL SECURITY (RLS)

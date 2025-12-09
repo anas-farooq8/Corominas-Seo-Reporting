@@ -95,9 +95,8 @@ export function CreateDatasourceDialog({ customerId }: CreateDatasourceDialogPro
     setLoading(true)
 
     try {
-      // Create datasource with auto-generated name
-      const datasourceName = `${type.charAt(0).toUpperCase() + type.slice(1)} - ${new Date().toLocaleDateString()}`
-      const result = await createDatasource({ customer_id: customerId, name: datasourceName, type })
+      // Create datasource without name
+      const result = await createDatasource({ customer_id: customerId, type })
 
       if (!result.success) {
         throw new Error(result.error)
@@ -125,7 +124,7 @@ export function CreateDatasourceDialog({ customerId }: CreateDatasourceDialogPro
       }
 
       setOpen(false)
-      window.location.reload() // Refresh to show new datasource
+      // No need to reload - revalidatePath in server actions handles the refresh
     } catch (err) {
       toast({ title: "Error", description: err instanceof Error ? err.message : "Failed to create datasource", variant: "destructive" })
     } finally {

@@ -1,7 +1,7 @@
 "use server"
 
 import { createClient } from "@/lib/supabase/server"
-import { revalidateTag } from "next/cache"
+import { revalidatePath } from "next/cache"
 import { z } from "zod"
 
 const customerSchema = z.object({
@@ -38,7 +38,7 @@ export async function createCustomer(input: CustomerInput) {
       throw new Error(error.message)
     }
 
-    revalidateTag("customers")
+    revalidatePath("/dashboard")
     return { success: true, data }
   } catch (error) {
     const message = error instanceof Error ? error.message : "Failed to create customer"
@@ -80,7 +80,8 @@ export async function updateCustomer(id: string, input: Partial<CustomerInput>) 
       throw new Error(error.message)
     }
 
-    revalidateTag("customers")
+    revalidatePath("/dashboard")
+    revalidatePath(`/dashboard/customers/${id}`)
     return { success: true, data }
   } catch (error) {
     const message = error instanceof Error ? error.message : "Failed to update customer"
@@ -96,7 +97,7 @@ export async function deleteCustomer(id: string) {
 
     if (error) throw new Error(error.message)
 
-    revalidateTag("customers")
+    revalidatePath("/dashboard")
     return { success: true }
   } catch (error) {
     const message = error instanceof Error ? error.message : "Failed to delete customer"

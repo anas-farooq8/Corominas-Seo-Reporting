@@ -7,7 +7,6 @@ import { z } from "zod"
 const datasourceSchema = z.object({
   customer_id: z.string().uuid(),
   type: z.enum(["mangools", "semrush"]),
-  name: z.string().min(1, "Name is required"),
 })
 
 type DatasourceInput = z.infer<typeof datasourceSchema>

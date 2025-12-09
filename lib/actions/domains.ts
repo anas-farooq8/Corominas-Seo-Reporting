@@ -2,7 +2,7 @@
 
 import { createClient } from "@/lib/supabase/server"
 import { fetchMangoolsDomains, parseMangoolsDomainForDb } from "@/lib/mangools/api"
-import { revalidateTag } from "next/cache"
+import { revalidatePath } from "next/cache"
 import { z } from "zod"
 
 const attachDomainSchema = z.object({
@@ -53,12 +53,22 @@ export async function attachDomain(input: AttachDomainInput) {
 
     if (error) {
       if (error.code === "23505") {
-        return { success: false, error: "Domain already attached" }
+        return { success: false, error: "This domain is already attached to another customer" }
       }
       throw new Error(error.message)
     }
 
-    revalidateTag(`domains-${validated.datasource_id}`)
+    // Get customer_id from datasource to revalidate the correct path
+    const { data: datasource } = await supabase
+      .from("datasources")
+      .select("customer_id")
+      .eq("id", validated.datasource_id)
+      .single()
+
+    if (datasource) {
+      revalidatePath(`/dashboard/customers/${datasource.customer_id}`)
+    }
+    
     return { success: true, data }
   } catch (error) {
     const message = error instanceof Error ? error.message : "Failed to attach domain"
@@ -75,7 +85,17 @@ export async function detachDomain(id: string, datasourceId: string) {
 
     if (error) throw new Error(error.message)
 
-    revalidateTag(`domains-${datasourceId}`)
+    // Get customer_id from datasource to revalidate the correct path
+    const { data: datasource } = await supabase
+      .from("datasources")
+      .select("customer_id")
+      .eq("id", datasourceId)
+      .single()
+
+    if (datasource) {
+      revalidatePath(`/dashboard/customers/${datasource.customer_id}`)
+    }
+    
     return { success: true }
   } catch (error) {
     const message = error instanceof Error ? error.message : "Failed to detach domain"

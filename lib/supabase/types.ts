@@ -15,7 +15,6 @@ export interface Datasource {
   id: string
   customer_id: string
   type: "mangools" | "semrush"
-  name: string
   is_active: boolean
   created_at: string
   updated_at: string
@@ -37,11 +36,7 @@ export interface MangoolsDomain {
 }
 
 // Alias for MangoolsDomain used in datasource components
-export type DatasourceDomain = MangoolsDomain & {
-  rank?: number
-  traffic?: number
-  difficulty?: number
-}
+export type DatasourceDomain = MangoolsDomain
 
 // ============================================
 // API Response Types
@@ -100,5 +95,4 @@ export interface CustomerInput {
 export interface DatasourceInput {
   customer_id: string
   type: "mangools" | "semrush"
-  name: string
 }

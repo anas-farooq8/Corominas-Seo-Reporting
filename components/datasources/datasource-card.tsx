@@ -15,10 +15,9 @@ export async function DatasourceCard({ datasource, customerId }: DatasourceCardP
       <CardHeader className="flex flex-row items-center justify-between pb-3">
         <div className="flex items-center gap-3">
           <div>
-            <CardTitle className="text-lg">{datasource.name}</CardTitle>
-            <Badge variant="secondary" className="mt-1">
+            <CardTitle className="text-lg">
               {datasource.type === "mangools" ? "Mangools" : "SEMrush"}
-            </Badge>
+            </CardTitle>
           </div>
         </div>
         <DeleteDatasourceButton datasourceId={datasource.id} customerId={customerId} />
