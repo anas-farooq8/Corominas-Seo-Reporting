@@ -1,0 +1,80 @@
+"use server"
+
+import { createClient } from "@/lib/supabase/server"
+import { fetchMangoolsDomains, parseMangoolsDomain } from "@/lib/mangools/api"
+import { revalidateTag } from "next/cache"
+import { z } from "zod"
+
+const attachDomainSchema = z.object({
+  datasource_id: z.string().uuid("Invalid datasource ID"),
+  domain: z.string().min(1, "Domain is required"),
+})
+
+type AttachDomainInput = z.infer<typeof attachDomainSchema>
+
+/**
+ * Attach a domain from Mangools API to a datasource
+ * Fetches latest data from API and stores normalized fields
+ */
+export async function attachDomain(input: AttachDomainInput) {
+  try {
+    const validated = attachDomainSchema.parse(input)
+
+    // Fetch all available domains from Mangools
+    const mangoolsDomains = await fetchMangoolsDomains()
+
+    // Find the domain in the API response
+    const foundDomain = mangoolsDomains.find((d) => d.domain === validated.domain)
+    if (!foundDomain) {
+      return { success: false, error: "Domain not found in Mangools" }
+    }
+
+    // Parse and normalize the domain data
+    const parsedDomain = parseMangoolsDomain(foundDomain)
+
+    // Insert into database
+    const supabase = await createClient()
+    const { data, error } = await supabase
+      .from("datasource_domains")
+      .insert([
+        {
+          datasource_id: validated.datasource_id,
+          domain: parsedDomain.domain,
+          rank: parsedDomain.rank,
+          traffic: parsedDomain.traffic,
+          difficulty: parsedDomain.difficulty,
+        },
+      ])
+      .select()
+      .single()
+
+    if (error) {
+      if (error.code === "23505") {
+        return { success: false, error: "Domain already attached" }
+      }
+      throw new Error(error.message)
+    }
+
+    revalidateTag(`domains-${validated.datasource_id}`)
+    return { success: true, data }
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Failed to attach domain"
+    return { success: false, error: message }
+  }
+}
+
+export async function detachDomain(id: string, datasourceId: string) {
+  try {
+    const supabase = await createClient()
+
+    const { error } = await supabase.from("datasource_domains").delete().eq("id", id)
+
+    if (error) throw new Error(error.message)
+
+    revalidateTag(`domains-${datasourceId}`)
+    return { success: true }
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Failed to detach domain"
+    return { success: false, error: message }
+  }
+}
