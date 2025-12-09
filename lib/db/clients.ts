@@ -68,7 +68,10 @@ export async function getClientWithProjects(id: string): Promise<ClientWithProje
     .select(`
       *,
       projects (
-        *
+        *,
+        datasources (
+          id
+        )
       )
     `)
     .eq("id", id)
@@ -76,8 +79,16 @@ export async function getClientWithProjects(id: string): Promise<ClientWithProje
 
   if (error) return null
   
+  // Add datasource_count to each project
+  const projectsWithCount = (data.projects || []).map((project: any) => ({
+    ...project,
+    datasource_count: project.datasources?.length || 0,
+    datasources: undefined
+  }))
+  
   return {
     ...data,
+    projects: projectsWithCount,
     project_count: data.projects?.length || 0
   }
 }

@@ -97,8 +97,7 @@ export async function createDatasource(input: DatasourceInput): Promise<Datasour
     .from("datasources")
     .insert({
       project_id: input.project_id,
-      type: input.type,
-      is_active: true
+      type: input.type
     })
     .select()
     .single()
@@ -159,8 +158,7 @@ export async function attachDomain(
       location_label: locationLabel,
       platform_id: platformId,
       keywords_count: keywordsCount,
-      mangools_created_at: mangoolsCreatedAt,
-      is_active: true
+      mangools_created_at: mangoolsCreatedAt
     })
     .select()
     .single()

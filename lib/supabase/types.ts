@@ -24,7 +24,6 @@ export interface Datasource {
   id: string
   project_id: string
   type: "mangools" | "semrush"
-  is_active: boolean
   created_at: string
   updated_at: string
 }
@@ -39,7 +38,6 @@ export interface MangoolsDomain {
   platform_id: number | null
   keywords_count: number
   mangools_created_at: number | null
-  is_active: boolean
   created_at: string
   updated_at: string
 }

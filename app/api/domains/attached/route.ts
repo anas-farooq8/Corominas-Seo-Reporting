@@ -13,7 +13,7 @@ export async function GET() {
     const { supabase } = auth
 
     // Get ALL attached domains across all customers (no customer filter)
-    const { data, error } = await supabase.from("mangools_domains").select("domain").eq("is_active", true)
+    const { data, error } = await supabase.from("mangools_domains").select("domain")
 
     if (error) throw error
 
@@ -22,4 +22,3 @@ export async function GET() {
     return errorResponse(error, "Failed to fetch attached domains")
   }
 }
-

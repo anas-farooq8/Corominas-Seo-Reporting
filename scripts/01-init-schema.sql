@@ -36,7 +36,6 @@ CREATE TABLE IF NOT EXISTS datasources (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   project_id UUID NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
   type TEXT NOT NULL CHECK (type IN ('mangools', 'semrush')),
-  is_active BOOLEAN DEFAULT TRUE,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
@@ -54,7 +53,6 @@ CREATE TABLE IF NOT EXISTS mangools_domains (
   platform_id INTEGER,
   keywords_count INTEGER DEFAULT 0,
   mangools_created_at BIGINT,
-  is_active BOOLEAN DEFAULT TRUE,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );

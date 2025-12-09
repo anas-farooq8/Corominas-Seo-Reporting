@@ -68,8 +68,8 @@ export async function detachDomain(id: string, datasourceId: string) {
   try {
     const supabase = await createClient()
 
-    // Soft delete by setting is_active to false
-    const { error } = await supabase.from("mangools_domains").update({ is_active: false }).eq("id", id)
+    // Hard delete the domain
+    const { error } = await supabase.from("mangools_domains").delete().eq("id", id)
 
     if (error) throw new Error(error.message)
     
