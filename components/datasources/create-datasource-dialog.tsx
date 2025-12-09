@@ -27,7 +27,7 @@ export function CreateDatasourceDialog({ customerId }: CreateDatasourceDialogPro
   const [open, setOpen] = useState(false)
   const [loading, setLoading] = useState(false)
   const [name, setName] = useState("")
-  const [type, setType] = useState<"mangools">("mangools")
+  const [type, setType] = useState<"mangools" | "semrush">("mangools")
   const { toast } = useToast()
 
   async function handleSubmit(e: React.FormEvent) {
@@ -70,16 +70,18 @@ export function CreateDatasourceDialog({ customerId }: CreateDatasourceDialogPro
               onChange={(e) => setName(e.target.value)}
               placeholder="e.g., Main Domain Monitor"
               disabled={loading}
+              required
             />
           </div>
           <div>
             <Label htmlFor="type">Type</Label>
-            <Select value={type} onValueChange={(value) => setType(value as "mangools")}>
+            <Select value={type} onValueChange={(value) => setType(value as "mangools" | "semrush")}>
               <SelectTrigger id="type" disabled={loading}>
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="mangools">Mangools</SelectItem>
+                <SelectItem value="semrush">SEMrush (Coming Soon)</SelectItem>
               </SelectContent>
             </Select>
           </div>

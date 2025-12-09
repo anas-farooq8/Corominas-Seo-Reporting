@@ -7,13 +7,15 @@ export default async function DashboardPage() {
   const customers = await getCustomers()
 
   return (
-    <div className="flex-1 space-y-6 p-8">
-      <div className="flex items-center justify-between">
+    <div className="flex-1 space-y-6 p-4 md:p-8">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-foreground">Dashboard</h1>
-          <p className="text-muted-foreground">Manage customers and their SEO data sources</p>
+          <h1 className="text-2xl md:text-3xl font-bold text-foreground">Dashboard</h1>
+          <p className="text-sm md:text-base text-muted-foreground mt-1">Manage customers and their SEO data sources</p>
         </div>
-        <CreateCustomerDialog />
+        <div className="w-full sm:w-auto">
+          <CreateCustomerDialog />
+        </div>
       </div>
 
       <Card>

@@ -19,16 +19,19 @@ export function AttachedDomainsSection({ datasourceId, attachedDomains }: Attach
           {attachedDomains.map((domain) => (
             <div
               key={domain.id}
-              className="flex items-center justify-between p-3 bg-accent/50 border border-border rounded-md"
+              className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 p-3 bg-accent/50 border border-border rounded-md"
             >
-              <div className="flex-1">
-                <p className="font-medium text-sm text-foreground">{domain.domain}</p>
-                <p className="text-xs text-muted-foreground">
-                  Rank: {domain.rank ?? "N/A"} | Traffic: {domain.traffic ?? "N/A"} | Difficulty:{" "}
-                  {domain.difficulty ?? "N/A"}
+              <div className="flex-1 min-w-0">
+                <p className="font-medium text-sm text-foreground break-words">{domain.domain}</p>
+                <p className="text-xs text-muted-foreground mt-1 flex flex-wrap gap-x-2">
+                  <span>Rank: {domain.rank ?? "N/A"}</span>
+                  <span>Traffic: {domain.traffic ?? "N/A"}</span>
+                  <span>Difficulty: {domain.difficulty ?? "N/A"}</span>
                 </p>
               </div>
-              <DetachDomainButton domainId={domain.id} datasourceId={datasourceId} />
+              <div className="self-end sm:self-auto">
+                <DetachDomainButton domainId={domain.id} datasourceId={datasourceId} />
+              </div>
             </div>
           ))}
         </div>

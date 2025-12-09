@@ -1,54 +1,62 @@
-import type { MangoolsDomain } from "@/lib/supabase/types"
+import type { MangoolsApiDomain } from "@/lib/supabase/types"
 import { cache } from "react"
 
-const MANGOOLS_API_BASE = "https://api.mangools.com/v2"
-
-interface MangoolsResponse {
-  domains: MangoolsDomain[]
-}
+const MANGOOLS_API_BASE = "https://api.mangools.com/v3"
 
 /**
- * Fetch available domains from Mangools API
- * Cached for 60 seconds to avoid excessive API calls
+ * Fetch available domains from Mangools SERPWatcher API
+ * Returns all tracked domains from the account
  */
-export const fetchMangoolsDomains = cache(async (): Promise<MangoolsDomain[]> => {
-  const accessToken = process.env.MANGOOLS_ACCESS_TOKEN
+export const fetchMangoolsDomains = cache(async (): Promise<MangoolsApiDomain[]> => {
+  const accessToken = process.env.MANGOOLS_X_ACCESS_TOKEN
 
   if (!accessToken) {
-    throw new Error("MANGOOLS_ACCESS_TOKEN environment variable is not set")
+    throw new Error("MANGOOLS_X_ACCESS_TOKEN environment variable is not set")
   }
 
   try {
-    const response = await fetch(`${MANGOOLS_API_BASE}/domains`, {
+    const response = await fetch(`${MANGOOLS_API_BASE}/serpwatcher/trackings`, {
       method: "GET",
       headers: {
         "x-access-token": accessToken,
         "Content-Type": "application/json",
+        Accept: "*/*",
       },
-      // cache: 'force-cache',
+      next: {
+        revalidate: 180, // Cache for 3 minutes
+      },
     })
 
     if (!response.ok) {
-      throw new Error(`Mangools API error: ${response.statusText}`)
+      const errorText = await response.text()
+      console.error("[Mangools API] Error response:", errorText)
+      throw new Error(`Mangools API error: ${response.status} ${response.statusText}`)
     }
 
-    const data = (await response.json()) as MangoolsResponse
-    return data.domains || []
+    const data = (await response.json()) as MangoolsApiDomain[]
+    
+    // Filter out deleted domains
+    const activeDomains = data.filter((domain) => !domain.is_deleted)
+    
+    return activeDomains
   } catch (error) {
-    console.error("[v0] Mangools API fetch failed:", error)
+    console.error("[Mangools API] Fetch failed:", error)
     throw error
   }
 })
 
 /**
- * Parse and normalize Mangools domain data
- * Extract only required fields: domain, rank, traffic, difficulty
+ * Parse Mangools domain data for storage
+ * Extracts only the fields we need for our database
  */
-export function parseMangoolsDomain(domain: MangoolsDomain): MangoolsDomain {
+export function parseMangoolsDomainForDb(domain: MangoolsApiDomain) {
   return {
+    mangools_id: domain._id,
     domain: domain.domain,
-    rank: domain.rank ?? null,
-    traffic: domain.traffic ?? null,
-    difficulty: domain.difficulty ?? null,
+    location_code: domain.location?.code ?? null,
+    location_label: domain.location?.label ?? null,
+    platform_id: domain.platform_id ?? null,
+    keywords_count: domain.count ?? 0,
+    mangools_created_at: domain.created_at ?? null,
   }
 }

@@ -17,14 +17,20 @@ export async function DatasourceCard({ datasource, customerId }: DatasourceCardP
           <div>
             <CardTitle className="text-lg">{datasource.name}</CardTitle>
             <Badge variant="secondary" className="mt-1">
-              {datasource.type.charAt(0).toUpperCase() + datasource.type.slice(1)}
+              {datasource.type === "mangools" ? "Mangools" : "SEMrush"}
             </Badge>
           </div>
         </div>
         <DeleteDatasourceButton datasourceId={datasource.id} customerId={customerId} />
       </CardHeader>
       <CardContent>
-        <DomainsSection datasourceId={datasource.id} />
+        {datasource.type === "mangools" ? (
+          <DomainsSection datasourceId={datasource.id} />
+        ) : (
+          <p className="text-sm text-muted-foreground py-4">
+            SEMrush integration coming soon...
+          </p>
+        )}
       </CardContent>
     </Card>
   )

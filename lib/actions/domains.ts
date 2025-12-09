@@ -1,7 +1,7 @@
 "use server"
 
 import { createClient } from "@/lib/supabase/server"
-import { fetchMangoolsDomains, parseMangoolsDomain } from "@/lib/mangools/api"
+import { fetchMangoolsDomains, parseMangoolsDomainForDb } from "@/lib/mangools/api"
 import { revalidateTag } from "next/cache"
 import { z } from "zod"
 
@@ -30,7 +30,7 @@ export async function attachDomain(input: AttachDomainInput) {
     }
 
     // Parse and normalize the domain data
-    const parsedDomain = parseMangoolsDomain(foundDomain)
+    const parsedDomain = parseMangoolsDomainForDb(foundDomain)
 
     // Insert into database
     const supabase = await createClient()

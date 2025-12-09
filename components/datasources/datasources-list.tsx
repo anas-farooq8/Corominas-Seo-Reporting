@@ -1,5 +1,3 @@
-"use client"
-
 import type { Datasource } from "@/lib/supabase/types"
 import { DatasourceCard } from "./datasource-card"
 

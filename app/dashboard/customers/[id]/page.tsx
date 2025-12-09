@@ -29,19 +29,21 @@ export default async function CustomerDetailPage({ params }: CustomerDetailPageP
   const datasources = await getDatasources(id)
 
   return (
-    <div className="space-y-6 p-8">
+    <div className="space-y-6 p-4 md:p-8">
       <div>
-        <h1 className="text-3xl font-bold text-foreground">{customer.name}</h1>
-        <p className="text-muted-foreground">{customer.email}</p>
+        <h1 className="text-2xl md:text-3xl font-bold text-foreground">{customer.name}</h1>
+        <p className="text-sm md:text-base text-muted-foreground">{customer.email}</p>
       </div>
 
       <Card>
-        <CardHeader className="flex flex-row items-center justify-between">
+        <CardHeader className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
             <CardTitle>Data Sources</CardTitle>
             <CardDescription>Manage SEO data sources for this customer</CardDescription>
           </div>
-          <CreateDatasourceDialog customerId={id} />
+          <div className="w-full sm:w-auto">
+            <CreateDatasourceDialog customerId={id} />
+          </div>
         </CardHeader>
         <CardContent>
           <DatasourcesList datasources={datasources} customerId={id} />
