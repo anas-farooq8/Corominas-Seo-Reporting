@@ -165,14 +165,14 @@ export function CreateDatasourceDialog({ projectId, existingTypes, onDatasourceA
   const canSubmit = selectedType && (selectedType !== "mangools" || selectedDomain)
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
+    <Dialog open={open} onOpenChange={(open) => !loading && setOpen(open)}>
       <DialogTrigger asChild>
         <Button size="sm" variant="outline">
           <Plus className="mr-2 h-4 w-4" />
           Add Data Source
         </Button>
       </DialogTrigger>
-      <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
+      <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto" showCloseButton={!loading} onInteractOutside={(e) => loading && e.preventDefault()} onEscapeKeyDown={(e) => loading && e.preventDefault()}>
         <form onSubmit={handleSubmit}>
           <DialogHeader>
             <DialogTitle>Add Data Source</DialogTitle>
@@ -193,7 +193,7 @@ export function CreateDatasourceDialog({ projectId, existingTypes, onDatasourceA
                 onValueChange={(value) => setSelectedType(value as "mangools" | "semrush")}
                 disabled={loading || fetchingDomains}
               >
-                <SelectTrigger id="type">
+                <SelectTrigger id="type" className="cursor-pointer">
                   <SelectValue placeholder="Select a data source type" />
                 </SelectTrigger>
                 <SelectContent>

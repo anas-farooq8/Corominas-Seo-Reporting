@@ -5,7 +5,8 @@ import type { ClientWithProjects } from "@/lib/supabase/types"
 import { CreateClientDialog } from "@/components/clients/create-client-dialog"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { ClientSearch } from "@/components/clients/client-search"
-import { Loader2 } from "lucide-react"
+import { LoadingSpinner } from "@/components/ui/loading-spinner"
+import { ErrorDisplay } from "@/components/ui/error-display"
 
 export default function ClientsPage() {
   const [clients, setClients] = useState<ClientWithProjects[]>([])
@@ -62,12 +63,13 @@ export default function ClientsPage() {
         </CardHeader>
         <CardContent>
           {loading ? (
-            <div className="flex items-center justify-center py-8">
-              <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-              <span className="ml-2 text-sm text-muted-foreground">Loading clients...</span>
-            </div>
+            <LoadingSpinner message="Loading clients..." variant="card" />
           ) : error ? (
-            <div className="text-center py-8 text-sm text-destructive">{error}</div>
+            <ErrorDisplay 
+              title="Failed to Load Clients" 
+              message={error}
+              variant="card"
+            />
           ) : (
             <ClientSearch
               clients={clients}

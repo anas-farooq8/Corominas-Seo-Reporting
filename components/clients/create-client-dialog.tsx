@@ -14,8 +14,9 @@ import {
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
+import { Alert, AlertDescription } from "@/components/ui/alert"
 import { createClient } from "@/lib/actions/clients"
-import { Plus, Loader2 } from "lucide-react"
+import { Plus, Loader2, AlertCircle } from "lucide-react"
 import type { Client } from "@/lib/supabase/types"
 
 interface CreateClientDialogProps {
@@ -25,6 +26,7 @@ interface CreateClientDialogProps {
 export function CreateClientDialog({ onClientAdded }: CreateClientDialogProps) {
   const [open, setOpen] = useState(false)
   const [loading, setLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
   const [formData, setFormData] = useState({
     name: "",
     email: "",
@@ -34,6 +36,7 @@ export function CreateClientDialog({ onClientAdded }: CreateClientDialogProps) {
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     setLoading(true)
+    setError(null)
 
     try {
       const client = await createClient({
@@ -47,21 +50,21 @@ export function CreateClientDialog({ onClientAdded }: CreateClientDialogProps) {
       onClientAdded?.(client)
     } catch (error) {
       console.error("Error creating client:", error)
-      alert("Failed to create client. Please try again.")
+      setError(error instanceof Error ? error.message : "Failed to create client. Please try again.")
     } finally {
       setLoading(false)
     }
   }
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
+    <Dialog open={open} onOpenChange={(open) => !loading && setOpen(open)}>
       <DialogTrigger asChild>
         <Button className="w-full sm:w-auto">
           <Plus className="mr-2 h-4 w-4" />
           Add Client
         </Button>
       </DialogTrigger>
-      <DialogContent className="sm:max-w-[425px]">
+      <DialogContent className="sm:max-w-[425px]" showCloseButton={!loading} onInteractOutside={(e) => loading && e.preventDefault()} onEscapeKeyDown={(e) => loading && e.preventDefault()}>
         <form onSubmit={handleSubmit}>
           <DialogHeader>
             <DialogTitle>Add New Client</DialogTitle>
@@ -104,6 +107,12 @@ export function CreateClientDialog({ onClientAdded }: CreateClientDialogProps) {
                 disabled={loading}
               />
             </div>
+            {error && (
+              <Alert variant="destructive">
+                <AlertCircle className="h-4 w-4" />
+                <AlertDescription>{error}</AlertDescription>
+              </Alert>
+            )}
           </div>
           <DialogFooter>
             <Button type="button" variant="outline" onClick={() => setOpen(false)} disabled={loading}>

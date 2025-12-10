@@ -7,7 +7,9 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button"
 import { CreateProjectDialog } from "@/components/projects/create-project-dialog"
 import { ProjectsList } from "@/components/projects/projects-list"
-import { Loader2, ArrowLeft } from "lucide-react"
+import { LoadingSpinner } from "@/components/ui/loading-spinner"
+import { ErrorDisplay } from "@/components/ui/error-display"
+import { ArrowLeft } from "lucide-react"
 
 export default function ClientDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const router = useRouter()
@@ -47,28 +49,6 @@ export default function ClientDetailPage({ params }: { params: Promise<{ id: str
     setProjects((prev) => prev.filter((p) => p.id !== projectId))
   }
 
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center h-[calc(100vh-4rem)]">
-        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-      </div>
-    )
-  }
-
-  if (error || !client) {
-    return (
-      <div className="flex-1 space-y-6 p-4 md:p-8">
-        <div className="text-center py-12">
-          <p className="text-destructive mb-4">{error || "Client not found"}</p>
-          <Button variant="outline" onClick={() => router.push("/dashboard/clients")}>
-            <ArrowLeft className="mr-2 h-4 w-4" />
-            Back to Clients
-          </Button>
-        </div>
-      </div>
-    )
-  }
-
   return (
     <div className="flex-1 space-y-6 p-4 md:p-8">
       <div className="space-y-4">
@@ -77,31 +57,58 @@ export default function ClientDetailPage({ params }: { params: Promise<{ id: str
           Back to Clients
         </Button>
 
-        <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
+        {loading ? (
           <div>
-            <h1 className="text-2xl md:text-3xl font-bold text-foreground">{client.name}</h1>
-            <p className="text-sm md:text-base text-muted-foreground mt-1">{client.email}</p>
-            {client.notes && (
-              <p className="text-sm text-muted-foreground mt-2 max-w-2xl">{client.notes}</p>
-            )}
+            <h1 className="text-2xl md:text-3xl font-bold text-foreground">Loading...</h1>
+            <p className="text-sm md:text-base text-muted-foreground mt-1">Please wait</p>
           </div>
-          <CreateProjectDialog clientId={client.id} onProjectAdded={handleProjectAdded} />
-        </div>
+        ) : error || !client ? (
+          <div>
+            <h1 className="text-2xl md:text-3xl font-bold text-foreground">Client Not Found</h1>
+            <p className="text-sm md:text-base text-muted-foreground mt-1">Unable to load client details</p>
+          </div>
+        ) : (
+          <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
+            <div>
+              <h1 className="text-2xl md:text-3xl font-bold text-foreground">{client.name}</h1>
+              <p className="text-sm md:text-base text-muted-foreground mt-1">{client.email}</p>
+              {client.notes && (
+                <p className="text-sm text-muted-foreground mt-2 max-w-2xl">{client.notes}</p>
+              )}
+            </div>
+            <CreateProjectDialog clientId={client.id} onProjectAdded={handleProjectAdded} />
+          </div>
+        )}
       </div>
 
       <Card>
         <CardHeader>
           <CardTitle>Projects</CardTitle>
           <CardDescription>
-            Manage projects for {client.name}
+            {loading ? "Loading projects..." : error || !client ? "Unable to load projects" : `Manage projects for ${client.name}`}
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <ProjectsList
-            projects={projects}
-            onProjectUpdated={handleProjectUpdated}
-            onProjectDeleted={handleProjectDeleted}
-          />
+          {loading ? (
+            <LoadingSpinner message="Loading client details..." variant="card" />
+          ) : error || !client ? (
+            <ErrorDisplay 
+              title="Failed to Load Client" 
+              message={error || "The client you're looking for doesn't exist or you don't have access to it."}
+              variant="card"
+              action={{
+                label: "Back to Clients",
+                onClick: () => router.push("/dashboard/clients"),
+                icon: <ArrowLeft className="mr-2 h-4 w-4" />
+              }}
+            />
+          ) : (
+            <ProjectsList
+              projects={projects}
+              onProjectUpdated={handleProjectUpdated}
+              onProjectDeleted={handleProjectDeleted}
+            />
+          )}
         </CardContent>
       </Card>
     </div>

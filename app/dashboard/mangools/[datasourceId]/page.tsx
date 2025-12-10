@@ -3,7 +3,9 @@
 import { useState, useEffect, use } from "react"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
-import { Loader2, ArrowLeft, Calendar } from "lucide-react"
+import { LoadingSpinner } from "@/components/ui/loading-spinner"
+import { ErrorDisplay } from "@/components/ui/error-display"
+import { ArrowLeft, Calendar } from "lucide-react"
 import { TopKeywordsTable } from "@/components/mangools/top-keywords-table"
 import { TopWinnersTable } from "@/components/mangools/top-winners-table"
 import { NewRankingsTable } from "@/components/mangools/new-rankings-table"
@@ -41,28 +43,24 @@ export default function MangoolsDashboardPage({ params }: { params: Promise<{ da
   }
 
   if (loading) {
-    return (
-      <div className="flex items-center justify-center h-[calc(100vh-4rem)]">
-        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-      </div>
-    )
+    return <LoadingSpinner message="Loading SEO dashboard data..." />
   }
 
   if (error || !data) {
     return (
-      <div className="flex-1 space-y-6 p-4 md:p-8">
-        <div className="flex items-center gap-4">
-          <Button variant="ghost" size="icon" onClick={() => router.back()}>
-            <ArrowLeft className="h-5 w-5" />
-          </Button>
-          <div>
-            <h1 className="text-2xl md:text-3xl font-bold text-foreground">Error</h1>
-          </div>
-        </div>
-        <div className="p-4 border border-red-200 bg-red-50 rounded-lg">
-          <p className="text-red-600">{error || "Failed to load dashboard data"}</p>
-        </div>
-      </div>
+      <ErrorDisplay
+        title="Dashboard Error"
+        message={error || "Failed to load dashboard data. Please try again later."}
+        secondaryAction={{
+          label: "Go Back",
+          onClick: () => router.back(),
+          icon: <ArrowLeft className="mr-2 h-4 w-4" />
+        }}
+        action={{
+          label: "Try Again",
+          onClick: () => fetchDashboardData()
+        }}
+      />
     )
   }
 

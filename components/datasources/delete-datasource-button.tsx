@@ -13,8 +13,9 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
+import { Alert, AlertDescription } from "@/components/ui/alert"
 import { deleteDatasource } from "@/lib/actions/datasources"
-import { Trash2, Loader2 } from "lucide-react"
+import { Trash2, Loader2, AlertCircle } from "lucide-react"
 
 interface DeleteDatasourceButtonProps {
   datasourceId: string
@@ -24,15 +25,17 @@ interface DeleteDatasourceButtonProps {
 
 export function DeleteDatasourceButton({ datasourceId, datasourceType, onDatasourceDeleted }: DeleteDatasourceButtonProps) {
   const [loading, setLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
 
   async function handleDelete() {
     setLoading(true)
+    setError(null)
     try {
       await deleteDatasource(datasourceId)
       onDatasourceDeleted?.()
     } catch (error) {
       console.error("Error deleting datasource:", error)
-      alert("Failed to delete datasource. Please try again.")
+      setError(error instanceof Error ? error.message : "Failed to delete datasource. Please try again.")
     } finally {
       setLoading(false)
     }
@@ -60,10 +63,27 @@ export function DeleteDatasourceButton({ datasourceId, datasourceType, onDatasou
             This action cannot be undone.
           </AlertDialogDescription>
         </AlertDialogHeader>
+        {error && (
+          <Alert variant="destructive">
+            <AlertCircle className="h-4 w-4" />
+            <AlertDescription>{error}</AlertDescription>
+          </Alert>
+        )}
         <AlertDialogFooter>
-          <AlertDialogCancel>Cancel</AlertDialogCancel>
-          <AlertDialogAction onClick={handleDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
-            Delete Data Source
+          <AlertDialogCancel disabled={loading}>Cancel</AlertDialogCancel>
+          <AlertDialogAction 
+            onClick={handleDelete} 
+            disabled={loading}
+            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+          >
+            {loading ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Deleting...
+              </>
+            ) : (
+              "Delete Data Source"
+            )}
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>

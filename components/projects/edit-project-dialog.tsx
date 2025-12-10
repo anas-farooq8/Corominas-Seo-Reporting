@@ -14,8 +14,9 @@ import {
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
+import { Alert, AlertDescription } from "@/components/ui/alert"
 import { updateProject } from "@/lib/actions/projects"
-import { Pencil, Loader2 } from "lucide-react"
+import { Pencil, Loader2, AlertCircle } from "lucide-react"
 import type { Project } from "@/lib/supabase/types"
 
 interface EditProjectDialogProps {
@@ -26,6 +27,7 @@ interface EditProjectDialogProps {
 export function EditProjectDialog({ project, onProjectUpdated }: EditProjectDialogProps) {
   const [open, setOpen] = useState(false)
   const [loading, setLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
   const [formData, setFormData] = useState({
     name: project.name,
     details: project.details || "",
@@ -34,6 +36,7 @@ export function EditProjectDialog({ project, onProjectUpdated }: EditProjectDial
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     setLoading(true)
+    setError(null)
 
     try {
       const updatedProject = await updateProject(project.id, {
@@ -45,20 +48,20 @@ export function EditProjectDialog({ project, onProjectUpdated }: EditProjectDial
       onProjectUpdated?.(updatedProject)
     } catch (error) {
       console.error("Error updating project:", error)
-      alert("Failed to update project. Please try again.")
+      setError(error instanceof Error ? error.message : "Failed to update project. Please try again.")
     } finally {
       setLoading(false)
     }
   }
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
+    <Dialog open={open} onOpenChange={(open) => !loading && setOpen(open)}>
       <DialogTrigger asChild>
         <Button variant="ghost" size="sm">
           <Pencil className="h-4 w-4" />
         </Button>
       </DialogTrigger>
-      <DialogContent className="sm:max-w-[425px]">
+      <DialogContent className="sm:max-w-[425px]" showCloseButton={!loading} onInteractOutside={(e) => loading && e.preventDefault()} onEscapeKeyDown={(e) => loading && e.preventDefault()}>
         <form onSubmit={handleSubmit}>
           <DialogHeader>
             <DialogTitle>Edit Project</DialogTitle>
@@ -89,6 +92,12 @@ export function EditProjectDialog({ project, onProjectUpdated }: EditProjectDial
                 disabled={loading}
               />
             </div>
+            {error && (
+              <Alert variant="destructive">
+                <AlertCircle className="h-4 w-4" />
+                <AlertDescription>{error}</AlertDescription>
+              </Alert>
+            )}
           </div>
           <DialogFooter>
             <Button type="button" variant="outline" onClick={() => setOpen(false)} disabled={loading}>

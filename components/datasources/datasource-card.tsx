@@ -3,10 +3,10 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { DeleteDatasourceButton } from "./delete-datasource-button"
 import { DomainsSection } from "./domains-section"
-import type { DatasourceWithDomains } from "@/lib/supabase/types"
+import type { getDataSourcesWithRespectiveData } from "@/lib/supabase/types"
 
 interface DatasourceCardProps {
-  datasource: DatasourceWithDomains
+  datasource: getDataSourcesWithRespectiveData
   onDatasourceDeleted?: () => void
   onDomainAttached?: () => void
 }
@@ -21,7 +21,7 @@ export function DatasourceCard({
 
   return (
     <Card>
-      <CardHeader>
+      <CardHeader className="pb-0">
         <div className="flex items-start justify-between">
           <div className="flex-1">
             <CardTitle className="text-xl">{typeLabel}</CardTitle>
@@ -37,7 +37,7 @@ export function DatasourceCard({
           />
         </div>
       </CardHeader>
-      <CardContent>
+      <CardContent className="pt-0">
         <DomainsSection
           datasource={datasource}
           hasDomains={hasDomains}
