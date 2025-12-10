@@ -1,7 +1,25 @@
-# Add directories or file patterns to ignore during indexing (e.g. foo/ or *.csv)
-.vscode
-.next
-node_modules
-public
-package-lock.json
-package.json
+# Editor folders
+.vscode/
+.idea/
+
+# Build output
+.next/
+out/
+dist/
+build/
+
+# Dependencies
+node_modules/
+
+# Public assets (optional — if you want to index them remove this)
+public/
+
+# Environment files
+.env
+.env*.local
+
+# Logs
+*.log
+
+# Misc
+.DS_Store
