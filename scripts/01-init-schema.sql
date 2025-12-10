@@ -43,16 +43,11 @@ CREATE TABLE IF NOT EXISTS datasources (
 -- ============================================
 -- MANGOOLS DOMAINS TABLE
 -- ============================================
-CREATE TABLE IF NOT EXISTS mangools_domains (
+CREATE TABLE mangools_domains (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   datasource_id UUID NOT NULL REFERENCES datasources(id) ON DELETE CASCADE,
-  mangools_id TEXT NOT NULL,
-  domain TEXT NOT NULL UNIQUE,
-  location_code TEXT,
-  location_label TEXT,
-  platform_id INTEGER,
-  keywords_count INTEGER DEFAULT 0,
-  mangools_created_at BIGINT,
+  tracking_id TEXT NOT NULL UNIQUE,  -- This is the _id from Mangools API
+  domain TEXT NOT NULL,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
@@ -64,6 +59,7 @@ CREATE INDEX IF NOT EXISTS idx_projects_client_id ON projects(client_id);
 CREATE INDEX IF NOT EXISTS idx_datasources_project_id ON datasources(project_id);
 CREATE INDEX IF NOT EXISTS idx_datasources_type ON datasources(type);
 CREATE INDEX IF NOT EXISTS idx_mangools_domains_datasource_id ON mangools_domains(datasource_id);
+CREATE INDEX IF NOT EXISTS idx_mangools_domains_tracking_id ON mangools_domains(tracking_id);
 
 -- ============================================
 -- ROW LEVEL SECURITY (RLS)
