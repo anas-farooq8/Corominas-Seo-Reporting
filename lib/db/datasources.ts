@@ -136,29 +136,20 @@ export async function getDomainsByDatasourceId(datasourceId: string): Promise<Ma
 
 /**
  * Attach a domain to a datasource
+ * Only stores domain name and tracking_id
  */
 export async function attachDomain(
   datasourceId: string,
-  mangoolsId: string,
-  domain: string,
-  locationCode: string | null,
-  locationLabel: string | null,
-  platformId: number | null,
-  keywordsCount: number,
-  mangoolsCreatedAt: number | null
+  trackingId: string,
+  domain: string
 ): Promise<MangoolsDomain> {
   const supabase = await createClient()
   const { data, error } = await supabase
     .from("mangools_domains")
     .insert({
       datasource_id: datasourceId,
-      mangools_id: mangoolsId,
-      domain,
-      location_code: locationCode,
-      location_label: locationLabel,
-      platform_id: platformId,
-      keywords_count: keywordsCount,
-      mangools_created_at: mangoolsCreatedAt
+      tracking_id: trackingId,
+      domain
     })
     .select()
     .single()
@@ -167,18 +158,8 @@ export async function attachDomain(
   return data
 }
 
-/**
- * Detach a domain from a datasource
- */
-export async function detachDomain(domainId: string): Promise<void> {
-  const supabase = await createClient()
-  const { error } = await supabase
-    .from("mangools_domains")
-    .delete()
-    .eq("id", domainId)
-
-  if (error) throw error
-}
+// Note: Domains are automatically deleted when datasource is deleted (CASCADE)
+// No manual detach function needed
 
 /**
  * Get all attached domains

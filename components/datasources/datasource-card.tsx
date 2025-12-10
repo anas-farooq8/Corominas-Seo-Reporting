@@ -9,14 +9,12 @@ interface DatasourceCardProps {
   datasource: DatasourceWithDomains
   onDatasourceDeleted?: () => void
   onDomainAttached?: () => void
-  onDomainDetached?: () => void
 }
 
 export function DatasourceCard({
   datasource,
   onDatasourceDeleted,
   onDomainAttached,
-  onDomainDetached,
 }: DatasourceCardProps) {
   const typeLabel = datasource.type.charAt(0).toUpperCase() + datasource.type.slice(1)
   const hasDomains = (datasource.domain_count || 0) > 0
@@ -44,7 +42,6 @@ export function DatasourceCard({
           datasource={datasource}
           hasDomains={hasDomains}
           onDomainAttached={onDomainAttached}
-          onDomainDetached={onDomainDetached}
         />
       </CardContent>
     </Card>

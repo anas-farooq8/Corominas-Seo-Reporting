@@ -31,13 +31,8 @@ export interface Datasource {
 export interface MangoolsDomain {
   id: string
   datasource_id: string
-  mangools_id: string
+  tracking_id: string  // The _id from Mangools API (used for tracking)
   domain: string
-  location_code: string | null
-  location_label: string | null
-  platform_id: number | null
-  keywords_count: number
-  mangools_created_at: number | null
   created_at: string
   updated_at: string
 }

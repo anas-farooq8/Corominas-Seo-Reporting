@@ -1,14 +1,17 @@
 "use client"
 
 import type { MangoolsDomain } from "@/lib/supabase/types"
-import { Globe, MapPin, Key } from "lucide-react"
+import { Globe, Key, BarChart3 } from "lucide-react"
+import { Button } from "@/components/ui/button"
+import { useRouter } from "next/navigation"
 
 interface AttachedDomainsSectionProps {
   domains: MangoolsDomain[]
-  onDomainDetached?: () => void
+  datasourceId?: string
 }
 
-export function AttachedDomainsSection({ domains }: AttachedDomainsSectionProps) {
+export function AttachedDomainsSection({ domains, datasourceId }: AttachedDomainsSectionProps) {
+  const router = useRouter()
   if (domains.length === 0) {
     return null
   }
@@ -37,20 +40,23 @@ export function AttachedDomainsSection({ domains }: AttachedDomainsSectionProps)
             <div className="flex-1 min-w-0">
               <h4 className="font-semibold text-base truncate mb-2">{domain.domain}</h4>
               <div className="flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
-                {domain.location_label && (
-                  <div className="flex items-center gap-1.5">
-                    <MapPin className="h-3.5 w-3.5" />
-                    <span>{domain.location_label}</span>
-                  </div>
-                )}
-                {domain.keywords_count > 0 && (
-                  <div className="flex items-center gap-1.5">
-                    <Key className="h-3.5 w-3.5" />
-                    <span className="font-medium">{domain.keywords_count} keywords</span>
-                  </div>
-                )}
+                <div className="flex items-center gap-1.5">
+                  <Key className="h-3.5 w-3.5" />
+                  <span className="font-medium">Tracking ID: {domain.tracking_id}</span>
+                </div>
               </div>
             </div>
+            {datasourceId && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => router.push(`/dashboard/mangools/${datasourceId}`)}
+                className="ml-auto"
+              >
+                <BarChart3 className="h-4 w-4 mr-2" />
+                View Dashboard
+              </Button>
+            )}
           </div>
         ))}
       </div>

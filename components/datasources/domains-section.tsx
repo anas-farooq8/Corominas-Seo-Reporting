@@ -9,14 +9,12 @@ interface DomainsSectionProps {
   datasource: DatasourceWithDomains
   hasDomains: boolean
   onDomainAttached?: () => void
-  onDomainDetached?: () => void
 }
 
 export function DomainsSection({
   datasource,
   hasDomains,
   onDomainAttached,
-  onDomainDetached,
 }: DomainsSectionProps) {
   // Only show domain attachment options for Mangools (Semrush coming soon)
   if (datasource.type !== "mangools") {
@@ -41,7 +39,7 @@ export function DomainsSection({
       {hasDomains && datasource.mangools_domains && (
         <AttachedDomainsSection
           domains={datasource.mangools_domains}
-          onDomainDetached={onDomainDetached}
+          datasourceId={datasource.id}
         />
       )}
     </div>

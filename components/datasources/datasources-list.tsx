@@ -44,7 +44,6 @@ export function DatasourcesList({ projectId, datasources, onDatasourcesChange }:
               datasource={datasource}
               onDatasourceDeleted={onDatasourcesChange}
               onDomainAttached={onDatasourcesChange}
-              onDomainDetached={onDatasourcesChange}
             />
           ))}
         </div>

@@ -140,13 +140,8 @@ export function CreateDatasourceDialog({ projectId, existingTypes, onDatasourceA
         if (domain) {
           await attachDomain(
             datasource.id,
-            domain._id,
-            domain.domain,
-            domain.location?.code ?? null,
-            domain.location?.label ?? null,
-            domain.platform_id ?? null,
-            domain.count ?? 0,
-            domain.created_at ?? null
+            domain._id,  // tracking_id
+            domain.domain
           )
         }
       }

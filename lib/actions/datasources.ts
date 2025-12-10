@@ -75,27 +75,18 @@ export async function getDomainsByDatasourceId(datasourceId: string): Promise<Ma
 
 /**
  * Attach a domain to a datasource
+ * Only stores domain name and tracking_id
  */
 export async function attachDomain(
   datasourceId: string,
-  mangoolsId: string,
-  domain: string,
-  locationCode: string | null,
-  locationLabel: string | null,
-  platformId: number | null,
-  keywordsCount: number,
-  mangoolsCreatedAt: number | null
+  trackingId: string,
+  domain: string
 ): Promise<MangoolsDomain> {
   try {
     const attachedDomain = await db.attachDomain(
       datasourceId,
-      mangoolsId,
-      domain,
-      locationCode,
-      locationLabel,
-      platformId,
-      keywordsCount,
-      mangoolsCreatedAt
+      trackingId,
+      domain
     )
     
     const datasource = await db.getDatasourceById(datasourceId)
@@ -110,33 +101,7 @@ export async function attachDomain(
   }
 }
 
-/**
- * Detach a domain from a datasource
- */
-export async function detachDomain(domainId: string): Promise<void> {
-  try {
-    // Get the domain to find its datasource
-    const supabase = await import("@/lib/supabase/server").then(m => m.createClient())
-    const client = await supabase
-    const { data: domain } = await client
-      .from("mangools_domains")
-      .select("datasource_id")
-      .eq("id", domainId)
-      .single()
-
-    await db.detachDomain(domainId)
-    
-    if (domain) {
-      const datasource = await db.getDatasourceById(domain.datasource_id)
-      if (datasource) {
-        revalidatePath(`/dashboard/projects/${datasource.project_id}`)
-      }
-    }
-  } catch (error) {
-    console.error("Error detaching domain:", error)
-    throw new Error("Failed to detach domain")
-  }
-}
+// Note: No detach function - domains are automatically deleted when datasource is deleted (CASCADE)
 
 /**
  * Get all attached domains

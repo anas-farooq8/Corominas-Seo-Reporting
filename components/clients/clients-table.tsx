@@ -47,7 +47,7 @@ export function ClientsTable({ clients, onClientUpdated, onClientDeleted, isSear
               <TableCell className="font-medium">{client.name}</TableCell>
               <TableCell className="hidden md:table-cell">{client.email}</TableCell>
               <TableCell className="hidden lg:table-cell max-w-xs truncate">
-                {client.notes || <span className="text-muted-foreground">—</span>}
+                {client.notes || <span className="text-muted-foreground">N/A</span>}
               </TableCell>
               <TableCell className="text-center">
                 <Badge variant="secondary">{client.project_count || 0}</Badge>
