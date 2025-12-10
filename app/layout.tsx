@@ -17,19 +17,21 @@ export const metadata: Metadata = {
   icons: {
     icon: [
       {
-        url: '/icon-light-32x32.png',
-        media: '(prefers-color-scheme: light)',
+        url: 'https://www.google.com/s2/favicons?domain=corominas-consulting.de&sz=32',
+        sizes: '32x32',
+        type: 'image/png',
       },
       {
-        url: '/icon-dark-32x32.png',
-        media: '(prefers-color-scheme: dark)',
-      },
-      {
-        url: '/icon.svg',
-        type: 'image/svg+xml',
+        url: 'https://www.google.com/s2/favicons?domain=corominas-consulting.de&sz=64',
+        sizes: '64x64',
+        type: 'image/png',
       },
     ],
-    apple: '/apple-icon.png',
+    apple: {
+      url: 'https://www.google.com/s2/favicons?domain=corominas-consulting.de&sz=180',
+      sizes: '180x180',
+      type: 'image/png',
+    },
   },
 }
 
