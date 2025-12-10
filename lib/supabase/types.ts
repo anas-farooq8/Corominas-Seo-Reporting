@@ -67,40 +67,9 @@ export interface MangoolsApiDomain {
   _id: string
   domain: string
   location: {
-    _id: number
-    code: string
     label: string
   }
-  platform_id: number
   count: number
-  tracked_keyword_ids: string[]
-  tracking_config: {
-    place_id: string | null
-    ludocid: string | null
-    name: string | null
-    address: string | null
-    forced_place_id: string | null
-  }
-  share_token: string
-  created_at: number
-  is_deleted: boolean
-  reports_active: [any, any]
-  stats?: {
-    timeframes: Record<string, {
-      performance_index: number
-      visibility_index: number
-      performance_total: number
-      estimated_visits: number
-      rank_distribution: {
-        "1": number
-        "3": number
-        "10": number
-        "20": number
-        "100": number
-        "rest": number
-      }
-    }>
-  }
 }
 
 // ============================================

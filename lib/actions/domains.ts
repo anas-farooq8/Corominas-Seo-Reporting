@@ -1,7 +1,7 @@
 "use server"
 
 import { createClient } from "@/lib/supabase/server"
-import { fetchMangoolsDomains, parseMangoolsDomainForDb } from "@/lib/mangools/api"
+import { fetchMangoolsDomains } from "@/lib/mangools/api"
 import { z } from "zod"
 import { revalidatePath } from "next/cache"
 
@@ -29,9 +29,6 @@ export async function attachDomain(input: AttachDomainInput) {
       return { success: false, error: "Domain not found in Mangools" }
     }
 
-    // Parse and normalize the domain data (only tracking_id and domain)
-    const parsedDomain = parseMangoolsDomainForDb(foundDomain)
-
     // Insert into database
     const supabase = await createClient()
     const { data, error } = await supabase
@@ -39,8 +36,8 @@ export async function attachDomain(input: AttachDomainInput) {
       .insert([
         {
           datasource_id: validated.datasource_id,
-          tracking_id: parsedDomain.tracking_id,
-          domain: parsedDomain.domain,
+          tracking_id: foundDomain._id,
+          domain: foundDomain.domain,
         },
       ])
       .select()

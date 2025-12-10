@@ -98,7 +98,12 @@ export const fetchMangoolsDomains = cache(async (): Promise<MangoolsApiDomain[]>
   }
 
   try {
-    const response = await fetch(`${MANGOOLS_API_BASE}/serpwatcher/trackings`, {
+    const url = `${MANGOOLS_API_BASE}/serpwatcher/trackings`
+    const params = new URLSearchParams({
+      is_with_deleted: "false"
+    })
+
+    const response = await fetch(`${url}?${params.toString()}`, {
       method: "GET",
       headers: {
         "x-access-token": accessToken,
@@ -115,26 +120,13 @@ export const fetchMangoolsDomains = cache(async (): Promise<MangoolsApiDomain[]>
 
     const data = (await response.json()) as MangoolsApiDomain[]
     
-    // Filter out deleted domains
-    const activeDomains = data.filter((domain) => !domain.is_deleted)
-    
-    return activeDomains
+    return data
   } catch (error) {
     console.error("[Mangools API] Fetch failed:", error)
     throw error
   }
 })
 
-/**
- * Parse Mangools domain data for storage
- * Extracts only the tracking_id and domain name
- */
-export function parseMangoolsDomainForDb(domain: MangoolsApiDomain) {
-  return {
-    tracking_id: domain._id,
-    domain: domain.domain,
-  }
-}
 
 /**
  * Fetch tracking detail for a specific domain

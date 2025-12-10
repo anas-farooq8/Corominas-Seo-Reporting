@@ -47,20 +47,7 @@ export function compareMonthlyKeywords(
   // Process each keyword from month B (current month)
   monthB.keywords.forEach(kwB => {
     const kwA = monthAMap.get(kwB._id)
-    
-    // Debug specific keyword from raw API data
-    if (kwB._id === '691c3ec0f265bb5eded2526d') {
-      console.log(`\n[DEBUG - RAW API DATA] Keyword ID: 691c3ec0f265bb5eded2526d`)
-      console.log(`  Month B (current):`, JSON.stringify({
-        rank: kwB.rank,
-        rank_change: kwB.rank_change,
-      }, null, 2))
-      console.log(`  Month A (previous):`, kwA ? JSON.stringify({
-        rank: kwA.rank,
-        rank_change: kwA.rank_change,
-      }, null, 2) : 'NOT FOUND')
-    }
-    
+
     const rankB = kwB.rank?.last ?? null
     const rankA = kwA?.rank?.last ?? null
     
@@ -100,30 +87,6 @@ export function compareMonthlyKeywords(
     
     comparisons.push(comparison)
   })
-  
-  // Debug: Log keywords with null rank_change values
-  const nullRankChangeA = comparisons.filter(kw => kw.rankChangeA === null)
-  const nullRankChangeB = comparisons.filter(kw => kw.rankChangeB === null)
-  
-  if (nullRankChangeA.length > 0) {
-    console.log(`\n[DEBUG - NULL RANK_CHANGE] Found ${nullRankChangeA.length} keywords with null rankChangeA:`)
-    nullRankChangeA.slice(0, 5).forEach(kw => {
-      console.log(`  - "${kw.keyword}" (${kw._id}): rankA=${kw.rankA}, rankChangeA=null`)
-    })
-    if (nullRankChangeA.length > 5) {
-      console.log(`  ... and ${nullRankChangeA.length - 5} more`)
-    }
-  }
-  
-  if (nullRankChangeB.length > 0) {
-    console.log(`\n[DEBUG - NULL RANK_CHANGE] Found ${nullRankChangeB.length} keywords with null rankChangeB:`)
-    nullRankChangeB.slice(0, 5).forEach(kw => {
-      console.log(`  - "${kw.keyword}" (${kw._id}): rankB=${kw.rankB}, rankChangeB=null`)
-    })
-    if (nullRankChangeB.length > 5) {
-      console.log(`  ... and ${nullRankChangeB.length - 5} more`)
-    }
-  }
   
   return comparisons
 }
