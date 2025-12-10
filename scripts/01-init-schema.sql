@@ -118,3 +118,4 @@ DROP TRIGGER IF EXISTS update_mangools_domains_updated_at ON mangools_domains;
 CREATE TRIGGER update_mangools_domains_updated_at
   BEFORE UPDATE ON mangools_domains
   FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
