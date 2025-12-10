@@ -6,21 +6,6 @@ import { createClient } from "@/lib/supabase/server"
 import type { Project, ProjectInput, ProjectWithDatasources } from "@/lib/supabase/types"
 
 /**
- * Get all projects for a client
- */
-export async function getProjectsByClientId(clientId: string): Promise<Project[]> {
-  const supabase = await createClient()
-  const { data, error } = await supabase
-    .from("projects")
-    .select("*")
-    .eq("client_id", clientId)
-    .order("created_at", { ascending: false })
-
-  if (error) throw error
-  return data || []
-}
-
-/**
  * Get all projects for a client with datasource count
  */
 export async function getProjectsWithDatasourceCount(clientId: string): Promise<ProjectWithDatasources[]> {
@@ -43,21 +28,6 @@ export async function getProjectsWithDatasourceCount(clientId: string): Promise<
     datasource_count: project.datasources?.length || 0,
     datasources: undefined
   }))
-}
-
-/**
- * Get a project by ID
- */
-export async function getProjectById(id: string): Promise<Project | null> {
-  const supabase = await createClient()
-  const { data, error } = await supabase
-    .from("projects")
-    .select("*")
-    .eq("id", id)
-    .single()
-
-  if (error) return null
-  return data
 }
 
 /**
@@ -135,13 +105,16 @@ export async function updateProject(id: string, input: Partial<ProjectInput>): P
 /**
  * Delete a project
  */
-export async function deleteProject(id: string): Promise<void> {
+export async function deleteProject(id: string): Promise<Project> {
   const supabase = await createClient()
-  const { error } = await supabase
+  const { data, error } = await supabase
     .from("projects")
     .delete()
     .eq("id", id)
+    .select()
+    .single()
 
   if (error) throw error
+  return data
 }
 

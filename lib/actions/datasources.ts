@@ -9,31 +9,10 @@ import * as db from "@/lib/db/datasources"
 import type { Datasource, DatasourceInput, MangoolsDomain } from "@/lib/supabase/types"
 
 /**
- * Get all datasources for a project
+ * Get all datasources for a project with their respective data (domains, etc.)
  */
-export async function getDatasourcesByProjectId(projectId: string) {
-  return await db.getDatasourcesByProjectId(projectId)
-}
-
-/**
- * Get all datasources for a project with domains
- */
-export async function getDatasourcesWithDomains(projectId: string) {
-  return await db.getDatasourcesWithDomains(projectId)
-}
-
-/**
- * Get a datasource by ID
- */
-export async function getDatasourceById(id: string) {
-  return await db.getDatasourceById(id)
-}
-
-/**
- * Get a datasource with domains
- */
-export async function getDatasourceWithDomains(id: string) {
-  return await db.getDatasourceWithDomains(id)
+export async function getDataSourcesWithRespectiveData(projectId: string) {
+  return await db.getDataSourcesWithRespectiveData(projectId)
 }
 
 /**
@@ -55,22 +34,13 @@ export async function createDatasource(input: DatasourceInput): Promise<Datasour
  */
 export async function deleteDatasource(id: string): Promise<void> {
   try {
-    const datasource = await db.getDatasourceById(id)
-    await db.deleteDatasource(id)
-    if (datasource) {
-      revalidatePath(`/dashboard/projects/${datasource.project_id}`)
-    }
+    // Delete returns the deleted datasource, so we get project_id in one call
+    const datasource = await db.deleteDatasource(id)
+    revalidatePath(`/dashboard/projects/${datasource.project_id}`)
   } catch (error) {
     console.error("Error deleting datasource:", error)
     throw new Error("Failed to delete datasource")
   }
-}
-
-/**
- * Get domains for a datasource
- */
-export async function getDomainsByDatasourceId(datasourceId: string): Promise<MangoolsDomain[]> {
-  return await db.getDomainsByDatasourceId(datasourceId)
 }
 
 /**
@@ -80,7 +50,8 @@ export async function getDomainsByDatasourceId(datasourceId: string): Promise<Ma
 export async function attachDomain(
   datasourceId: string,
   trackingId: string,
-  domain: string
+  domain: string,
+  projectId: string
 ): Promise<MangoolsDomain> {
   try {
     const attachedDomain = await db.attachDomain(
@@ -89,10 +60,8 @@ export async function attachDomain(
       domain
     )
     
-    const datasource = await db.getDatasourceById(datasourceId)
-    if (datasource) {
-      revalidatePath(`/dashboard/projects/${datasource.project_id}`)
-    }
+    // Use projectId parameter instead of making extra DB call
+    revalidatePath(`/dashboard/projects/${projectId}`)
     
     return attachedDomain
   } catch (error) {
@@ -101,18 +70,3 @@ export async function attachDomain(
   }
 }
 
-// Note: No detach function - domains are automatically deleted when datasource is deleted (CASCADE)
-
-/**
- * Get all attached domains
- */
-export async function getAllAttachedDomains(): Promise<MangoolsDomain[]> {
-  return await db.getAllAttachedDomains()
-}
-
-/**
- * Check if a datasource has any attached domains
- */
-export async function hasDatasourceAttachedDomains(datasourceId: string): Promise<boolean> {
-  return await db.hasDatasourceAttachedDomains(datasourceId)
-}

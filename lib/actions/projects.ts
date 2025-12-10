@@ -9,24 +9,10 @@ import * as db from "@/lib/db/projects"
 import type { Project, ProjectInput } from "@/lib/supabase/types"
 
 /**
- * Get all projects for a client
- */
-export async function getProjectsByClientId(clientId: string) {
-  return await db.getProjectsByClientId(clientId)
-}
-
-/**
  * Get all projects for a client with datasource count
  */
 export async function getProjectsWithDatasourceCount(clientId: string) {
   return await db.getProjectsWithDatasourceCount(clientId)
-}
-
-/**
- * Get a project by ID
- */
-export async function getProjectById(id: string) {
-  return await db.getProjectById(id)
 }
 
 /**
@@ -57,11 +43,11 @@ export async function createProject(input: ProjectInput): Promise<Project> {
 export async function updateProject(id: string, input: Partial<ProjectInput>): Promise<Project> {
   try {
     const project = await db.updateProject(id, input)
-    const existing = await db.getProjectById(id)
-    if (existing) {
-      revalidatePath(`/dashboard/clients/${existing.client_id}`)
-      revalidatePath(`/dashboard/projects/${id}`)
-    }
+    
+    // Use the returned project data instead of making another DB call
+    revalidatePath(`/dashboard/clients/${project.client_id}`)
+    revalidatePath(`/dashboard/projects/${id}`)
+    
     return project
   } catch (error) {
     console.error("Error updating project:", error)
@@ -74,15 +60,12 @@ export async function updateProject(id: string, input: Partial<ProjectInput>): P
  */
 export async function deleteProject(id: string): Promise<void> {
   try {
-    const project = await db.getProjectById(id)
-    await db.deleteProject(id)
-    if (project) {
-      revalidatePath(`/dashboard/clients/${project.client_id}`)
-    }
+    // Delete returns the deleted project, so we get client_id in one call
+    const project = await db.deleteProject(id)
+    revalidatePath(`/dashboard/clients/${project.client_id}`)
     revalidatePath("/dashboard")
   } catch (error) {
     console.error("Error deleting project:", error)
     throw new Error("Failed to delete project")
   }
 }
-

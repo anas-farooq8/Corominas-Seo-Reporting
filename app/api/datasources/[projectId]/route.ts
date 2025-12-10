@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server"
-import { getDatasourcesWithDomains } from "@/lib/actions/datasources"
+import { getDataSourcesWithRespectiveData } from "@/lib/actions/datasources"
 import { requireAuth } from "@/lib/api/auth"
 
 export async function GET(
@@ -9,7 +9,7 @@ export async function GET(
   try {
     await requireAuth()
     const { projectId } = await params
-    const datasources = await getDatasourcesWithDomains(projectId)
+    const datasources = await getDataSourcesWithRespectiveData(projectId)
     return NextResponse.json(datasources)
   } catch (error) {
     console.error("Error fetching datasources:", error)

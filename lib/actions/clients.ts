@@ -9,24 +9,10 @@ import * as db from "@/lib/db/clients"
 import type { Client, ClientInput } from "@/lib/supabase/types"
 
 /**
- * Get all clients
- */
-export async function getAllClients(): Promise<Client[]> {
-  return await db.getClients()
-}
-
-/**
  * Get all clients with project count
  */
 export async function getClientsWithProjectCount() {
   return await db.getClientsWithProjectCount()
-}
-
-/**
- * Get a client by ID
- */
-export async function getClientById(id: string) {
-  return await db.getClientById(id)
 }
 
 /**
@@ -77,4 +63,3 @@ export async function deleteClient(id: string): Promise<void> {
     throw new Error("Failed to delete client")
   }
 }
-

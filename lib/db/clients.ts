@@ -6,20 +6,6 @@ import { createClient } from "@/lib/supabase/server"
 import type { Client, ClientInput, ClientWithProjects } from "@/lib/supabase/types"
 
 /**
- * Get all clients
- */
-export async function getClients(): Promise<Client[]> {
-  const supabase = await createClient()
-  const { data, error } = await supabase
-    .from("clients")
-    .select("*")
-    .order("created_at", { ascending: false })
-
-  if (error) throw error
-  return data || []
-}
-
-/**
  * Get all clients with their project count
  */
 export async function getClientsWithProjectCount(): Promise<ClientWithProjects[]> {
@@ -41,21 +27,6 @@ export async function getClientsWithProjectCount(): Promise<ClientWithProjects[]
     project_count: client.projects?.length || 0,
     projects: undefined
   }))
-}
-
-/**
- * Get a client by ID
- */
-export async function getClientById(id: string): Promise<Client | null> {
-  const supabase = await createClient()
-  const { data, error } = await supabase
-    .from("clients")
-    .select("*")
-    .eq("id", id)
-    .single()
-
-  if (error) return null
-  return data
 }
 
 /**
@@ -144,4 +115,3 @@ export async function deleteClient(id: string): Promise<void> {
 
   if (error) throw error
 }
-

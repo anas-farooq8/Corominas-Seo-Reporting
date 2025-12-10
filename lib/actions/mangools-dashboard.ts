@@ -26,8 +26,8 @@ export interface MangoolsDashboardData {
     monthAEnd: string
     monthBStart: string
     monthBEnd: string
-    monthAName: string // e.g., "Oct 2024"
-    monthBName: string // e.g., "Nov 2024"
+    monthAName: string // e.g., "Oct Year"
+    monthBName: string // e.g., "Nov Year"
   }
   topKeywords: KeywordComparison[]
   topWinners: KeywordComparison[]

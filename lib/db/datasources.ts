@@ -7,28 +7,13 @@ import type {
   Datasource, 
   DatasourceInput, 
   MangoolsDomain, 
-  DatasourceWithDomains 
+  getDataSourcesWithRespectiveData 
 } from "@/lib/supabase/types"
 
 /**
- * Get all datasources for a project
+ * Get all datasources for a project with their respective data (domains, etc.)
  */
-export async function getDatasourcesByProjectId(projectId: string): Promise<Datasource[]> {
-  const supabase = await createClient()
-  const { data, error } = await supabase
-    .from("datasources")
-    .select("*")
-    .eq("project_id", projectId)
-    .order("created_at", { ascending: false })
-
-  if (error) throw error
-  return data || []
-}
-
-/**
- * Get all datasources for a project with their domains
- */
-export async function getDatasourcesWithDomains(projectId: string): Promise<DatasourceWithDomains[]> {
+export async function getDataSourcesWithRespectiveData(projectId: string): Promise<getDataSourcesWithRespectiveData[]> {
   const supabase = await createClient()
   const { data, error } = await supabase
     .from("datasources")
@@ -47,45 +32,6 @@ export async function getDatasourcesWithDomains(projectId: string): Promise<Data
     ...datasource,
     domain_count: datasource.mangools_domains?.length || 0
   }))
-}
-
-/**
- * Get a datasource by ID
- */
-export async function getDatasourceById(id: string): Promise<Datasource | null> {
-  const supabase = await createClient()
-  const { data, error } = await supabase
-    .from("datasources")
-    .select("*")
-    .eq("id", id)
-    .single()
-
-  if (error) return null
-  return data
-}
-
-/**
- * Get a datasource by ID with domains
- */
-export async function getDatasourceWithDomains(id: string): Promise<DatasourceWithDomains | null> {
-  const supabase = await createClient()
-  const { data, error } = await supabase
-    .from("datasources")
-    .select(`
-      *,
-      mangools_domains (
-        *
-      )
-    `)
-    .eq("id", id)
-    .single()
-
-  if (error) return null
-  
-  return {
-    ...data,
-    domain_count: data.mangools_domains?.length || 0
-  }
 }
 
 /**
@@ -109,29 +55,17 @@ export async function createDatasource(input: DatasourceInput): Promise<Datasour
 /**
  * Delete a datasource
  */
-export async function deleteDatasource(id: string): Promise<void> {
+export async function deleteDatasource(id: string): Promise<Datasource> {
   const supabase = await createClient()
-  const { error } = await supabase
+  const { data, error } = await supabase
     .from("datasources")
     .delete()
     .eq("id", id)
+    .select()
+    .single()
 
   if (error) throw error
-}
-
-/**
- * Get domains for a datasource
- */
-export async function getDomainsByDatasourceId(datasourceId: string): Promise<MangoolsDomain[]> {
-  const supabase = await createClient()
-  const { data, error } = await supabase
-    .from("mangools_domains")
-    .select("*")
-    .eq("datasource_id", datasourceId)
-    .order("created_at", { ascending: false })
-
-  if (error) throw error
-  return data || []
+  return data
 }
 
 /**
@@ -156,35 +90,4 @@ export async function attachDomain(
 
   if (error) throw error
   return data
-}
-
-// Note: Domains are automatically deleted when datasource is deleted (CASCADE)
-// No manual detach function needed
-
-/**
- * Get all attached domains
- */
-export async function getAllAttachedDomains(): Promise<MangoolsDomain[]> {
-  const supabase = await createClient()
-  const { data, error } = await supabase
-    .from("mangools_domains")
-    .select("*")
-    .order("created_at", { ascending: false })
-
-  if (error) throw error
-  return data || []
-}
-
-/**
- * Check if a datasource has any attached domains
- */
-export async function hasDatasourceAttachedDomains(datasourceId: string): Promise<boolean> {
-  const supabase = await createClient()
-  const { count, error } = await supabase
-    .from("mangools_domains")
-    .select("*", { count: "exact", head: true })
-    .eq("datasource_id", datasourceId)
-
-  if (error) return false
-  return (count || 0) > 0
 }

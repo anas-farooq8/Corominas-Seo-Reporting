@@ -54,7 +54,7 @@ export interface ProjectWithDatasources extends Project {
   datasource_count?: number
 }
 
-export interface DatasourceWithDomains extends Datasource {
+export interface getDataSourcesWithRespectiveData extends Datasource {
   mangools_domains?: MangoolsDomain[]
   domain_count?: number
 }
