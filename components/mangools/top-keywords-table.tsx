@@ -137,9 +137,15 @@ export function TopKeywordsTable({ keywords, monthAName, monthBName }: TopKeywor
       if (aValue === null) return 1
       if (bValue === null) return -1
 
+      // Reverse sorting direction for change columns (negative = improvement, should be first in desc)
+      const isChangeColumn = sortColumn === 'rankChangeA' || sortColumn === 'rankChangeB'
+      const effectiveDirection = isChangeColumn 
+        ? (sortDirection === 'asc' ? 'desc' : 'asc')
+        : sortDirection
+
       // Compare values
-      if (aValue < bValue) return sortDirection === 'asc' ? -1 : 1
-      if (aValue > bValue) return sortDirection === 'asc' ? 1 : -1
+      if (aValue < bValue) return effectiveDirection === 'asc' ? -1 : 1
+      if (aValue > bValue) return effectiveDirection === 'asc' ? 1 : -1
       return 0
     })
   }, [keywords, sortColumn, sortDirection])
@@ -171,23 +177,23 @@ export function TopKeywordsTable({ keywords, monthAName, monthBName }: TopKeywor
         <div className="overflow-x-auto">
           <Table>
             <TableHeader>
-              <TableRow className="bg-primary/10 hover:bg-primary/10">
+              <TableRow className="bg-primary/10">
                 <TableHead className="min-w-[200px] font-semibold text-primary border-r">
                   Keyword
                 </TableHead>
-                <TableHead className="text-center font-semibold text-primary border-r" title={`The Last Position at the Month\n\nMonth A: ${monthAName}\nMonth B: ${monthBName}\n\nLower numbers are better (e.g., #1 is top position)`}>
+                <TableHead className="text-center font-semibold text-primary border-r">
                   <div className="flex flex-col items-center gap-1">
                     <span>Rank</span>
                     <div className="flex items-center text-xs font-normal">
                       <button 
-                        className="hover:text-primary-foreground cursor-pointer flex items-center gap-0.5 px-2"
+                        className="cursor-pointer flex items-center gap-0.5 px-2"
                         onClick={() => handleSort('rankA')}
                       >
                         {monthAShort} <SortIcon column="rankA" />
                       </button>
                       <div className="h-4 w-px bg-border"></div>
                       <button 
-                        className="hover:text-primary-foreground cursor-pointer flex items-center gap-0.5 px-2"
+                        className="cursor-pointer flex items-center gap-0.5 px-2"
                         onClick={() => handleSort('rankB')}
                       >
                         {monthBShort} <SortIcon column="rankB" />
@@ -195,19 +201,19 @@ export function TopKeywordsTable({ keywords, monthAName, monthBName }: TopKeywor
                     </div>
                   </div>
                 </TableHead>
-                <TableHead className="text-center font-semibold text-primary border-r" title={`Position Change\n\nMonth A: ${monthAName}\nMonth B: ${monthBName}\n\nGreen ▲ = Improved (moved up in rankings)\nRed ▼ = Declined (moved down in rankings)`}>
+                <TableHead className="text-center font-semibold text-primary border-r">
                   <div className="flex flex-col items-center gap-1">
                     <span>Change</span>
                     <div className="flex items-center text-xs font-normal">
                       <button 
-                        className="hover:text-primary-foreground cursor-pointer flex items-center gap-0.5 px-2"
+                        className="cursor-pointer flex items-center gap-0.5 px-2"
                         onClick={() => handleSort('rankChangeA')}
                       >
                         {monthAShort} <SortIcon column="rankChangeA" />
                       </button>
                       <div className="h-4 w-px bg-border"></div>
                       <button 
-                        className="hover:text-primary-foreground cursor-pointer flex items-center gap-0.5 px-2"
+                        className="cursor-pointer flex items-center gap-0.5 px-2"
                         onClick={() => handleSort('rankChangeB')}
                       >
                         {monthBShort} <SortIcon column="rankChangeB" />
@@ -215,19 +221,19 @@ export function TopKeywordsTable({ keywords, monthAName, monthBName }: TopKeywor
                     </div>
                   </div>
                 </TableHead>
-                <TableHead className="text-center font-semibold text-primary border-r" title={`The Average Position in the Time Frame\n\nMonth A: ${monthAName}\nMonth B: ${monthBName}\n\nAverage ranking position throughout the entire month`}>
+                <TableHead className="text-center font-semibold text-primary border-r">
                   <div className="flex flex-col items-center gap-1">
                     <span>Avg</span>
                     <div className="flex items-center text-xs font-normal">
                       <button 
-                        className="hover:text-primary-foreground cursor-pointer flex items-center gap-0.5 px-2"
+                        className="cursor-pointer flex items-center gap-0.5 px-2"
                         onClick={() => handleSort('rankAAvg')}
                       >
                         {monthAShort} <SortIcon column="rankAAvg" />
                       </button>
                       <div className="h-4 w-px bg-border"></div>
                       <button 
-                        className="hover:text-primary-foreground cursor-pointer flex items-center gap-0.5 px-2"
+                        className="cursor-pointer flex items-center gap-0.5 px-2"
                         onClick={() => handleSort('rankBAvg')}
                       >
                         {monthBShort} <SortIcon column="rankBAvg" />
@@ -235,19 +241,19 @@ export function TopKeywordsTable({ keywords, monthAName, monthBName }: TopKeywor
                     </div>
                   </div>
                 </TableHead>
-                <TableHead className="text-center font-semibold text-primary border-r" title={`Best Position Achieved in the Time Frame\n\nMonth A: ${monthAName}\nMonth B: ${monthBName}\n\nThe highest ranking position (lowest number) achieved during the month`}>
+                <TableHead className="text-center font-semibold text-primary border-r">
                   <div className="flex flex-col items-center gap-1">
                     <span>Best</span>
                     <div className="flex items-center text-xs font-normal">
                       <button 
-                        className="hover:text-primary-foreground cursor-pointer flex items-center gap-0.5 px-2"
+                        className="cursor-pointer flex items-center gap-0.5 px-2"
                         onClick={() => handleSort('rankABest')}
                       >
                         {monthAShort} <SortIcon column="rankABest" />
                       </button>
                       <div className="h-4 w-px bg-border"></div>
                       <button 
-                        className="hover:text-primary-foreground cursor-pointer flex items-center gap-0.5 px-2"
+                        className="cursor-pointer flex items-center gap-0.5 px-2"
                         onClick={() => handleSort('rankBBest')}
                       >
                         {monthBShort} <SortIcon column="rankBBest" />
@@ -255,19 +261,19 @@ export function TopKeywordsTable({ keywords, monthAName, monthBName }: TopKeywor
                     </div>
                   </div>
                 </TableHead>
-                <TableHead className="text-center font-semibold text-primary border-r" title={`Monthly Search Volume\n\nMonth A: ${monthAName}\nMonth B: ${monthBName}\n\nEstimated number of searches per month for this keyword`}>
+                <TableHead className="text-center font-semibold text-primary border-r">
                   <div className="flex flex-col items-center gap-1">
                     <span>Search</span>
                     <div className="flex items-center text-xs font-normal">
                       <button 
-                        className="hover:text-primary-foreground cursor-pointer flex items-center gap-0.5 px-2"
+                        className="cursor-pointer flex items-center gap-0.5 px-2"
                         onClick={() => handleSort('searchVolumeA')}
                       >
                         {monthAShort} <SortIcon column="searchVolumeA" />
                       </button>
                       <div className="h-4 w-px bg-border"></div>
                       <button 
-                        className="hover:text-primary-foreground cursor-pointer flex items-center gap-0.5 px-2"
+                        className="cursor-pointer flex items-center gap-0.5 px-2"
                         onClick={() => handleSort('searchVolumeB')}
                       >
                         {monthBShort} <SortIcon column="searchVolumeB" />
@@ -275,19 +281,19 @@ export function TopKeywordsTable({ keywords, monthAName, monthBName }: TopKeywor
                     </div>
                   </div>
                 </TableHead>
-                <TableHead className="text-center font-semibold text-primary border-r" title={`Performance Index Change\n\nMonth A: ${monthAName}\nMonth B: ${monthBName}\n\nMeasures overall keyword performance change\nGreen (+) = Performance improved\nRed (-) = Performance declined`}>
+                <TableHead className="text-center font-semibold text-primary border-r">
                   <div className="flex flex-col items-center gap-1">
                     <span>PI</span>
                     <div className="flex items-center text-xs font-normal">
                       <button 
-                        className="hover:text-primary-foreground cursor-pointer flex items-center gap-0.5 px-2"
+                        className="cursor-pointer flex items-center gap-0.5 px-2"
                         onClick={() => handleSort('performanceIndexChangeA')}
                       >
                         {monthAShort} <SortIcon column="performanceIndexChangeA" />
                       </button>
                       <div className="h-4 w-px bg-border"></div>
                       <button 
-                        className="hover:text-primary-foreground cursor-pointer flex items-center gap-0.5 px-2"
+                        className="cursor-pointer flex items-center gap-0.5 px-2"
                         onClick={() => handleSort('performanceIndexChangeB')}
                       >
                         {monthBShort} <SortIcon column="performanceIndexChangeB" />
@@ -295,19 +301,19 @@ export function TopKeywordsTable({ keywords, monthAName, monthBName }: TopKeywor
                     </div>
                   </div>
                 </TableHead>
-                <TableHead className="text-center font-semibold text-primary" title={`Estimated Visits\n\nMonth A: ${monthAName}\nMonth B: ${monthBName}\n\nEstimated number of visitors from this keyword based on ranking position and search volume`}>
+                <TableHead className="text-center font-semibold text-primary">
                   <div className="flex flex-col items-center gap-1">
                     <span>EV</span>
                     <div className="flex items-center text-xs font-normal">
                       <button 
-                        className="hover:text-primary-foreground cursor-pointer flex items-center gap-0.5 px-2"
+                        className="cursor-pointer flex items-center gap-0.5 px-2"
                         onClick={() => handleSort('estimatedVisitsA')}
                       >
                         {monthAShort} <SortIcon column="estimatedVisitsA" />
                       </button>
                       <div className="h-4 w-px bg-border"></div>
                       <button 
-                        className="hover:text-primary-foreground cursor-pointer flex items-center gap-0.5 px-2"
+                        className="cursor-pointer flex items-center gap-0.5 px-2"
                         onClick={() => handleSort('estimatedVisitsB')}
                       >
                         {monthBShort} <SortIcon column="estimatedVisitsB" />
@@ -348,7 +354,7 @@ export function TopKeywordsTable({ keywords, monthAName, monthBName }: TopKeywor
                     : "N/A"
                   
                   return (
-                    <TableRow key={kw._id} className="hover:bg-muted/50">
+                    <TableRow key={kw._id}>
                       <TableCell className="font-medium py-3 border-r">{kw.keyword}</TableCell>
                       
                       {/* Rank: A | B */}

@@ -127,11 +127,13 @@ export async function fetchMangoolsDashboardData(datasourceId: string): Promise<
     // Compare monthly data
     const comparisons = compareMonthlyKeywords(monthA, monthB, keywordsData)
     
-    // Generate all tables
+    // Generate all tables (no limits - show all)
     const topKeywords = getTopKeywords(comparisons)
-    const topWinners = getTopWinners(comparisons, 5)
-    const controlledLosers = getControlledLosers(comparisons, 5)
+    const topWinners = getTopWinners(comparisons) // Get all winners
+    const controlledLosers = getControlledLosers(comparisons) // Get all losers
     const newRankings = getNewRankings(comparisons)
+
+    console.log(`[Dashboard] Results - Winners: ${topWinners.length}, Losers: ${controlledLosers.length}, New Rankings: ${newRankings.length}`)
 
     return {
       domain: domain.domain,

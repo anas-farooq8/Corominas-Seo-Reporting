@@ -1,5 +1,6 @@
 "use client"
 
+import { useState, useMemo } from "react"
 import {
   Table,
   TableBody,
@@ -9,14 +10,22 @@ import {
   TableRow,
 } from "@/components/ui/table"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Sparkles } from "lucide-react"
+import { Button } from "@/components/ui/button"
+import { Sparkles, ChevronDown, ChevronUp } from "lucide-react"
 import type { KeywordComparison } from "@/lib/mangools/dashboard-utils"
 
 interface NewRankingsTableProps {
   newRankings: KeywordComparison[]
 }
 
+const INITIAL_DISPLAY_COUNT = 5
+
 export function NewRankingsTable({ newRankings }: NewRankingsTableProps) {
+  const [showAll, setShowAll] = useState(false)
+  
+  const displayedRankings = useMemo(() => {
+    return showAll ? newRankings : newRankings.slice(0, INITIAL_DISPLAY_COUNT)
+  }, [newRankings, showAll])
   return (
     <Card>
       <CardHeader>
@@ -40,14 +49,14 @@ export function NewRankingsTable({ newRankings }: NewRankingsTableProps) {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {newRankings.length === 0 ? (
+              {displayedRankings.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={4} className="text-center text-muted-foreground">
                     No new rankings found
                   </TableCell>
                 </TableRow>
               ) : (
-                newRankings.map((kw) => (
+                displayedRankings.map((kw) => (
                   <TableRow key={kw._id}>
                     <TableCell className="font-medium">{kw.keyword}</TableCell>
                     <TableCell className="text-center text-muted-foreground">
@@ -65,6 +74,31 @@ export function NewRankingsTable({ newRankings }: NewRankingsTableProps) {
             </TableBody>
           </Table>
         </div>
+        
+        {/* Show More / Show Less Button */}
+        {newRankings.length > INITIAL_DISPLAY_COUNT && (
+          <div className="mt-4 flex justify-center">
+            {showAll ? (
+              <Button 
+                variant="outline" 
+                onClick={() => setShowAll(false)}
+                className="gap-2"
+              >
+                <ChevronUp className="h-4 w-4" />
+                Show Less
+              </Button>
+            ) : (
+              <Button 
+                variant="outline" 
+                onClick={() => setShowAll(true)}
+                className="gap-2"
+              >
+                <ChevronDown className="h-4 w-4" />
+                Show More ({newRankings.length - INITIAL_DISPLAY_COUNT} more)
+              </Button>
+            )}
+          </div>
+        )}
       </CardContent>
     </Card>
   )

@@ -1,5 +1,6 @@
 "use client"
 
+import { useState, useMemo } from "react"
 import {
   Table,
   TableBody,
@@ -9,7 +10,8 @@ import {
   TableRow,
 } from "@/components/ui/table"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { TrendingUp } from "lucide-react"
+import { Button } from "@/components/ui/button"
+import { TrendingUp, ChevronDown, ChevronUp } from "lucide-react"
 import type { KeywordComparison } from "@/lib/mangools/dashboard-utils"
 import { formatRankChange } from "@/lib/mangools/dashboard-utils"
 
@@ -17,7 +19,14 @@ interface TopWinnersTableProps {
   winners: KeywordComparison[]
 }
 
+const INITIAL_DISPLAY_COUNT = 5
+
 export function TopWinnersTable({ winners }: TopWinnersTableProps) {
+  const [showAll, setShowAll] = useState(false)
+  
+  const displayedWinners = useMemo(() => {
+    return showAll ? winners : winners.slice(0, INITIAL_DISPLAY_COUNT)
+  }, [winners, showAll])
   return (
     <Card>
       <CardHeader>
@@ -41,14 +50,14 @@ export function TopWinnersTable({ winners }: TopWinnersTableProps) {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {winners.length === 0 ? (
+              {displayedWinners.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={4} className="text-center text-muted-foreground">
                     No improvements found
                   </TableCell>
                 </TableRow>
               ) : (
-                winners.map((kw) => {
+                displayedWinners.map((kw) => {
                   const changeDisplay = formatRankChange(kw.monthlyRankChange ?? 0)
                   return (
                     <TableRow key={kw._id}>
@@ -65,6 +74,31 @@ export function TopWinnersTable({ winners }: TopWinnersTableProps) {
             </TableBody>
           </Table>
         </div>
+        
+        {/* Show More / Show Less Button */}
+        {winners.length > INITIAL_DISPLAY_COUNT && (
+          <div className="mt-4 flex justify-center">
+            {showAll ? (
+              <Button 
+                variant="outline" 
+                onClick={() => setShowAll(false)}
+                className="gap-2"
+              >
+                <ChevronUp className="h-4 w-4" />
+                Show Less
+              </Button>
+            ) : (
+              <Button 
+                variant="outline" 
+                onClick={() => setShowAll(true)}
+                className="gap-2"
+              >
+                <ChevronDown className="h-4 w-4" />
+                Show More ({winners.length - INITIAL_DISPLAY_COUNT} more)
+              </Button>
+            )}
+          </div>
+        )}
       </CardContent>
     </Card>
   )

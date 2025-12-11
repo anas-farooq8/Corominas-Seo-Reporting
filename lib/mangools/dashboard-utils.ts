@@ -51,6 +51,10 @@ export function compareMonthlyKeywords(
     const rankB = kwB.rank?.last ?? null
     const rankA = kwA?.rank?.last ?? null
     
+    // Handle best values: if -1, convert to 101
+    const rankBBest = kwB.rank?.best === -1 ? 101 : (kwB.rank?.best ?? null)
+    const rankABest = kwA?.rank?.best === -1 ? 101 : (kwA?.rank?.best ?? null)
+    
     // Compute monthly rank change: rankB - rankA
     // Negative = improved (went up), Positive = declined (went down)
     let monthlyRankChange: number | null = null
@@ -66,7 +70,7 @@ export function compareMonthlyKeywords(
       // Month B (current month) - all data from kwB
       rankB: rankB,
       rankBAvg: kwB.rank?.avg ?? null,
-      rankBBest: kwB.rank?.best ?? null,
+      rankBBest: rankBBest,
       estimatedVisitsB: kwB.estimated_visits ?? null,
       performanceIndexChangeB: kwB.performanceIndexChange ?? null,
       searchVolumeB: kwB.search_volume ?? null,
@@ -75,7 +79,7 @@ export function compareMonthlyKeywords(
       // Previous month (A) - all data from kwA
       rankA: rankA,
       rankAAvg: kwA?.rank?.avg ?? null,
-      rankABest: kwA?.rank?.best ?? null,
+      rankABest: rankABest,
       estimatedVisitsA: kwA?.estimated_visits ?? null,
       performanceIndexChangeA: kwA?.performanceIndexChange ?? null,
       searchVolumeA: kwA?.search_volume ?? null,
@@ -115,8 +119,8 @@ export function getTopKeywords(comparisons: KeywordComparison[]): KeywordCompari
  * Note: Negative monthlyRankChange = improvement (rank got better/lower number)
  * Example: rankA=20, rankB=9 → monthlyRankChange=-11 (improved by 11 positions)
  */
-export function getTopWinners(comparisons: KeywordComparison[], limit = 5): KeywordComparison[] {
-  return [...comparisons]
+export function getTopWinners(comparisons: KeywordComparison[], limit?: number): KeywordComparison[] {
+  const filtered = [...comparisons]
     .filter(kw => {
       const isNew = (kw.rankA === null || kw.rankA > 100) && kw.rankB !== null && kw.rankB <= 100
       const rankChange = kw.monthlyRankChange
@@ -127,19 +131,26 @@ export function getTopWinners(comparisons: KeywordComparison[], limit = 5): Keyw
       const bChange = b.monthlyRankChange ?? 0
       return aChange - bChange // Most negative (best improvement) first
     })
-    .slice(0, limit)
+  
+  return limit ? filtered.slice(0, limit) : filtered
 }
 
 /**
  * Get new rankings (keywords that went from unranked to ranked ≤100)
  */
 export function getNewRankings(comparisons: KeywordComparison[]): KeywordComparison[] {
-  return [...comparisons]
+  const newRankings = [...comparisons]
     .filter(kw => {
       const isNew = (kw.rankA === null || kw.rankA > 100) && kw.rankB !== null && kw.rankB <= 100
+      if (isNew) {
+        console.log(`[New Ranking] ${kw.keyword}: rankA=${kw.rankA}, rankB=${kw.rankB}`)
+      }
       return isNew
     })
     .sort((a, b) => (b.searchVolumeB ?? 0) - (a.searchVolumeB ?? 0)) // Sort by search volume
+  
+  console.log(`[New Rankings] Total found: ${newRankings.length}`)
+  return newRankings
 }
 
 /**
@@ -147,8 +158,8 @@ export function getNewRankings(comparisons: KeywordComparison[]): KeywordCompari
  * Note: Positive monthlyRankChange = decline (rank got worse/higher number)
  * Example: rankA=5, rankB=8 → monthlyRankChange=+3 (declined by 3 positions)
  */
-export function getControlledLosers(comparisons: KeywordComparison[], limit = 5): KeywordComparison[] {
-  return [...comparisons]
+export function getControlledLosers(comparisons: KeywordComparison[], limit?: number): KeywordComparison[] {
+  const filtered = [...comparisons]
     .filter(kw => {
       const isNew = (kw.rankA === null || kw.rankA > 100) && kw.rankB !== null && kw.rankB <= 100
       const rankChange = kw.monthlyRankChange
@@ -159,7 +170,8 @@ export function getControlledLosers(comparisons: KeywordComparison[], limit = 5)
       const bChange = b.monthlyRankChange ?? 0
       return bChange - aChange // Most positive (worst decline) first
     })
-    .slice(0, limit)
+  
+  return limit ? filtered.slice(0, limit) : filtered
 }
 
 /**
