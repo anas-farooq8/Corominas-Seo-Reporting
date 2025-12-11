@@ -104,17 +104,17 @@ export function PerformanceVisibilityGraph({
   })
 
   // Custom tooltip to show names with values including year (date shown only once)
-  const CustomTooltip = ({ active, payload }: TooltipProps<number, string>) => {
+  const CustomTooltip = ({ active, payload }: any) => {
     if (active && payload && payload.length) {
       // Get the full date with year from the data
       const dataPoint = payload[0]?.payload
       const dateWithYear = dataPoint?.fullDate || ''
       
       // Group by metric type
-      const perfA = payload.find(p => p.dataKey === 'performanceIndexA')
-      const perfB = payload.find(p => p.dataKey === 'performanceIndexB')
-      const visA = payload.find(p => p.dataKey === 'visibilityIndexA')
-      const visB = payload.find(p => p.dataKey === 'visibilityIndexB')
+      const perfA = payload.find((p: any) => p.dataKey === 'performanceIndexA')
+      const perfB = payload.find((p: any) => p.dataKey === 'performanceIndexB')
+      const visA = payload.find((p: any) => p.dataKey === 'visibilityIndexA')
+      const visB = payload.find((p: any) => p.dataKey === 'visibilityIndexB')
       
       return (
         <div className="bg-white p-3 border border-gray-200 rounded-lg shadow-lg">
@@ -125,12 +125,12 @@ export function PerformanceVisibilityGraph({
               <p className="text-xs font-medium text-muted-foreground">Performance Index</p>
               {perfA && perfA.value !== null && (
                 <p className="text-sm font-semibold" style={{ color: '#fdba74' }}>
-                  {monthAName}: {typeof perfA.value === 'number' ? perfA.value.toFixed(2) : perfA.value}
+                  {typeof perfA.value === 'number' ? perfA.value.toFixed(2) : perfA.value}
                 </p>
               )}
               {perfB && perfB.value !== null && (
                 <p className="text-sm font-semibold" style={{ color: '#f97316' }}>
-                  {monthBName}: {typeof perfB.value === 'number' ? perfB.value.toFixed(2) : perfB.value}
+                  {typeof perfB.value === 'number' ? perfB.value.toFixed(2) : perfB.value}
                 </p>
               )}
             </div>
@@ -141,12 +141,12 @@ export function PerformanceVisibilityGraph({
               <p className="text-xs font-medium text-muted-foreground">Visibility Index</p>
               {visA && visA.value !== null && (
                 <p className="text-sm font-semibold" style={{ color: '#93c5fd' }}>
-                  {monthAName}: {typeof visA.value === 'number' ? visA.value.toFixed(2) : visA.value}
+                  {typeof visA.value === 'number' ? visA.value.toFixed(2) : visA.value}
                 </p>
               )}
               {visB && visB.value !== null && (
                 <p className="text-sm font-semibold" style={{ color: '#3b82f6' }}>
-                  {monthBName}: {typeof visB.value === 'number' ? visB.value.toFixed(2) : visB.value}
+                  {typeof visB.value === 'number' ? visB.value.toFixed(2) : visB.value}
                 </p>
               )}
             </div>
