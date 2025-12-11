@@ -161,7 +161,9 @@ export function PerformanceVisibilityGraph({
     <Card>
       <CardHeader>
         <CardTitle>Performance Index and Visibility</CardTitle>
-        <CardDescription>Comparing {monthAName} vs {monthBName}</CardDescription>
+        <CardDescription>
+          These charts track two key metrics over time: Performance Index (orange line) measures how well your keywords are ranking on average higher scores mean better positions in search results. Visibility Index (blue area) shows how often your website appears in search results for these keywords. Rising lines indicate growing SEO strength and more opportunities for organic traffic. The percentages below show monthly trends and comparisons.
+        </CardDescription>
       </CardHeader>
       <CardContent>
         <div className="space-y-6">

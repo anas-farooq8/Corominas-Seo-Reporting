@@ -34,7 +34,7 @@ export function NewRankingsTable({ newRankings }: NewRankingsTableProps) {
           <CardTitle>New Rankings</CardTitle>
         </div>
         <CardDescription>
-          Keywords that went from unranked to ranked ≤100
+          Exciting news! These keywords just entered the top 100 search results for the first time (or returned after being unranked). Each new ranking is a potential source of organic traffic to your website. The <strong>Search Volume</strong> column shows how many people search for each term every month, helping you understand the opportunity size. The better these keywords rank over time, the more visitors they can bring to your site.
         </CardDescription>
       </CardHeader>
       <CardContent>

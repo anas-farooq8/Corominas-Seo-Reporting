@@ -35,7 +35,7 @@ export function ControlledLosersTable({ losers }: ControlledLosersTableProps) {
           <CardTitle>Controlled Losers</CardTitle>
         </div>
         <CardDescription>
-          Keywords with small drops (max -3 positions) - for reference
+          These keywords dropped slightly in ranking (3 positions or less), but they&apos;re nothing to worry about. Small fluctuations like these are completely normal in SEO as search engines continuously update their algorithms and competitors make changes. We track them here for your reference and awareness, but they don&apos;t indicate a major issue. If any keyword were to drop more significantly, it would require closer attention.
         </CardDescription>
       </CardHeader>
       <CardContent>

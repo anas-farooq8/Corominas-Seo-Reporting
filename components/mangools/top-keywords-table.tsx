@@ -170,7 +170,7 @@ export function TopKeywordsTable({ keywords, monthAName, monthBName }: TopKeywor
       <CardHeader className="bg-primary/5">
         <CardTitle className="text-primary">Top Keywords</CardTitle>
         <CardDescription>
-          Comparison of {monthAName} vs {monthBName}. Click columns to sort.
+          This comprehensive table shows all your tracked keywords with detailed performance metrics. For each keyword, you can see: <strong>Rank</strong> (current position in search results lower numbers are better), <strong>Change</strong> (movement up ↑ or down ↓), <strong>Avg</strong> (average position over the month), <strong>Best</strong> (highest ranking achieved), <strong>Search</strong> (monthly search volume), <strong>PI</strong> (Performance Index contribution), and <strong>EV</strong> (Estimated Visits from this keyword). Click any column header to sort and analyze your data. Compare {monthAName} vs {monthBName} side-by-side.
         </CardDescription>
       </CardHeader>
       <CardContent>

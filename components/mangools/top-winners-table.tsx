@@ -35,7 +35,7 @@ export function TopWinnersTable({ winners }: TopWinnersTableProps) {
           <CardTitle>Top Winners</CardTitle>
         </div>
         <CardDescription>
-          Keywords with the largest positive improvements
+          These are your star performers keywords that jumped up the most in search rankings this month. Higher rankings mean more visibility to potential customers searching for these terms. Focus on these successes to understand what&apos;s working in your SEO strategy. Each position gained increases the likelihood that people will click on your website in search results.
         </CardDescription>
       </CardHeader>
       <CardContent>

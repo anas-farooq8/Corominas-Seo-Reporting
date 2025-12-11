@@ -73,7 +73,7 @@ export function KeywordPositionFlow({ keywords, monthAName, monthBName }: Keywor
       <CardHeader>
         <CardTitle>Keyword Position Flow</CardTitle>
         <CardDescription>
-          Comparing {monthAName} → {monthBName}
+          This section shows how many of your tracked keywords improved their ranking (went up), declined (went down), or stayed the same (unchanged) compared to the previous month. The visual bars help you quickly see the proportion of positive vs. negative movement. More green means more keywords are climbing in search results, which increases your website&apos;s visibility to potential customers.
         </CardDescription>
       </CardHeader>
       <CardContent>
