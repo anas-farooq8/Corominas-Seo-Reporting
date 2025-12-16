@@ -23,7 +23,7 @@ export interface Project {
 export interface Datasource {
   id: string
   project_id: string
-  type: "mangools" | "semrush"
+  type: "mangools" | "semrush" | "google_analytics"
   created_at: string
   updated_at: string
 }
@@ -33,6 +33,18 @@ export interface MangoolsDomain {
   datasource_id: string
   tracking_id: string  // The _id from Mangools API (used for tracking)
   domain: string
+  created_at: string
+  updated_at: string
+}
+
+export interface GoogleAnalyticsProperty {
+  id: string
+  datasource_id: string
+  name: string  // The "name" field from GA API (e.g., "properties/516632017")
+  parent: string
+  display_name: string
+  time_zone: string
+  currency_code: string
   created_at: string
   updated_at: string
 }
@@ -54,10 +66,14 @@ export interface ProjectWithDatasources extends Project {
   datasource_count?: number
 }
 
-export interface getDataSourcesWithRespectiveData extends Datasource {
+export interface DatasourceWithDomains extends Datasource {
   mangools_domains?: MangoolsDomain[]
+  google_analytics_properties?: GoogleAnalyticsProperty[]
   domain_count?: number
 }
+
+// Keep the old alias for backwards compatibility
+export type getDataSourcesWithRespectiveData = DatasourceWithDomains
 
 // ============================================
 // API Response Types
@@ -70,6 +86,20 @@ export interface MangoolsApiDomain {
     label: string
   }
   count: number
+}
+
+export interface GoogleAnalyticsApiProperty {
+  name: string  // e.g., "properties/516632017"
+  parent: string  // e.g., "accounts/335827031"
+  create_time: string
+  update_time: string
+  display_name: string
+  industry_category?: string
+  time_zone: string
+  currency_code: string
+  service_level?: string
+  account?: string
+  property_type?: string
 }
 
 // ============================================
@@ -90,5 +120,5 @@ export interface ProjectInput {
 
 export interface DatasourceInput {
   project_id: string
-  type: "mangools" | "semrush"
+  type: "mangools" | "semrush" | "google_analytics"
 }

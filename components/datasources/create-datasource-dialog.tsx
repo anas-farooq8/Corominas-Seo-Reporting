@@ -14,9 +14,9 @@ import {
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { createDatasource, attachDomain } from "@/lib/actions/datasources"
+import { createDatasource, attachDomain, attachGoogleAnalyticsProperty } from "@/lib/actions/datasources"
 import { Plus, Loader2, Search, AlertCircle, CheckCircle2 } from "lucide-react"
-import type { Datasource, MangoolsApiDomain } from "@/lib/supabase/types"
+import type { Datasource, MangoolsApiDomain, GoogleAnalyticsApiProperty } from "@/lib/supabase/types"
 
 interface CreateDatasourceDialogProps {
   projectId: string
@@ -29,16 +29,28 @@ interface DomainOption extends MangoolsApiDomain {
   attachedInfo?: string
 }
 
+interface PropertyOption extends GoogleAnalyticsApiProperty {
+  isAttached: boolean
+  attachedInfo?: string
+}
+
 export function CreateDatasourceDialog({ projectId, existingTypes, onDatasourceAdded }: CreateDatasourceDialogProps) {
   const [open, setOpen] = useState(false)
   const [loading, setLoading] = useState(false)
-  const [selectedType, setSelectedType] = useState<"mangools" | "semrush" | "">("")
+  const [selectedType, setSelectedType] = useState<"mangools" | "semrush" | "google_analytics" | "">("")
   
   // Mangools-specific state
   const [fetchingDomains, setFetchingDomains] = useState(false)
   const [domains, setDomains] = useState<DomainOption[]>([])
   const [searchQuery, setSearchQuery] = useState("")
   const [selectedDomain, setSelectedDomain] = useState<string>("")
+  
+  // Google Analytics-specific state
+  const [fetchingProperties, setFetchingProperties] = useState(false)
+  const [properties, setProperties] = useState<PropertyOption[]>([])
+  const [propertySearchQuery, setPropertySearchQuery] = useState("")
+  const [selectedProperty, setSelectedProperty] = useState<string>("")
+  
   const [error, setError] = useState<string | null>(null)
 
   // Reset state when dialog opens/closes
@@ -48,6 +60,9 @@ export function CreateDatasourceDialog({ projectId, existingTypes, onDatasourceA
       setDomains([])
       setSearchQuery("")
       setSelectedDomain("")
+      setProperties([])
+      setPropertySearchQuery("")
+      setSelectedProperty("")
       setError(null)
     }
   }, [open])
@@ -99,6 +114,53 @@ export function CreateDatasourceDialog({ projectId, existingTypes, onDatasourceA
     fetchDomains()
   }, [selectedType])
 
+  // Fetch Google Analytics properties when Google Analytics is selected
+  useEffect(() => {
+    async function fetchProperties() {
+      if (selectedType !== "google_analytics") return
+      
+      setFetchingProperties(true)
+      setError(null)
+      
+      try {
+        // Fetch available properties from Google Analytics
+        const propertiesResponse = await fetch("/api/google-analytics/properties")
+        if (!propertiesResponse.ok) {
+          throw new Error("Failed to fetch properties from Google Analytics")
+        }
+        const gaProperties: GoogleAnalyticsApiProperty[] = await propertiesResponse.json()
+        
+        // Fetch all attached properties to check which ones are already used
+        const attachedResponse = await fetch("/api/google-analytics/attached")
+        if (!attachedResponse.ok) {
+          throw new Error("Failed to fetch attached properties")
+        }
+        const attachedProperties: { name: string }[] = await attachedResponse.json()
+        const attachedPropertySet = new Set(attachedProperties.map(p => p.name))
+        
+        // Mark properties as attached or available
+        const propertyOptions: PropertyOption[] = gaProperties.map(property => ({
+          ...property,
+          isAttached: attachedPropertySet.has(property.name),
+          attachedInfo: attachedPropertySet.has(property.name) ? "Already attached to another project" : undefined
+        }))
+        
+        setProperties(propertyOptions)
+        
+        if (propertyOptions.length === 0) {
+          setError("No properties found in your Google Analytics account")
+        }
+      } catch (err) {
+        console.error("Error fetching properties:", err)
+        setError(err instanceof Error ? err.message : "Failed to fetch properties")
+      } finally {
+        setFetchingProperties(false)
+      }
+    }
+    
+    fetchProperties()
+  }, [selectedType])
+
   // Filter domains based on search query
   const filteredDomains = useMemo(() => {
     if (!searchQuery.trim()) return domains
@@ -109,6 +171,17 @@ export function CreateDatasourceDialog({ projectId, existingTypes, onDatasourceA
       domain.location?.label.toLowerCase().includes(query)
     )
   }, [domains, searchQuery])
+
+  // Filter properties based on search query
+  const filteredProperties = useMemo(() => {
+    if (!propertySearchQuery.trim()) return properties
+    
+    const query = propertySearchQuery.toLowerCase()
+    return properties.filter(property => 
+      property.display_name.toLowerCase().includes(query) ||
+      property.name.toLowerCase().includes(query)
+    )
+  }, [properties, propertySearchQuery])
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -121,6 +194,12 @@ export function CreateDatasourceDialog({ projectId, existingTypes, onDatasourceA
     // For Mangools, require domain selection
     if (selectedType === "mangools" && !selectedDomain) {
       setError("Please select a domain to attach")
+      return
+    }
+
+    // For Google Analytics, require property selection
+    if (selectedType === "google_analytics" && !selectedProperty) {
+      setError("Please select a property to attach")
       return
     }
 
@@ -147,6 +226,22 @@ export function CreateDatasourceDialog({ projectId, existingTypes, onDatasourceA
         }
       }
 
+      // If Google Analytics, attach the selected property
+      if (selectedType === "google_analytics" && selectedProperty) {
+        const property = properties.find(p => p.name === selectedProperty)
+        if (property) {
+          await attachGoogleAnalyticsProperty(
+            datasource.id,
+            property.name,
+            property.parent,
+            property.display_name,
+            property.time_zone,
+            property.currency_code,
+            projectId
+          )
+        }
+      }
+
       setOpen(false)
       onDatasourceAdded?.(datasource)
     } catch (error) {
@@ -159,10 +254,13 @@ export function CreateDatasourceDialog({ projectId, existingTypes, onDatasourceA
 
   const availableTypes = [
     { value: "mangools", label: "Mangools", disabled: existingTypes.includes("mangools") },
+    { value: "google_analytics", label: "Google Analytics", disabled: existingTypes.includes("google_analytics") },
     { value: "semrush", label: "Semrush (Coming Soon)", disabled: true },
   ]
 
-  const canSubmit = selectedType && (selectedType !== "mangools" || selectedDomain)
+  const canSubmit = selectedType && 
+    (selectedType !== "mangools" || selectedDomain) &&
+    (selectedType !== "google_analytics" || selectedProperty)
 
   return (
     <Dialog open={open} onOpenChange={(open) => !loading && setOpen(open)}>
@@ -179,6 +277,8 @@ export function CreateDatasourceDialog({ projectId, existingTypes, onDatasourceA
             <DialogDescription>
               {selectedType === "mangools" 
                 ? "Select a domain from your Mangools account. Note: Each domain can only be attached once, and each project can have only one Mangools data source."
+                : selectedType === "google_analytics"
+                ? "Select a property from your Google Analytics account. Note: Each property can only be attached once, and each project can have only one Google Analytics data source."
                 : "Add a new data source to this project. Each type can only be added once per project."
               }
             </DialogDescription>
@@ -190,8 +290,8 @@ export function CreateDatasourceDialog({ projectId, existingTypes, onDatasourceA
               <Label htmlFor="type">Data Source Type *</Label>
               <Select
                 value={selectedType}
-                onValueChange={(value) => setSelectedType(value as "mangools" | "semrush")}
-                disabled={loading || fetchingDomains}
+                onValueChange={(value) => setSelectedType(value as "mangools" | "semrush" | "google_analytics")}
+                disabled={loading || fetchingDomains || fetchingProperties}
               >
                 <SelectTrigger id="type" className="cursor-pointer">
                   <SelectValue placeholder="Select a data source type" />
@@ -304,6 +404,98 @@ export function CreateDatasourceDialog({ projectId, existingTypes, onDatasourceA
               </>
             )}
 
+            {/* Google Analytics Property Selection */}
+            {selectedType === "google_analytics" && (
+              <>
+                {fetchingProperties ? (
+                  <div className="flex items-center justify-center py-8">
+                    <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+                    <span className="ml-3 text-sm text-muted-foreground">
+                      Loading properties from Google Analytics...
+                    </span>
+                  </div>
+                ) : (
+                  <>
+                    {/* Search */}
+                    <div className="grid gap-2">
+                      <Label htmlFor="property-search">Search Properties</Label>
+                      <div className="relative">
+                        <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                        <Input
+                          id="property-search"
+                          type="text"
+                          placeholder="Search by property name..."
+                          value={propertySearchQuery}
+                          onChange={(e) => setPropertySearchQuery(e.target.value)}
+                          className="pl-9"
+                          disabled={loading}
+                        />
+                      </div>
+                    </div>
+
+                    {/* Property List */}
+                    <div className="grid gap-2">
+                      <Label>Available Properties ({filteredProperties.length})</Label>
+                      <div className="border rounded-lg max-h-[300px] overflow-y-auto">
+                        {filteredProperties.length === 0 ? (
+                          <div className="p-8 text-center text-sm text-muted-foreground">
+                            {propertySearchQuery ? "No properties match your search" : "No properties available"}
+                          </div>
+                        ) : (
+                          <div className="divide-y">
+                            {filteredProperties.map((property) => (
+                              <label
+                                key={property.name}
+                                className={`flex items-start gap-3 p-3 cursor-pointer hover:bg-muted/50 transition-colors ${
+                                  property.isAttached ? "opacity-50 cursor-not-allowed" : ""
+                                } ${selectedProperty === property.name ? "bg-muted" : ""}`}
+                              >
+                                <input
+                                  type="radio"
+                                  name="property"
+                                  value={property.name}
+                                  checked={selectedProperty === property.name}
+                                  onChange={(e) => setSelectedProperty(e.target.value)}
+                                  disabled={property.isAttached || loading}
+                                  className="mt-1"
+                                />
+                                <div className="flex-1 min-w-0">
+                                  <div className="flex items-center gap-2">
+                                    <p className="font-medium text-sm truncate">
+                                      {property.display_name}
+                                    </p>
+                                    {property.isAttached && (
+                                      <AlertCircle className="h-4 w-4 text-yellow-600 flex-shrink-0" />
+                                    )}
+                                    {selectedProperty === property.name && !property.isAttached && (
+                                      <CheckCircle2 className="h-4 w-4 text-green-600 flex-shrink-0" />
+                                    )}
+                                  </div>
+                                  <div className="flex flex-wrap gap-2 mt-1">
+                                    <span className="text-xs text-muted-foreground">
+                                      🕐 {property.time_zone}
+                                    </span>
+                                    <span className="text-xs text-muted-foreground">
+                                      💰 {property.currency_code}
+                                    </span>
+                                  </div>
+                                  {property.isAttached && (
+                                    <p className="text-xs text-yellow-600 mt-1">
+                                      {property.attachedInfo}
+                                    </p>
+                                  )}
+                                </div>
+                              </label>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </>
+                )}
+              </>
+            )}
+
             {/* Error Message */}
             {error && (
               <div className="flex items-start gap-2 p-3 text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg">
@@ -317,7 +509,7 @@ export function CreateDatasourceDialog({ projectId, existingTypes, onDatasourceA
             <Button type="button" variant="outline" onClick={() => setOpen(false)} disabled={loading}>
               Cancel
             </Button>
-            <Button type="submit" disabled={loading || fetchingDomains || !canSubmit}>
+            <Button type="submit" disabled={loading || fetchingDomains || fetchingProperties || !canSubmit}>
               {loading ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />

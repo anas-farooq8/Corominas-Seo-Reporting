@@ -35,7 +35,7 @@ CREATE TABLE IF NOT EXISTS projects (
 CREATE TABLE IF NOT EXISTS datasources (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   project_id UUID NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
-  type TEXT NOT NULL CHECK (type IN ('mangools', 'semrush')),
+  type TEXT NOT NULL CHECK (type IN ('mangools', 'semrush', 'google_analytics')),
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
@@ -53,6 +53,21 @@ CREATE TABLE mangools_domains (
 );
 
 -- ============================================
+-- GOOGLE ANALYTICS PROPERTIES TABLE
+-- ============================================
+CREATE TABLE IF NOT EXISTS google_analytics_properties (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  datasource_id UUID NOT NULL REFERENCES datasources(id) ON DELETE CASCADE,
+  name TEXT NOT NULL UNIQUE,  -- This is the "name" field from GA API (e.g., "properties/516632017")
+  parent TEXT NOT NULL,
+  display_name TEXT NOT NULL,
+  time_zone TEXT NOT NULL,
+  currency_code TEXT NOT NULL,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- ============================================
 -- INDEXES
 -- ============================================
 CREATE INDEX IF NOT EXISTS idx_projects_client_id ON projects(client_id);
@@ -60,6 +75,8 @@ CREATE INDEX IF NOT EXISTS idx_datasources_project_id ON datasources(project_id)
 CREATE INDEX IF NOT EXISTS idx_datasources_type ON datasources(type);
 CREATE INDEX IF NOT EXISTS idx_mangools_domains_datasource_id ON mangools_domains(datasource_id);
 CREATE INDEX IF NOT EXISTS idx_mangools_domains_tracking_id ON mangools_domains(tracking_id);
+CREATE INDEX IF NOT EXISTS idx_ga_properties_datasource_id ON google_analytics_properties(datasource_id);
+CREATE INDEX IF NOT EXISTS idx_ga_properties_name ON google_analytics_properties(name);
 
 -- ============================================
 -- ROW LEVEL SECURITY (RLS)
@@ -68,6 +85,7 @@ ALTER TABLE clients ENABLE ROW LEVEL SECURITY;
 ALTER TABLE projects ENABLE ROW LEVEL SECURITY;
 ALTER TABLE datasources ENABLE ROW LEVEL SECURITY;
 ALTER TABLE mangools_domains ENABLE ROW LEVEL SECURITY;
+ALTER TABLE google_analytics_properties ENABLE ROW LEVEL SECURITY;
 
 -- ============================================
 -- RLS POLICIES
@@ -86,6 +104,10 @@ CREATE POLICY "authenticated_users_all_datasources" ON datasources
 
 DROP POLICY IF EXISTS "authenticated_users_all_mangools_domains" ON mangools_domains;
 CREATE POLICY "authenticated_users_all_mangools_domains" ON mangools_domains
+  FOR ALL USING (auth.role() = 'authenticated');
+
+DROP POLICY IF EXISTS "authenticated_users_all_ga_properties" ON google_analytics_properties;
+CREATE POLICY "authenticated_users_all_ga_properties" ON google_analytics_properties
   FOR ALL USING (auth.role() = 'authenticated');
 
 -- ============================================
@@ -117,5 +139,10 @@ CREATE TRIGGER update_datasources_updated_at
 DROP TRIGGER IF EXISTS update_mangools_domains_updated_at ON mangools_domains;
 CREATE TRIGGER update_mangools_domains_updated_at
   BEFORE UPDATE ON mangools_domains
+  FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+DROP TRIGGER IF EXISTS update_ga_properties_updated_at ON google_analytics_properties;
+CREATE TRIGGER update_ga_properties_updated_at
+  BEFORE UPDATE ON google_analytics_properties
   FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 

@@ -6,7 +6,7 @@
 
 import { revalidatePath } from "next/cache"
 import * as db from "@/lib/db/datasources"
-import type { Datasource, DatasourceInput, MangoolsDomain } from "@/lib/supabase/types"
+import type { Datasource, DatasourceInput, MangoolsDomain, GoogleAnalyticsProperty } from "@/lib/supabase/types"
 
 /**
  * Get all datasources for a project with their respective data (domains, etc.)
@@ -67,6 +67,37 @@ export async function attachDomain(
   } catch (error) {
     console.error("Error attaching domain:", error)
     throw new Error("Failed to attach domain")
+  }
+}
+
+/**
+ * Attach a Google Analytics property to a datasource
+ */
+export async function attachGoogleAnalyticsProperty(
+  datasourceId: string,
+  name: string,
+  parent: string,
+  displayName: string,
+  timeZone: string,
+  currencyCode: string,
+  projectId: string
+): Promise<GoogleAnalyticsProperty> {
+  try {
+    const attachedProperty = await db.attachGoogleAnalyticsProperty(
+      datasourceId,
+      name,
+      parent,
+      displayName,
+      timeZone,
+      currencyCode
+    )
+    
+    revalidatePath(`/dashboard/projects/${projectId}`)
+    
+    return attachedProperty
+  } catch (error) {
+    console.error("Error attaching Google Analytics property:", error)
+    throw new Error("Failed to attach Google Analytics property")
   }
 }
 

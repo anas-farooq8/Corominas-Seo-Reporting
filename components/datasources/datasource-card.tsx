@@ -16,7 +16,19 @@ export function DatasourceCard({
   onDatasourceDeleted,
   onDomainAttached,
 }: DatasourceCardProps) {
-  const typeLabel = datasource.type.charAt(0).toUpperCase() + datasource.type.slice(1)
+  const typeLabels: Record<string, string> = {
+    mangools: "Mangools",
+    semrush: "Semrush",
+    google_analytics: "Google Analytics"
+  }
+  
+  const typeDescriptions: Record<string, string> = {
+    mangools: "Track domain rankings and keywords",
+    semrush: "SEO analytics and competitive research",
+    google_analytics: "Website traffic and user behavior analytics"
+  }
+  
+  const typeLabel = typeLabels[datasource.type] || datasource.type
   const hasDomains = (datasource.domain_count || 0) > 0
 
   return (
@@ -26,8 +38,7 @@ export function DatasourceCard({
           <div className="flex-1">
             <CardTitle className="text-xl">{typeLabel}</CardTitle>
             <CardDescription className="mt-1">
-              {datasource.type === "mangools" && "Track domain rankings and keywords"}
-              {datasource.type === "semrush" && "SEO analytics and competitive research"}
+              {typeDescriptions[datasource.type] || "Data analytics"}
             </CardDescription>
           </div>
           <DeleteDatasourceButton
