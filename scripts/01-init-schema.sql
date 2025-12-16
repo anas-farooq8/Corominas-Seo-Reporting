@@ -145,4 +145,3 @@ DROP TRIGGER IF EXISTS update_ga_properties_updated_at ON google_analytics_prope
 CREATE TRIGGER update_ga_properties_updated_at
   BEFORE UPDATE ON google_analytics_properties
   FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
-
