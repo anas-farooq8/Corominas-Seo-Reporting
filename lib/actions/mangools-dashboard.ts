@@ -14,8 +14,6 @@ import {
   type KeywordComparison,
 } from "@/lib/mangools/dashboard-utils"
 
-import type { MangoolsStatsResponse } from "@/lib/mangools/api"
-
 export interface MangoolsDashboardData {
   domain: string
   trackingId: string
@@ -33,8 +31,6 @@ export interface MangoolsDashboardData {
   topWinners: KeywordComparison[]
   newRankings: KeywordComparison[]
   controlledLosers: KeywordComparison[]
-  monthAStats: MangoolsStatsResponse
-  monthBStats: MangoolsStatsResponse
 }
 
 /**
@@ -152,8 +148,6 @@ export async function fetchMangoolsDashboardData(datasourceId: string): Promise<
       topWinners,
       newRankings,
       controlledLosers,
-      monthAStats: monthA,
-      monthBStats: monthB,
     }
   } catch (error) {
     console.error("Error fetching Mangools dashboard data:", error)

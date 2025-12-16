@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { BarChart3, AlertCircle, Eye, EyeOff, Loader2 } from "lucide-react"
+import { AlertCircle, Eye, EyeOff, Loader2 } from "lucide-react"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 
 export default function LoginPage() {
@@ -84,7 +84,11 @@ export default function LoginPage() {
       <Card className="w-full max-w-md shadow-lg border-border/50 backdrop-blur-sm">
         <CardHeader className="space-y-2 sm:space-y-3 pb-4 sm:pb-6">
           <div className="flex items-center justify-center gap-2 mb-1 sm:mb-2">
-            <BarChart3 className="h-6 w-6 sm:h-8 sm:w-8 text-primary" />
+            <img 
+              src="https://www.google.com/s2/favicons?domain=corominas-consulting.de&sz=64" 
+              alt="Corominas Consulting Logo" 
+              className="h-8 w-8 sm:h-10 sm:w-10"
+            />
             <span className="text-lg sm:text-2xl font-bold">SEO Reporting</span>
           </div>
           <CardTitle className="text-lg sm:text-2xl text-center">Welcome Back</CardTitle>

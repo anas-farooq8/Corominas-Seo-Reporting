@@ -10,8 +10,6 @@ import { TopKeywordsTable } from "@/components/mangools/top-keywords-table"
 import { TopWinnersTable } from "@/components/mangools/top-winners-table"
 import { NewRankingsTable } from "@/components/mangools/new-rankings-table"
 import { ControlledLosersTable } from "@/components/mangools/controlled-losers-table"
-import { KeywordPositionFlow } from "@/components/mangools/keyword-position-flow"
-import { PerformanceVisibilityGraph } from "@/components/mangools/performance-visibility-graph"
 import type { MangoolsDashboardData } from "@/lib/actions/mangools-dashboard"
 
 export default function MangoolsDashboardPage({ params }: { params: Promise<{ datasourceId: string }> }) {
@@ -91,9 +89,9 @@ export default function MangoolsDashboardPage({ params }: { params: Promise<{ da
       </div>
 
       {/* Summary Stats */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
         <div className="p-4 border rounded-lg bg-card">
-          <div className="text-sm text-muted-foreground">Total Keywords</div>
+          <div className="text-sm text-muted-foreground">Total Keywords in Tracking</div>
           <div className="text-2xl font-bold">{data.totalKeywords}</div>
         </div>
         <div className="p-4 border rounded-lg bg-card">
@@ -104,42 +102,23 @@ export default function MangoolsDashboardPage({ params }: { params: Promise<{ da
           <div className="text-sm text-muted-foreground">New Rankings</div>
           <div className="text-2xl font-bold text-blue-600">{data.newRankings.length}</div>
         </div>
-        <div className="p-4 border rounded-lg bg-card">
-          <div className="text-sm text-muted-foreground">Controlled Losers</div>
-          <div className="text-2xl font-bold text-orange-600">{data.controlledLosers.length}</div>
-        </div>
       </div>
 
-      {/* Keyword Position Flow and Performance/Visibility */}
-      <div className="grid gap-6 lg:grid-cols-2">
-        <KeywordPositionFlow 
-          keywords={data.topKeywords}
-          monthAName={data.dateRanges.monthAName}
-          monthBName={data.dateRanges.monthBName}
-        />
-        <PerformanceVisibilityGraph
-          monthAData={data.monthAStats}
-          monthBData={data.monthBStats}
-          monthAName={data.dateRanges.monthAName}
-          monthBName={data.dateRanges.monthBName}
-        />
-      </div>
-
-      {/* Top Keywords Table */}
-      <TopKeywordsTable 
-        keywords={data.topKeywords} 
-        monthAName={data.dateRanges.monthAName}
-        monthBName={data.dateRanges.monthBName}
-      />
-
-      {/* Winners and Controlled Losers side by side */}
+      {/* Top Keywords and Top Winners side by side */}
       <div className="grid gap-6 md:grid-cols-2">
+        <TopKeywordsTable 
+          keywords={data.topKeywords} 
+          monthAName={data.dateRanges.monthAName}
+          monthBName={data.dateRanges.monthBName}
+        />
         <TopWinnersTable winners={data.topWinners} />
+      </div>
+
+      {/* New Rankings and Controlled Losers side by side */}
+      <div className="grid gap-6 md:grid-cols-2">
+        <NewRankingsTable newRankings={data.newRankings} />
         <ControlledLosersTable losers={data.controlledLosers} />
       </div>
-
-      {/* New Rankings Table */}
-      <NewRankingsTable newRankings={data.newRankings} />
     </div>
   )
 }

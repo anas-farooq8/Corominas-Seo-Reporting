@@ -30,16 +30,10 @@ type SortColumn =
   | 'rankBAvg'
   | 'rankABest'
   | 'rankBBest'
-  | 'searchVolumeA'
-  | 'searchVolumeB'
-  | 'performanceIndexChangeA'
-  | 'performanceIndexChangeB'
-  | 'estimatedVisitsA'
-  | 'estimatedVisitsB'
 
 type SortDirection = 'asc' | 'desc'
 
-const INITIAL_DISPLAY_COUNT = 10
+const INITIAL_DISPLAY_COUNT = 5
 
 export function TopKeywordsTable({ keywords, monthAName, monthBName }: TopKeywordsTableProps) {
   const [sortColumn, setSortColumn] = useState<SortColumn>('rankB')
@@ -106,30 +100,6 @@ export function TopKeywordsTable({ keywords, monthAName, monthBName }: TopKeywor
           aValue = a.rankBBest
           bValue = b.rankBBest
           break
-        case 'searchVolumeA':
-          aValue = a.searchVolumeA
-          bValue = b.searchVolumeA
-          break
-        case 'searchVolumeB':
-          aValue = a.searchVolumeB
-          bValue = b.searchVolumeB
-          break
-        case 'performanceIndexChangeA':
-          aValue = a.performanceIndexChangeA
-          bValue = b.performanceIndexChangeA
-          break
-        case 'performanceIndexChangeB':
-          aValue = a.performanceIndexChangeB
-          bValue = b.performanceIndexChangeB
-          break
-        case 'estimatedVisitsA':
-          aValue = a.estimatedVisitsA
-          bValue = b.estimatedVisitsA
-          break
-        case 'estimatedVisitsB':
-          aValue = a.estimatedVisitsB
-          bValue = b.estimatedVisitsB
-          break
       }
 
       // Handle null values - put them at the end
@@ -170,7 +140,7 @@ export function TopKeywordsTable({ keywords, monthAName, monthBName }: TopKeywor
       <CardHeader className="bg-primary/5">
         <CardTitle className="text-primary">Top Keywords</CardTitle>
         <CardDescription>
-          This comprehensive table shows all your tracked keywords with detailed performance metrics. For each keyword, you can see: <strong>Rank</strong> (current position in search results lower numbers are better), <strong>Change</strong> (movement up ↑ or down ↓), <strong>Avg</strong> (average position over the month), <strong>Best</strong> (highest ranking achieved), <strong>Search</strong> (monthly search volume), <strong>PI</strong> (Performance Index contribution), and <strong>EV</strong> (Estimated Visits from this keyword). Click any column header to sort and analyze your data. Compare {monthAName} vs {monthBName} side-by-side.
+          This comprehensive table shows all your tracked keywords with detailed performance metrics. For each keyword, you can see: <strong>Rank</strong> (current position in search results lower numbers are better), <strong>Change</strong> (movement up ↑ or down ↓), <strong>Avg</strong> (average position over the month), and <strong>Best</strong> (highest ranking achieved). Click any column header to sort and analyze your data. Compare {monthAName} vs {monthBName} side-by-side.
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -261,72 +231,12 @@ export function TopKeywordsTable({ keywords, monthAName, monthBName }: TopKeywor
                     </div>
                   </div>
                 </TableHead>
-                <TableHead className="text-center font-semibold text-primary border-r">
-                  <div className="flex flex-col items-center gap-1">
-                    <span>Search</span>
-                    <div className="flex items-center text-xs font-normal">
-                      <button 
-                        className="cursor-pointer flex items-center gap-0.5 px-2"
-                        onClick={() => handleSort('searchVolumeA')}
-                      >
-                        {monthAShort} <SortIcon column="searchVolumeA" />
-                      </button>
-                      <div className="h-4 w-px bg-border"></div>
-                      <button 
-                        className="cursor-pointer flex items-center gap-0.5 px-2"
-                        onClick={() => handleSort('searchVolumeB')}
-                      >
-                        {monthBShort} <SortIcon column="searchVolumeB" />
-                      </button>
-                    </div>
-                  </div>
-                </TableHead>
-                <TableHead className="text-center font-semibold text-primary border-r">
-                  <div className="flex flex-col items-center gap-1">
-                    <span>PI</span>
-                    <div className="flex items-center text-xs font-normal">
-                      <button 
-                        className="cursor-pointer flex items-center gap-0.5 px-2"
-                        onClick={() => handleSort('performanceIndexChangeA')}
-                      >
-                        {monthAShort} <SortIcon column="performanceIndexChangeA" />
-                      </button>
-                      <div className="h-4 w-px bg-border"></div>
-                      <button 
-                        className="cursor-pointer flex items-center gap-0.5 px-2"
-                        onClick={() => handleSort('performanceIndexChangeB')}
-                      >
-                        {monthBShort} <SortIcon column="performanceIndexChangeB" />
-                      </button>
-                    </div>
-                  </div>
-                </TableHead>
-                <TableHead className="text-center font-semibold text-primary">
-                  <div className="flex flex-col items-center gap-1">
-                    <span>EV</span>
-                    <div className="flex items-center text-xs font-normal">
-                      <button 
-                        className="cursor-pointer flex items-center gap-0.5 px-2"
-                        onClick={() => handleSort('estimatedVisitsA')}
-                      >
-                        {monthAShort} <SortIcon column="estimatedVisitsA" />
-                      </button>
-                      <div className="h-4 w-px bg-border"></div>
-                      <button 
-                        className="cursor-pointer flex items-center gap-0.5 px-2"
-                        onClick={() => handleSort('estimatedVisitsB')}
-                      >
-                        {monthBShort} <SortIcon column="estimatedVisitsB" />
-                      </button>
-                    </div>
-                  </div>
-                </TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {displayedKeywords.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={10} className="text-center text-muted-foreground">
+                  <TableCell colSpan={5} className="text-center text-muted-foreground">
                     No keywords found
                   </TableCell>
                 </TableRow>
@@ -334,24 +244,6 @@ export function TopKeywordsTable({ keywords, monthAName, monthBName }: TopKeywor
                 displayedKeywords.map((kw) => {
                   const changeADisplay = formatRankChange(kw.rankChangeA)
                   const changeBDisplay = formatRankChange(kw.rankChangeB)
-                  
-                  // Format PI values with color
-                  const piAValue = kw.performanceIndexChangeA
-                  const piBValue = kw.performanceIndexChangeB
-                  
-                  const piAColor = piAValue !== null 
-                    ? piAValue > 0 ? "text-green-600" : piAValue < 0 ? "text-red-600" : ""
-                    : "text-muted-foreground"
-                  const piBColor = piBValue !== null 
-                    ? piBValue > 0 ? "text-green-600 font-bold" : piBValue < 0 ? "text-red-600 font-bold" : "font-bold"
-                    : "font-bold"
-                  
-                  const piADisplay = piAValue !== null 
-                    ? `${piAValue > 0 ? '+' : ''}${piAValue.toFixed(2)}` 
-                    : "N/A"
-                  const piBDisplay = piBValue !== null 
-                    ? `${piBValue > 0 ? '+' : ''}${piBValue.toFixed(2)}` 
-                    : "N/A"
                   
                   return (
                     <TableRow key={kw._id}>
@@ -397,7 +289,7 @@ export function TopKeywordsTable({ keywords, monthAName, monthBName }: TopKeywor
                       </TableCell>
                       
                       {/* Best: A | B */}
-                      <TableCell className="text-center py-3 border-r">
+                      <TableCell className="text-center py-3">
                         <div className="flex items-center justify-center">
                           <span className="text-muted-foreground w-10 text-right">
                             {kw.rankABest !== null ? kw.rankABest : "N/A"}
@@ -405,45 +297,6 @@ export function TopKeywordsTable({ keywords, monthAName, monthBName }: TopKeywor
                           <div className="h-4 w-px bg-border mx-2"></div>
                           <span className="font-bold w-10 text-left">
                             {kw.rankBBest !== null ? kw.rankBBest : "N/A"}
-                          </span>
-                        </div>
-                      </TableCell>
-                      
-                      {/* Search Volume: A | B */}
-                      <TableCell className="text-center py-3 border-r">
-                        <div className="flex items-center justify-center">
-                          <span className="text-muted-foreground w-16 text-right">
-                            {kw.searchVolumeA !== null ? kw.searchVolumeA.toLocaleString() : "N/A"}
-                          </span>
-                          <div className="h-4 w-px bg-border mx-2"></div>
-                          <span className="font-bold w-16 text-left">
-                            {kw.searchVolumeB !== null ? kw.searchVolumeB.toLocaleString() : "N/A"}
-                          </span>
-                        </div>
-                      </TableCell>
-                      
-                      {/* Performance Index: A | B (colored) */}
-                      <TableCell className="text-center py-3 border-r">
-                        <div className="flex items-center justify-center">
-                          <span className={`${piAColor} w-14 text-right`}>
-                            {piADisplay}
-                          </span>
-                          <div className="h-4 w-px bg-border mx-2"></div>
-                          <span className={`${piBColor} w-14 text-left`}>
-                            {piBDisplay}
-                          </span>
-                        </div>
-                      </TableCell>
-                      
-                      {/* Estimated Visits: A | B */}
-                      <TableCell className="text-center py-3">
-                        <div className="flex items-center justify-center">
-                          <span className="text-muted-foreground w-16 text-right">
-                            {kw.estimatedVisitsA !== null ? kw.estimatedVisitsA.toLocaleString() : "N/A"}
-                          </span>
-                          <div className="h-4 w-px bg-border mx-2"></div>
-                          <span className="font-bold w-16 text-left">
-                            {kw.estimatedVisitsB !== null ? kw.estimatedVisitsB.toLocaleString() : "N/A"}
                           </span>
                         </div>
                       </TableCell>

@@ -34,9 +34,11 @@ export function Sidebar() {
       )}>
         <div className="flex h-16 items-center justify-center border-b px-2">
           <Link href="/dashboard" className="flex items-center gap-2 font-semibold">
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-primary-foreground">
-              S
-            </div>
+            <img 
+              src="https://www.google.com/s2/favicons?domain=corominas-consulting.de&sz=64" 
+              alt="Corominas Consulting Logo" 
+              className="h-8 w-8"
+            />
             {isOpen && <span className="whitespace-nowrap">SEO Reporting</span>}
           </Link>
         </div>
