@@ -28,8 +28,6 @@ type SortColumn =
   | 'rankChangeB'
   | 'rankAAvg'
   | 'rankBAvg'
-  | 'rankABest'
-  | 'rankBBest'
 
 type SortDirection = 'asc' | 'desc'
 
@@ -92,14 +90,6 @@ export function TopKeywordsTable({ keywords, monthAName, monthBName }: TopKeywor
           aValue = a.rankBAvg
           bValue = b.rankBAvg
           break
-        case 'rankABest':
-          aValue = a.rankABest
-          bValue = b.rankABest
-          break
-        case 'rankBBest':
-          aValue = a.rankBBest
-          bValue = b.rankBBest
-          break
       }
 
       // Handle null values - put them at the end
@@ -140,7 +130,7 @@ export function TopKeywordsTable({ keywords, monthAName, monthBName }: TopKeywor
       <CardHeader className="bg-primary/5">
         <CardTitle className="text-primary">Top Keywords</CardTitle>
         <CardDescription>
-          This comprehensive table shows all your tracked keywords with detailed performance metrics. For each keyword, you can see: <strong>Rank</strong> (current position in search results lower numbers are better), <strong>Change</strong> (movement up ↑ or down ↓), <strong>Avg</strong> (average position over the month), and <strong>Best</strong> (highest ranking achieved). Click any column header to sort and analyze your data. Compare {monthAName} vs {monthBName} side-by-side.
+          This comprehensive table shows all your tracked keywords with detailed performance metrics. For each keyword, you can see: <strong>Last Rank</strong> (current position in search results lower numbers are better), <strong>Rank Change</strong> (movement up ↑ or down ↓), and <strong>Avg Rank</strong> (average position over the month). Click any column header to sort and analyze your data. Compare {monthAName} vs {monthBName} side-by-side.
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -153,7 +143,7 @@ export function TopKeywordsTable({ keywords, monthAName, monthBName }: TopKeywor
                 </TableHead>
                 <TableHead className="text-center font-semibold text-primary border-r">
                   <div className="flex flex-col items-center gap-1">
-                    <span>Rank</span>
+                    <span>Last Rank</span>
                     <div className="flex items-center text-xs font-normal">
                       <button 
                         className="cursor-pointer flex items-center gap-0.5 px-2"
@@ -173,7 +163,7 @@ export function TopKeywordsTable({ keywords, monthAName, monthBName }: TopKeywor
                 </TableHead>
                 <TableHead className="text-center font-semibold text-primary border-r">
                   <div className="flex flex-col items-center gap-1">
-                    <span>Change</span>
+                    <span>Rank Change</span>
                     <div className="flex items-center text-xs font-normal">
                       <button 
                         className="cursor-pointer flex items-center gap-0.5 px-2"
@@ -193,7 +183,7 @@ export function TopKeywordsTable({ keywords, monthAName, monthBName }: TopKeywor
                 </TableHead>
                 <TableHead className="text-center font-semibold text-primary border-r">
                   <div className="flex flex-col items-center gap-1">
-                    <span>Avg</span>
+                    <span>Avg Rank</span>
                     <div className="flex items-center text-xs font-normal">
                       <button 
                         className="cursor-pointer flex items-center gap-0.5 px-2"
@@ -211,32 +201,12 @@ export function TopKeywordsTable({ keywords, monthAName, monthBName }: TopKeywor
                     </div>
                   </div>
                 </TableHead>
-                <TableHead className="text-center font-semibold text-primary border-r">
-                  <div className="flex flex-col items-center gap-1">
-                    <span>Best</span>
-                    <div className="flex items-center text-xs font-normal">
-                      <button 
-                        className="cursor-pointer flex items-center gap-0.5 px-2"
-                        onClick={() => handleSort('rankABest')}
-                      >
-                        {monthAShort} <SortIcon column="rankABest" />
-                      </button>
-                      <div className="h-4 w-px bg-border"></div>
-                      <button 
-                        className="cursor-pointer flex items-center gap-0.5 px-2"
-                        onClick={() => handleSort('rankBBest')}
-                      >
-                        {monthBShort} <SortIcon column="rankBBest" />
-                      </button>
-                    </div>
-                  </div>
-                </TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {displayedKeywords.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={5} className="text-center text-muted-foreground">
+                  <TableCell colSpan={4} className="text-center text-muted-foreground">
                     No keywords found
                   </TableCell>
                 </TableRow>
@@ -276,7 +246,7 @@ export function TopKeywordsTable({ keywords, monthAName, monthBName }: TopKeywor
                       </TableCell>
                       
                       {/* Avg: A | B */}
-                      <TableCell className="text-center py-3 border-r">
+                      <TableCell className="text-center py-3">
                         <div className="flex items-center justify-center">
                           <span className="text-muted-foreground w-10 text-right">
                             {kw.rankAAvg !== null ? kw.rankAAvg.toFixed(1) : "N/A"}
@@ -284,19 +254,6 @@ export function TopKeywordsTable({ keywords, monthAName, monthBName }: TopKeywor
                           <div className="h-4 w-px bg-border mx-2"></div>
                           <span className="font-bold w-10 text-left">
                             {kw.rankBAvg !== null ? kw.rankBAvg.toFixed(1) : "N/A"}
-                          </span>
-                        </div>
-                      </TableCell>
-                      
-                      {/* Best: A | B */}
-                      <TableCell className="text-center py-3">
-                        <div className="flex items-center justify-center">
-                          <span className="text-muted-foreground w-10 text-right">
-                            {kw.rankABest !== null ? kw.rankABest : "N/A"}
-                          </span>
-                          <div className="h-4 w-px bg-border mx-2"></div>
-                          <span className="font-bold w-10 text-left">
-                            {kw.rankBBest !== null ? kw.rankBBest : "N/A"}
                           </span>
                         </div>
                       </TableCell>
