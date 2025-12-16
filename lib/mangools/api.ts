@@ -145,8 +145,6 @@ export async function fetchTrackingDetail(trackingId: string): Promise<MangoolsT
     const params = new URLSearchParams({
       is_with_deleted: "false"
     })
-    
-    console.log(`[Mangools API] Fetching tracking detail: ${url}?${params.toString()}`)
 
     const response = await fetch(`${url}?${params.toString()}`, {
       method: "GET",

@@ -336,4 +336,3 @@ export function TopKeywordsTable({ keywords, monthAName, monthBName }: TopKeywor
     </Card>
   )
 }
-

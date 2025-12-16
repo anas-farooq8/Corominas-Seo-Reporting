@@ -60,12 +60,8 @@ export async function fetchMangoolsDashboardData(datasourceId: string): Promise<
     }
     
     // Step 1: Fetch tracking detail to get keyword names and total count
-    console.log(`[Dashboard] Fetching tracking detail from /detail endpoint...`)
     const trackingDetail = await fetchTrackingDetail(trackingId)
     
-    console.log(`[Dashboard] Successfully fetched ${trackingDetail.keywords.length} total keywords from /detail endpoint`)
-    console.log(`[Dashboard] Domain: ${trackingDetail.tracking.domain}, Location: ${trackingDetail.tracking.location.label}`)
-
     // Calculate date ranges for the last 2 completed months
     const today = new Date()
     
@@ -104,10 +100,6 @@ export async function fetchMangoolsDashboardData(datasourceId: string): Promise<
     const monthBName = formatMonthName(monthBStart)
 
     // Step 2: Fetch stats for both months in parallel
-    console.log(`[Dashboard] Fetching last 2 completed months:`)
-    console.log(`[Dashboard] ${monthAName}: ${fromA} to ${toA}`)
-    console.log(`[Dashboard] ${monthBName}: ${fromB} to ${toB}`)
-    
     const [monthA, monthB] = await Promise.all([
       fetchTrackingStats(trackingId, fromA, toA),
       fetchTrackingStats(trackingId, fromB, toB),
@@ -128,8 +120,6 @@ export async function fetchMangoolsDashboardData(datasourceId: string): Promise<
     const topWinners = getTopWinners(comparisons) // Get all winners
     const controlledLosers = getControlledLosers(comparisons) // Get all losers
     const newRankings = getNewRankings(comparisons)
-
-    console.log(`[Dashboard] Results - Winners: ${topWinners.length}, Losers: ${controlledLosers.length}, New Rankings: ${newRankings.length}`)
 
     return {
       domain: domain.domain,

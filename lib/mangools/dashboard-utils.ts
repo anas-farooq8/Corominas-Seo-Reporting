@@ -142,14 +142,9 @@ export function getNewRankings(comparisons: KeywordComparison[]): KeywordCompari
   const newRankings = [...comparisons]
     .filter(kw => {
       const isNew = (kw.rankA === null || kw.rankA > 100) && kw.rankB !== null && kw.rankB <= 100
-      if (isNew) {
-        console.log(`[New Ranking] ${kw.keyword}: rankA=${kw.rankA}, rankB=${kw.rankB}`)
-      }
       return isNew
     })
     .sort((a, b) => (b.searchVolumeB ?? 0) - (a.searchVolumeB ?? 0)) // Sort by search volume
-  
-  console.log(`[New Rankings] Total found: ${newRankings.length}`)
   return newRankings
 }
 
