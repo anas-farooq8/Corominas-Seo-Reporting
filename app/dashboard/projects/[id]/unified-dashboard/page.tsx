@@ -7,14 +7,14 @@ import { LoadingSpinner } from "@/components/ui/loading-spinner"
 import { ErrorDisplay } from "@/components/ui/error-display"
 import { ArrowLeft } from "lucide-react"
 import type { getDataSourcesWithRespectiveData } from "@/lib/supabase/types"
-import { ComingSoonPage } from "@/components/dashboard/coming-soon-page"
+import { GoogleAnalyticsDashboardPage } from "@/components/dashboard/google-analytics-dashboard-page"
 import { MangoolsDashboardPage } from "@/components/dashboard/mangools-dashboard-page"
 
 interface PageConfig {
   id: string
   label: string
   datasourceType: string
-  datasourceId?: string
+  datasourceId: string
 }
 
 export default function UnifiedDashboardPage({ params }: { params: Promise<{ id: string }> }) {
@@ -43,24 +43,24 @@ export default function UnifiedDashboardPage({ params }: { params: Promise<{ id:
       
       // Build pages based on connected datasources
       const connectedPages: PageConfig[] = []
-      const hasGoogleAnalytics = data.datasources?.some((ds: any) => ds.type === "google_analytics")
-      const hasMangools = data.datasources?.some((ds: any) => ds.type === "mangools")
+      const googleAnalyticsDatasource = data.datasources?.find((ds: any) => ds.type === "google_analytics")
       const mangoolsDatasource = data.datasources?.find((ds: any) => ds.type === "mangools")
       
-      if (hasGoogleAnalytics) {
+      if (googleAnalyticsDatasource) {
         connectedPages.push({
           id: "page-1",
           label: "Google Analytics",
-          datasourceType: "google_analytics"
+          datasourceType: "google_analytics",
+          datasourceId: googleAnalyticsDatasource.id
         })
       }
       
-      if (hasMangools) {
+      if (mangoolsDatasource) {
         connectedPages.push({
-          id: hasGoogleAnalytics ? "page-2" : "page-1",
+          id: googleAnalyticsDatasource ? "page-2" : "page-1",
           label: "Mangools SEO",
           datasourceType: "mangools",
-          datasourceId: mangoolsDatasource?.id
+          datasourceId: mangoolsDatasource.id
         })
       }
       
@@ -143,9 +143,9 @@ export default function UnifiedDashboardPage({ params }: { params: Promise<{ id:
       {/* Content Area */}
       <div className="flex-1 overflow-auto">
         {activePageConfig?.datasourceType === "google_analytics" && (
-          <ComingSoonPage pageName="Google Analytics" />
+          <GoogleAnalyticsDashboardPage datasourceId={activePageConfig.datasourceId} />
         )}
-        {activePageConfig?.datasourceType === "mangools" && activePageConfig.datasourceId && (
+        {activePageConfig?.datasourceType === "mangools" && (
           <MangoolsDashboardPage datasourceId={activePageConfig.datasourceId} />
         )}
       </div>
