@@ -1,0 +1,155 @@
+"use client"
+
+import { useState, useEffect, use } from "react"
+import { useRouter } from "next/navigation"
+import { Button } from "@/components/ui/button"
+import { LoadingSpinner } from "@/components/ui/loading-spinner"
+import { ErrorDisplay } from "@/components/ui/error-display"
+import { ArrowLeft } from "lucide-react"
+import type { getDataSourcesWithRespectiveData } from "@/lib/supabase/types"
+import { ComingSoonPage } from "@/components/dashboard/coming-soon-page"
+import { MangoolsDashboardPage } from "@/components/dashboard/mangools-dashboard-page"
+
+interface PageConfig {
+  id: string
+  label: string
+  datasourceType: string
+  datasourceId?: string
+}
+
+export default function UnifiedDashboardPage({ params }: { params: Promise<{ id: string }> }) {
+  const router = useRouter()
+  const { id: projectId } = use(params)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+  const [datasources, setDatasources] = useState<getDataSourcesWithRespectiveData[]>([])
+  const [pages, setPages] = useState<PageConfig[]>([])
+  const [activePage, setActivePage] = useState<string>("")
+  const [projectName, setProjectName] = useState<string>("")
+
+  useEffect(() => {
+    fetchDashboardData()
+  }, [projectId])
+
+  async function fetchDashboardData() {
+    try {
+      setLoading(true)
+      const response = await fetch(`/api/projects/${projectId}`)
+      if (!response.ok) throw new Error("Failed to fetch project data")
+      const data = await response.json()
+      
+      setProjectName(data.name)
+      setDatasources(data.datasources || [])
+      
+      // Build pages based on connected datasources
+      const connectedPages: PageConfig[] = []
+      const hasGoogleAnalytics = data.datasources?.some((ds: any) => ds.type === "google_analytics")
+      const hasMangools = data.datasources?.some((ds: any) => ds.type === "mangools")
+      const mangoolsDatasource = data.datasources?.find((ds: any) => ds.type === "mangools")
+      
+      if (hasGoogleAnalytics) {
+        connectedPages.push({
+          id: "page-1",
+          label: "Google Analytics",
+          datasourceType: "google_analytics"
+        })
+      }
+      
+      if (hasMangools) {
+        connectedPages.push({
+          id: hasGoogleAnalytics ? "page-2" : "page-1",
+          label: "Mangools SEO",
+          datasourceType: "mangools",
+          datasourceId: mangoolsDatasource?.id
+        })
+      }
+      
+      setPages(connectedPages)
+      if (connectedPages.length > 0) {
+        setActivePage(connectedPages[0].id)
+      }
+    } catch (err) {
+      console.error("Error fetching dashboard data:", err)
+      setError(err instanceof Error ? err.message : "Failed to load dashboard")
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  if (loading) {
+    return (
+      <div className="flex-1 flex items-center justify-center min-h-screen">
+        <LoadingSpinner message="Loading Dashboard..." />
+      </div>
+    )
+  }
+
+  if (error || pages.length === 0) {
+    return (
+      <div className="flex-1 p-4 md:p-8">
+        <ErrorDisplay
+          title="Dashboard Error"
+          message={error || "No data sources connected. Please add a data source to view the dashboard."}
+          secondaryAction={{
+            label: "Go Back",
+            onClick: () => router.back(),
+            icon: <ArrowLeft className="mr-2 h-4 w-4" />
+          }}
+        />
+      </div>
+    )
+  }
+
+  const activePageConfig = pages.find(p => p.id === activePage)
+
+  return (
+    <div className="flex-1 flex flex-col">
+      {/* Header */}
+      <div className="border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+        <div className="flex items-center gap-4 p-4 md:p-6">
+          <Button variant="ghost" size="icon" onClick={() => router.back()}>
+            <ArrowLeft className="h-5 w-5" />
+          </Button>
+          <div className="flex-1">
+            <h1 className="text-2xl md:text-3xl font-bold text-foreground">
+              {projectName} Dashboard
+            </h1>
+            <p className="text-sm text-muted-foreground mt-1">
+              Unified analytics dashboard
+            </p>
+          </div>
+        </div>
+        
+        {/* Page Navigation Tabs */}
+        <div className="px-4 md:px-6">
+          <div className="flex gap-2 border-b">
+            {pages.map((page) => (
+              <button
+                key={page.id}
+                onClick={() => setActivePage(page.id)}
+                className={`px-4 py-3 text-sm font-medium border-b-2 transition-colors cursor-pointer ${
+                  activePage === page.id
+                    ? "border-primary text-primary"
+                    : "border-transparent text-muted-foreground hover:text-foreground hover:border-muted"
+                }`}
+              >
+                {page.label}
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* Content Area */}
+      <div className="flex-1 overflow-auto">
+        {activePageConfig?.datasourceType === "google_analytics" && (
+          <ComingSoonPage pageName="Google Analytics" />
+        )}
+        {activePageConfig?.datasourceType === "mangools" && activePageConfig.datasourceId && (
+          <MangoolsDashboardPage datasourceId={activePageConfig.datasourceId} />
+        )}
+      </div>
+    </div>
+  )
+}
+

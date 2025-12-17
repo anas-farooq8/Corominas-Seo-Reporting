@@ -4,6 +4,7 @@ import { useState, useEffect } from "react"
 import { AvailableDomainsSection } from "./available-domains-section"
 import { AttachedDomainsSection } from "./attached-domains-section"
 import type { DatasourceWithDomains } from "@/lib/supabase/types"
+import { BarChart3, Globe, Clock, DollarSign } from "lucide-react"
 
 interface DomainsSectionProps {
   datasource: DatasourceWithDomains
@@ -32,7 +33,6 @@ export function DomainsSection({
         {hasDomains && datasource.mangools_domains && (
           <AttachedDomainsSection
             domains={datasource.mangools_domains}
-            datasourceId={datasource.id}
           />
         )}
       </div>
@@ -53,13 +53,24 @@ export function DomainsSection({
 
     const property = properties[0]
     return (
-      <div className="space-y-2">
-        <div className="text-sm font-medium">Google Analytics Property</div>
-        <div className="border rounded-lg p-4 space-y-2">
-          <div className="font-medium">{property.display_name}</div>
-          <div className="flex flex-wrap gap-4 text-sm text-muted-foreground">
-            <span>🕐 {property.time_zone}</span>
-            <span>💰 {property.currency_code}</span>
+      <div className="space-y-3">
+        <h3 className="text-sm font-semibold text-foreground">Google Analytics Property</h3>
+        <div className="group relative flex items-center gap-4 p-4 border-2 rounded-xl bg-gradient-to-br from-background to-muted/30 hover:shadow-md hover:border-primary/20 transition-all duration-200">
+          <div className="relative p-2 rounded-lg bg-primary/10 group-hover:bg-primary/15 transition-colors">
+            <BarChart3 className="h-5 w-5 text-primary" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <h4 className="font-semibold text-base truncate mb-2">{property.display_name}</h4>
+            <div className="flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
+              <div className="flex items-center gap-1.5">
+                <Clock className="h-3.5 w-3.5" />
+                <span>{property.time_zone}</span>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <DollarSign className="h-3.5 w-3.5" />
+                <span>{property.currency_code}</span>
+              </div>
+            </div>
           </div>
         </div>
       </div>

@@ -1,17 +1,13 @@
 "use client"
 
 import type { MangoolsDomain } from "@/lib/supabase/types"
-import { Globe, Key, BarChart3 } from "lucide-react"
-import { Button } from "@/components/ui/button"
-import { useRouter } from "next/navigation"
+import { Globe, Key } from "lucide-react"
 
 interface AttachedDomainsSectionProps {
   domains: MangoolsDomain[]
-  datasourceId?: string
 }
 
-export function AttachedDomainsSection({ domains, datasourceId }: AttachedDomainsSectionProps) {
-  const router = useRouter()
+export function AttachedDomainsSection({ domains }: AttachedDomainsSectionProps) {
   if (domains.length === 0) {
     return null
   }
@@ -46,17 +42,6 @@ export function AttachedDomainsSection({ domains, datasourceId }: AttachedDomain
                 </div>
               </div>
             </div>
-            {datasourceId && (
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => router.push(`/dashboard/mangools/${datasourceId}`)}
-                className="ml-auto"
-              >
-                <BarChart3 className="h-4 w-4 mr-2" />
-                View Dashboard
-              </Button>
-            )}
           </div>
         ))}
       </div>

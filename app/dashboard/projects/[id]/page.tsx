@@ -9,7 +9,7 @@ import { DatasourcesList } from "@/components/datasources/datasources-list"
 import { CreateDatasourceDialog } from "@/components/datasources/create-datasource-dialog"
 import { LoadingSpinner } from "@/components/ui/loading-spinner"
 import { ErrorDisplay } from "@/components/ui/error-display"
-import { ArrowLeft } from "lucide-react"
+import { ArrowLeft, BarChart3 } from "lucide-react"
 
 export default function ProjectDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const router = useRouter()
@@ -77,11 +77,22 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
             </CardDescription>
           </div>
           {!loading && !error && project && (
-            <CreateDatasourceDialog
-              projectId={project.id}
-              existingTypes={datasources.map((ds) => ds.type)}
-              onDatasourceAdded={fetchProjectData}
-            />
+            <div className="flex gap-2">
+              {datasources.length > 0 && (
+                <Button
+                  variant="default"
+                  onClick={() => router.push(`/dashboard/projects/${project.id}/unified-dashboard`)}
+                >
+                  <BarChart3 className="mr-2 h-4 w-4" />
+                  View Dashboard
+                </Button>
+              )}
+              <CreateDatasourceDialog
+                projectId={project.id}
+                existingTypes={datasources.map((ds) => ds.type)}
+                onDatasourceAdded={fetchProjectData}
+              />
+            </div>
           )}
         </CardHeader>
         <CardContent>
