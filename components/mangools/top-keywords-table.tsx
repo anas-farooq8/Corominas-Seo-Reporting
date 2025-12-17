@@ -127,33 +127,33 @@ export function TopKeywordsTable({ keywords, monthAName, monthBName }: TopKeywor
   }
   return (
     <Card>
-      <CardHeader className="bg-primary/5">
-        <CardTitle className="text-primary">Top Keywords</CardTitle>
-        <CardDescription>
+      <CardHeader className="bg-primary/5 px-4 sm:px-6 py-3 sm:py-4">
+        <CardTitle className="text-primary text-base sm:text-lg">Top Keywords</CardTitle>
+        <CardDescription className="text-xs sm:text-sm">
           This comprehensive table shows all your tracked keywords with detailed performance metrics. For each keyword, you can see: <strong>Last Rank</strong> (current position in search results lower numbers are better), <strong>Rank Change</strong> (movement up ↑ or down ↓), and <strong>Avg Rank</strong> (average position over the month). Click any column header to sort and analyze your data. Compare {monthAName} vs {monthBName} side-by-side.
         </CardDescription>
       </CardHeader>
-      <CardContent>
+      <CardContent className="px-0 sm:px-6 pb-4 sm:pb-6">
         <div className="overflow-x-auto">
           <Table>
             <TableHeader>
               <TableRow className="bg-primary/10">
-                <TableHead className="min-w-[200px] font-semibold text-primary border-r">
+                <TableHead className="min-w-[150px] sm:min-w-[200px] font-semibold text-primary border-r text-xs sm:text-sm">
                   Keyword
                 </TableHead>
                 <TableHead className="text-center font-semibold text-primary border-r">
                   <div className="flex flex-col items-center gap-1">
-                    <span>Last Rank</span>
-                    <div className="flex items-center text-xs font-normal">
+                    <span className="text-xs sm:text-sm">Last Rank</span>
+                    <div className="flex items-center text-[10px] sm:text-xs font-normal">
                       <button 
-                        className="cursor-pointer flex items-center gap-0.5 px-2"
+                        className="cursor-pointer flex items-center gap-0.5 px-1.5 sm:px-2 touch-manipulation"
                         onClick={() => handleSort('rankA')}
                       >
                         {monthAShort} <SortIcon column="rankA" />
                       </button>
                       <div className="h-4 w-px bg-border"></div>
                       <button 
-                        className="cursor-pointer flex items-center gap-0.5 px-2"
+                        className="cursor-pointer flex items-center gap-0.5 px-1.5 sm:px-2 touch-manipulation"
                         onClick={() => handleSort('rankB')}
                       >
                         {monthBShort} <SortIcon column="rankB" />
@@ -163,17 +163,17 @@ export function TopKeywordsTable({ keywords, monthAName, monthBName }: TopKeywor
                 </TableHead>
                 <TableHead className="text-center font-semibold text-primary border-r">
                   <div className="flex flex-col items-center gap-1">
-                    <span>Rank Change</span>
-                    <div className="flex items-center text-xs font-normal">
+                    <span className="text-xs sm:text-sm">Rank Change</span>
+                    <div className="flex items-center text-[10px] sm:text-xs font-normal">
                       <button 
-                        className="cursor-pointer flex items-center gap-0.5 px-2"
+                        className="cursor-pointer flex items-center gap-0.5 px-1.5 sm:px-2 touch-manipulation"
                         onClick={() => handleSort('rankChangeA')}
                       >
                         {monthAShort} <SortIcon column="rankChangeA" />
                       </button>
                       <div className="h-4 w-px bg-border"></div>
                       <button 
-                        className="cursor-pointer flex items-center gap-0.5 px-2"
+                        className="cursor-pointer flex items-center gap-0.5 px-1.5 sm:px-2 touch-manipulation"
                         onClick={() => handleSort('rankChangeB')}
                       >
                         {monthBShort} <SortIcon column="rankChangeB" />
@@ -183,17 +183,17 @@ export function TopKeywordsTable({ keywords, monthAName, monthBName }: TopKeywor
                 </TableHead>
                 <TableHead className="text-center font-semibold text-primary border-r">
                   <div className="flex flex-col items-center gap-1">
-                    <span>Avg Rank</span>
-                    <div className="flex items-center text-xs font-normal">
+                    <span className="text-xs sm:text-sm">Avg Rank</span>
+                    <div className="flex items-center text-[10px] sm:text-xs font-normal">
                       <button 
-                        className="cursor-pointer flex items-center gap-0.5 px-2"
+                        className="cursor-pointer flex items-center gap-0.5 px-1.5 sm:px-2 touch-manipulation"
                         onClick={() => handleSort('rankAAvg')}
                       >
                         {monthAShort} <SortIcon column="rankAAvg" />
                       </button>
                       <div className="h-4 w-px bg-border"></div>
                       <button 
-                        className="cursor-pointer flex items-center gap-0.5 px-2"
+                        className="cursor-pointer flex items-center gap-0.5 px-1.5 sm:px-2 touch-manipulation"
                         onClick={() => handleSort('rankBAvg')}
                       >
                         {monthBShort} <SortIcon column="rankBAvg" />
@@ -206,7 +206,7 @@ export function TopKeywordsTable({ keywords, monthAName, monthBName }: TopKeywor
             <TableBody>
               {displayedKeywords.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={4} className="text-center text-muted-foreground">
+                  <TableCell colSpan={4} className="text-center text-muted-foreground text-xs sm:text-sm">
                     No keywords found
                   </TableCell>
                 </TableRow>
@@ -217,42 +217,42 @@ export function TopKeywordsTable({ keywords, monthAName, monthBName }: TopKeywor
                   
                   return (
                     <TableRow key={kw._id}>
-                      <TableCell className="font-medium py-3 border-r">{kw.keyword}</TableCell>
+                      <TableCell className="font-medium py-2 sm:py-3 border-r text-xs sm:text-sm">{kw.keyword}</TableCell>
                       
                       {/* Rank: A | B */}
-                      <TableCell className="text-center py-3 border-r">
+                      <TableCell className="text-center py-2 sm:py-3 border-r text-xs sm:text-sm">
                         <div className="flex items-center justify-center">
-                          <span className="text-muted-foreground w-10 text-right">
+                          <span className="text-muted-foreground w-8 sm:w-10 text-right">
                             {kw.rankA !== null ? kw.rankA : "N/A"}
                           </span>
-                          <div className="h-4 w-px bg-border mx-2"></div>
-                          <span className="font-bold w-10 text-left">
+                          <div className="h-4 w-px bg-border mx-1.5 sm:mx-2"></div>
+                          <span className="font-bold w-8 sm:w-10 text-left">
                             {kw.rankB !== null ? kw.rankB : "N/A"}
                           </span>
                         </div>
                       </TableCell>
                       
                       {/* Change: A | B */}
-                      <TableCell className="text-center py-3 border-r">
+                      <TableCell className="text-center py-2 sm:py-3 border-r text-xs sm:text-sm">
                         <div className="flex items-center justify-center">
-                          <span className={`${changeADisplay.color} w-12 text-right`}>
+                          <span className={`${changeADisplay.color} w-10 sm:w-12 text-right`}>
                             {changeADisplay.symbol} {changeADisplay.value}
                           </span>
-                          <div className="h-4 w-px bg-border mx-2"></div>
-                          <span className={`font-bold ${changeBDisplay.color} w-12 text-left`}>
+                          <div className="h-4 w-px bg-border mx-1.5 sm:mx-2"></div>
+                          <span className={`font-bold ${changeBDisplay.color} w-10 sm:w-12 text-left`}>
                             {changeBDisplay.symbol} {changeBDisplay.value}
                           </span>
                         </div>
                       </TableCell>
                       
                       {/* Avg: A | B */}
-                      <TableCell className="text-center py-3">
+                      <TableCell className="text-center py-2 sm:py-3 text-xs sm:text-sm">
                         <div className="flex items-center justify-center">
-                          <span className="text-muted-foreground w-10 text-right">
+                          <span className="text-muted-foreground w-8 sm:w-10 text-right">
                             {kw.rankAAvg !== null ? kw.rankAAvg.toFixed(1) : "N/A"}
                           </span>
-                          <div className="h-4 w-px bg-border mx-2"></div>
-                          <span className="font-bold w-10 text-left">
+                          <div className="h-4 w-px bg-border mx-1.5 sm:mx-2"></div>
+                          <span className="font-bold w-8 sm:w-10 text-left">
                             {kw.rankBAvg !== null ? kw.rankBAvg.toFixed(1) : "N/A"}
                           </span>
                         </div>
@@ -267,23 +267,23 @@ export function TopKeywordsTable({ keywords, monthAName, monthBName }: TopKeywor
         
         {/* Show More / Show Less Button */}
         {sortedKeywords.length > INITIAL_DISPLAY_COUNT && (
-          <div className="mt-4 flex justify-center">
+          <div className="mt-4 flex justify-center px-4 sm:px-0">
             {showAll ? (
               <Button 
                 variant="outline" 
                 onClick={handleShowLess}
-                className="gap-2"
+                className="gap-2 h-10 sm:h-11 text-xs sm:text-sm touch-manipulation"
               >
-                <ChevronUp className="h-4 w-4" />
+                <ChevronUp className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
                 Show Less
               </Button>
             ) : (
               <Button 
                 variant="outline" 
                 onClick={() => setShowAll(true)}
-                className="gap-2"
+                className="gap-2 h-10 sm:h-11 text-xs sm:text-sm touch-manipulation"
               >
-                <ChevronDown className="h-4 w-4" />
+                <ChevronDown className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
                 Show More ({sortedKeywords.length - INITIAL_DISPLAY_COUNT} more)
               </Button>
             )}

@@ -66,20 +66,20 @@ export function MangoolsDashboardPage({ datasourceId }: MangoolsDashboardPagePro
   }
 
   return (
-    <div className="space-y-6 p-4 md:p-8">
+    <div className="space-y-4 sm:space-y-6 p-3 sm:p-4 md:p-6 lg:p-8">
       {/* Domain Info */}
       <div>
-        <h2 className="text-xl md:text-2xl font-bold text-foreground">
+        <h2 className="text-lg sm:text-xl md:text-2xl font-bold text-foreground">
           {data.domain}
         </h2>
-        <div className="flex flex-col gap-1 mt-2">
-          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+        <div className="flex flex-col gap-1 mt-1.5 sm:mt-2">
+          <div className="flex items-center gap-2 text-xs sm:text-sm text-muted-foreground">
             <span className="font-medium">Location:</span>
-            <span>{data.location}</span>
+            <span className="truncate">{data.location}</span>
           </div>
-          <div className="flex items-center gap-2 text-sm text-muted-foreground">
-            <Calendar className="h-4 w-4" />
-            <span>
+          <div className="flex items-center gap-2 text-xs sm:text-sm text-muted-foreground">
+            <Calendar className="h-3.5 w-3.5 sm:h-4 sm:w-4 flex-shrink-0" />
+            <span className="text-[11px] sm:text-xs md:text-sm">
               Comparing {data.dateRanges.monthAName} vs {data.dateRanges.monthBName}
             </span>
           </div>
@@ -87,23 +87,23 @@ export function MangoolsDashboardPage({ datasourceId }: MangoolsDashboardPagePro
       </div>
 
       {/* Summary Stats */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-        <div className="p-4 border rounded-lg bg-card">
-          <div className="text-sm text-muted-foreground">Total Keywords in Tracking</div>
-          <div className="text-2xl font-bold">{data.totalKeywords}</div>
+      <div className="grid gap-3 sm:gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="p-3 sm:p-4 border rounded-lg bg-card">
+          <div className="text-xs sm:text-sm text-muted-foreground">Total Keywords in Tracking</div>
+          <div className="text-xl sm:text-2xl font-bold mt-1">{data.totalKeywords}</div>
         </div>
-        <div className="p-4 border rounded-lg bg-card">
-          <div className="text-sm text-muted-foreground">Top Winners</div>
-          <div className="text-2xl font-bold text-green-600">{data.topWinners.length}</div>
+        <div className="p-3 sm:p-4 border rounded-lg bg-card">
+          <div className="text-xs sm:text-sm text-muted-foreground">Top Winners</div>
+          <div className="text-xl sm:text-2xl font-bold text-green-600 mt-1">{data.topWinners.length}</div>
         </div>
-        <div className="p-4 border rounded-lg bg-card">
-          <div className="text-sm text-muted-foreground">New Rankings</div>
-          <div className="text-2xl font-bold text-blue-600">{data.newRankings.length}</div>
+        <div className="p-3 sm:p-4 border rounded-lg bg-card">
+          <div className="text-xs sm:text-sm text-muted-foreground">New Rankings</div>
+          <div className="text-xl sm:text-2xl font-bold text-blue-600 mt-1">{data.newRankings.length}</div>
         </div>
       </div>
 
       {/* Top Keywords and Top Winners side by side */}
-      <div className="grid gap-6 md:grid-cols-2">
+      <div className="grid gap-4 sm:gap-6 grid-cols-1 lg:grid-cols-2">
         <TopKeywordsTable 
           keywords={data.topKeywords} 
           monthAName={data.dateRanges.monthAName}
@@ -113,7 +113,7 @@ export function MangoolsDashboardPage({ datasourceId }: MangoolsDashboardPagePro
       </div>
 
       {/* New Rankings and Controlled Losers side by side */}
-      <div className="grid gap-6 md:grid-cols-2">
+      <div className="grid gap-4 sm:gap-6 grid-cols-1 lg:grid-cols-2">
         <NewRankingsTable newRankings={data.newRankings} />
         <ControlledLosersTable losers={data.controlledLosers} />
       </div>

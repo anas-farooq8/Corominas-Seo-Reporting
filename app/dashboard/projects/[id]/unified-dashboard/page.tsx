@@ -98,15 +98,15 @@ export default function UnifiedDashboardPage({ params }: { params: Promise<{ id:
     <div className="flex-1 flex flex-col">
       {/* Header */}
       <div className="border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-        <div className="flex items-center gap-4 p-4 md:p-6">
-          <Button variant="ghost" size="icon" onClick={() => router.back()}>
-            <ArrowLeft className="h-5 w-5" />
+        <div className="flex items-center gap-3 sm:gap-4 p-3 sm:p-4 md:p-6">
+          <Button variant="ghost" size="icon" onClick={() => router.back()} className="h-9 w-9 sm:h-10 sm:w-10 flex-shrink-0 touch-manipulation">
+            <ArrowLeft className="h-4 w-4 sm:h-5 sm:w-5" />
           </Button>
-          <div className="flex-1">
-            <h1 className="text-2xl md:text-3xl font-bold text-foreground">
+          <div className="flex-1 min-w-0">
+            <h1 className="text-lg sm:text-xl md:text-2xl lg:text-3xl font-bold text-foreground truncate">
               {loading ? "Loading..." : `${projectName} Dashboard`}
             </h1>
-            <p className="text-sm text-muted-foreground mt-1">
+            <p className="text-xs sm:text-sm text-muted-foreground mt-0.5 sm:mt-1">
               {loading ? "Please wait" : "Unified analytics dashboard"}
             </p>
           </div>
@@ -114,13 +114,13 @@ export default function UnifiedDashboardPage({ params }: { params: Promise<{ id:
         
         {/* Page Navigation Tabs */}
         {!loading && pages.length > 0 && (
-        <div className="px-4 md:px-6">
-          <div className="flex gap-2 border-b">
+        <div className="px-3 sm:px-4 md:px-6">
+          <div className="flex gap-1 sm:gap-2 border-b overflow-x-auto scrollbar-hide">
             {pages.map((page) => (
               <button
                 key={page.id}
                 onClick={() => setActivePage(page.id)}
-                className={`px-4 py-3 text-sm font-medium border-b-2 transition-colors cursor-pointer ${
+                className={`px-3 sm:px-4 py-2.5 sm:py-3 text-xs sm:text-sm font-medium border-b-2 transition-colors cursor-pointer whitespace-nowrap touch-manipulation ${
                   activePage === page.id
                     ? "border-primary text-primary"
                     : "border-transparent text-muted-foreground hover:text-foreground hover:border-muted"
@@ -137,7 +137,7 @@ export default function UnifiedDashboardPage({ params }: { params: Promise<{ id:
       {/* Content Area */}
       <div className="flex-1 overflow-auto">
         {loading ? (
-          <div className="flex items-center justify-center min-h-[600px]">
+          <div className="flex items-center justify-center min-h-[400px] sm:min-h-[600px]">
             <LoadingSpinner message="Loading Dashboard..." />
           </div>
         ) : (
