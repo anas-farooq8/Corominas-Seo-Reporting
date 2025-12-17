@@ -87,18 +87,34 @@ export function MangoolsDashboardPage({ datasourceId }: MangoolsDashboardPagePro
       </div>
 
       {/* Summary Stats */}
-      <div className="grid gap-3 sm:gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
-        <div className="p-3 sm:p-4 border rounded-lg bg-card">
-          <div className="text-xs sm:text-sm text-muted-foreground">Total Keywords in Tracking</div>
-          <div className="text-xl sm:text-2xl font-bold mt-1">{data.totalKeywords}</div>
+      <div className="space-y-3">
+        {/* First row - Total Keywords (full width on mobile) */}
+        <div className="grid gap-3 sm:gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="p-3 sm:p-4 border rounded-lg bg-card sm:col-span-2 lg:col-span-1">
+            <div className="text-xs sm:text-sm text-muted-foreground">Total Keywords in Tracking</div>
+            <div className="text-xl sm:text-2xl font-bold mt-1">{data.totalKeywords}</div>
+          </div>
+          {/* Show other cards on desktop */}
+          <div className="hidden sm:block p-3 sm:p-4 border rounded-lg bg-card">
+            <div className="text-xs sm:text-sm text-muted-foreground">Top Winners</div>
+            <div className="text-xl sm:text-2xl font-bold text-green-600 mt-1">{data.topWinners.length}</div>
+          </div>
+          <div className="hidden sm:block p-3 sm:p-4 border rounded-lg bg-card">
+            <div className="text-xs sm:text-sm text-muted-foreground">New Rankings</div>
+            <div className="text-xl sm:text-2xl font-bold text-blue-600 mt-1">{data.newRankings.length}</div>
+          </div>
         </div>
-        <div className="p-3 sm:p-4 border rounded-lg bg-card">
-          <div className="text-xs sm:text-sm text-muted-foreground">Top Winners</div>
-          <div className="text-xl sm:text-2xl font-bold text-green-600 mt-1">{data.topWinners.length}</div>
-        </div>
-        <div className="p-3 sm:p-4 border rounded-lg bg-card">
-          <div className="text-xs sm:text-sm text-muted-foreground">New Rankings</div>
-          <div className="text-xl sm:text-2xl font-bold text-blue-600 mt-1">{data.newRankings.length}</div>
+        
+        {/* Second row - Other cards side by side (mobile only) */}
+        <div className="grid gap-3 grid-cols-2 sm:hidden">
+          <div className="p-3 border rounded-lg bg-card">
+            <div className="text-xs text-muted-foreground">Top Winners</div>
+            <div className="text-xl font-bold text-green-600 mt-1">{data.topWinners.length}</div>
+          </div>
+          <div className="p-3 border rounded-lg bg-card">
+            <div className="text-xs text-muted-foreground">New Rankings</div>
+            <div className="text-xl font-bold text-blue-600 mt-1">{data.newRankings.length}</div>
+          </div>
         </div>
       </div>
 

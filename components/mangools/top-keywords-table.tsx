@@ -37,6 +37,7 @@ export function TopKeywordsTable({ keywords, monthAName, monthBName }: TopKeywor
   const [sortColumn, setSortColumn] = useState<SortColumn>('rankB')
   const [sortDirection, setSortDirection] = useState<SortDirection>('asc')
   const [showAll, setShowAll] = useState(false)
+  const [showDescription, setShowDescription] = useState(false)
   
   // Extract short month names (e.g., "Oct 2024" -> "Oct")
   const monthAShort = monthAName.split(' ')[0]
@@ -127,13 +128,26 @@ export function TopKeywordsTable({ keywords, monthAName, monthBName }: TopKeywor
   }
   return (
     <Card>
-      <CardHeader className="bg-primary/5 px-4 sm:px-6 py-3 sm:py-4">
-        <CardTitle className="text-primary text-base sm:text-lg">Top Keywords</CardTitle>
-        <CardDescription className="text-xs sm:text-sm">
+      <CardHeader className="bg-base/5 px-4 sm:px-6 py-2 sm:py-3 pb-0.5 sm:pb-1">
+        <div className="flex items-center justify-between">
+          <CardTitle className="text-primary text-base sm:text-lg">Top Keywords</CardTitle>
+          <button
+            onClick={() => setShowDescription(!showDescription)}
+            className="sm:hidden p-1 hover:bg-primary/10 rounded touch-manipulation"
+            aria-label="Toggle description"
+          >
+            {showDescription ? (
+              <ChevronUp className="h-4 w-4 text-primary" />
+            ) : (
+              <ChevronDown className="h-4 w-4 text-primary" />
+            )}
+          </button>
+        </div>
+        <CardDescription className={`text-xs sm:text-sm ${showDescription ? 'block' : 'hidden sm:block'}`}>
           This comprehensive table shows all your tracked keywords with detailed performance metrics. For each keyword, you can see: <strong>Last Rank</strong> (current position in search results lower numbers are better), <strong>Rank Change</strong> (movement up ↑ or down ↓), and <strong>Avg Rank</strong> (average position over the month). Click any column header to sort and analyze your data. Compare {monthAName} vs {monthBName} side-by-side.
         </CardDescription>
       </CardHeader>
-      <CardContent className="px-0 sm:px-6 pb-4 sm:pb-6">
+      <CardContent className="px-0 sm:px-6 pt-1 sm:pt-1.5 pb-4 sm:pb-6">
         <div className="overflow-x-auto">
           <Table>
             <TableHeader>
@@ -217,42 +231,42 @@ export function TopKeywordsTable({ keywords, monthAName, monthBName }: TopKeywor
                   
                   return (
                     <TableRow key={kw._id}>
-                      <TableCell className="font-medium py-2 sm:py-3 border-r text-xs sm:text-sm">{kw.keyword}</TableCell>
+                      <TableCell className="font-medium py-1.5 sm:py-3 border-r text-[10px] sm:text-sm">{kw.keyword}</TableCell>
                       
                       {/* Rank: A | B */}
-                      <TableCell className="text-center py-2 sm:py-3 border-r text-xs sm:text-sm">
+                      <TableCell className="text-center py-1.5 sm:py-3 border-r text-[10px] sm:text-sm">
                         <div className="flex items-center justify-center">
-                          <span className="text-muted-foreground w-8 sm:w-10 text-right">
+                          <span className="text-muted-foreground w-6 sm:w-10 text-right">
                             {kw.rankA !== null ? kw.rankA : "N/A"}
                           </span>
-                          <div className="h-4 w-px bg-border mx-1.5 sm:mx-2"></div>
-                          <span className="font-bold w-8 sm:w-10 text-left">
+                          <div className="h-3 sm:h-4 w-px bg-border mx-1 sm:mx-2"></div>
+                          <span className="font-bold w-6 sm:w-10 text-left">
                             {kw.rankB !== null ? kw.rankB : "N/A"}
                           </span>
                         </div>
                       </TableCell>
                       
                       {/* Change: A | B */}
-                      <TableCell className="text-center py-2 sm:py-3 border-r text-xs sm:text-sm">
+                      <TableCell className="text-center py-1.5 sm:py-3 border-r text-[10px] sm:text-sm">
                         <div className="flex items-center justify-center">
-                          <span className={`${changeADisplay.color} w-10 sm:w-12 text-right`}>
+                          <span className={`${changeADisplay.color} w-8 sm:w-12 text-right`}>
                             {changeADisplay.symbol} {changeADisplay.value}
                           </span>
-                          <div className="h-4 w-px bg-border mx-1.5 sm:mx-2"></div>
-                          <span className={`font-bold ${changeBDisplay.color} w-10 sm:w-12 text-left`}>
+                          <div className="h-3 sm:h-4 w-px bg-border mx-1 sm:mx-2"></div>
+                          <span className={`font-bold ${changeBDisplay.color} w-8 sm:w-12 text-left`}>
                             {changeBDisplay.symbol} {changeBDisplay.value}
                           </span>
                         </div>
                       </TableCell>
                       
                       {/* Avg: A | B */}
-                      <TableCell className="text-center py-2 sm:py-3 text-xs sm:text-sm">
+                      <TableCell className="text-center py-1.5 sm:py-3 text-[10px] sm:text-sm">
                         <div className="flex items-center justify-center">
-                          <span className="text-muted-foreground w-8 sm:w-10 text-right">
+                          <span className="text-muted-foreground w-6 sm:w-10 text-right">
                             {kw.rankAAvg !== null ? kw.rankAAvg.toFixed(1) : "N/A"}
                           </span>
-                          <div className="h-4 w-px bg-border mx-1.5 sm:mx-2"></div>
-                          <span className="font-bold w-8 sm:w-10 text-left">
+                          <div className="h-3 sm:h-4 w-px bg-border mx-1 sm:mx-2"></div>
+                          <span className="font-bold w-6 sm:w-10 text-left">
                             {kw.rankBAvg !== null ? kw.rankBAvg.toFixed(1) : "N/A"}
                           </span>
                         </div>
