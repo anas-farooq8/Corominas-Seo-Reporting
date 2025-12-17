@@ -33,22 +33,24 @@ export function DatasourceCard({
 
   return (
     <Card>
-      <CardHeader className="pb-0">
-        <div className="flex items-start justify-between">
-          <div className="flex-1">
-            <CardTitle className="text-xl">{typeLabel}</CardTitle>
-            <CardDescription className="mt-1">
+      <CardHeader className="pb-3 px-4 sm:px-6 pt-4 sm:pt-5">
+        <div className="flex items-start justify-between gap-2">
+          <div className="flex-1 min-w-0">
+            <CardTitle className="text-base sm:text-lg md:text-xl leading-tight">{typeLabel}</CardTitle>
+            <CardDescription className="mt-1 text-sm">
               {typeDescriptions[datasource.type] || "Data analytics"}
             </CardDescription>
           </div>
-          <DeleteDatasourceButton
-            datasourceId={datasource.id}
-            datasourceType={typeLabel}
-            onDatasourceDeleted={onDatasourceDeleted}
-          />
+          <div className="flex-shrink-0">
+            <DeleteDatasourceButton
+              datasourceId={datasource.id}
+              datasourceType={typeLabel}
+              onDatasourceDeleted={onDatasourceDeleted}
+            />
+          </div>
         </div>
       </CardHeader>
-      <CardContent className="pt-0">
+      <CardContent className="pt-0 px-4 sm:px-6 pb-4 sm:pb-5">
         <DomainsSection
           datasource={datasource}
           hasDomains={hasDomains}

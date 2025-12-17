@@ -57,21 +57,21 @@ export function EditProjectDialog({ project, onProjectUpdated }: EditProjectDial
   return (
     <Dialog open={open} onOpenChange={(open) => !loading && setOpen(open)}>
       <DialogTrigger asChild>
-        <Button variant="ghost" size="sm">
+        <Button variant="ghost" size="sm" className="h-9 w-9 p-0 touch-manipulation">
           <Pencil className="h-4 w-4" />
         </Button>
       </DialogTrigger>
-      <DialogContent className="sm:max-w-[425px]" showCloseButton={!loading} onInteractOutside={(e) => loading && e.preventDefault()} onEscapeKeyDown={(e) => loading && e.preventDefault()}>
+      <DialogContent className="w-[calc(100%-2rem)] max-w-[425px] max-h-[90vh] overflow-y-auto" showCloseButton={!loading} onInteractOutside={(e) => loading && e.preventDefault()} onEscapeKeyDown={(e) => loading && e.preventDefault()}>
         <form onSubmit={handleSubmit}>
-          <DialogHeader>
-            <DialogTitle>Edit Project</DialogTitle>
-            <DialogDescription>
+          <DialogHeader className="space-y-2">
+            <DialogTitle className="text-lg sm:text-xl">Edit Project</DialogTitle>
+            <DialogDescription className="text-sm leading-relaxed">
               Update project information and details.
             </DialogDescription>
           </DialogHeader>
           <div className="grid gap-4 py-4">
             <div className="grid gap-2">
-              <Label htmlFor="edit-name">Project Name *</Label>
+              <Label htmlFor="edit-name" className="text-sm sm:text-[15px]">Project Name *</Label>
               <Input
                 id="edit-name"
                 value={formData.name}
@@ -79,10 +79,11 @@ export function EditProjectDialog({ project, onProjectUpdated }: EditProjectDial
                 placeholder="Project name"
                 required
                 disabled={loading}
+                className="h-10 sm:h-11 text-[15px]"
               />
             </div>
             <div className="grid gap-2">
-              <Label htmlFor="edit-details">Details</Label>
+              <Label htmlFor="edit-details" className="text-sm sm:text-[15px]">Details</Label>
               <Textarea
                 id="edit-details"
                 value={formData.details}
@@ -90,20 +91,21 @@ export function EditProjectDialog({ project, onProjectUpdated }: EditProjectDial
                 placeholder="Project description and details (optional)"
                 rows={3}
                 disabled={loading}
+                className="text-[15px] min-h-[80px]"
               />
             </div>
             {error && (
-              <Alert variant="destructive">
+              <Alert variant="destructive" className="text-sm">
                 <AlertCircle className="h-4 w-4" />
-                <AlertDescription>{error}</AlertDescription>
+                <AlertDescription className="text-sm leading-relaxed">{error}</AlertDescription>
               </Alert>
             )}
           </div>
-          <DialogFooter>
-            <Button type="button" variant="outline" onClick={() => setOpen(false)} disabled={loading}>
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button type="button" variant="outline" onClick={() => setOpen(false)} disabled={loading} className="h-10 sm:h-11 text-sm sm:text-[15px] flex-1 sm:flex-none touch-manipulation">
               Cancel
             </Button>
-            <Button type="submit" disabled={loading}>
+            <Button type="submit" disabled={loading} className="h-10 sm:h-11 text-sm sm:text-[15px] flex-1 sm:flex-none touch-manipulation">
               {loading ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />

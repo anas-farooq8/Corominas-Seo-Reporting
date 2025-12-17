@@ -59,22 +59,22 @@ export function CreateProjectDialog({ clientId, onProjectAdded }: CreateProjectD
   return (
     <Dialog open={open} onOpenChange={(open) => !loading && setOpen(open)}>
       <DialogTrigger asChild>
-        <Button size="sm">
+        <Button size="sm" className="w-full sm:w-auto h-9 sm:h-10 text-sm sm:text-[15px] touch-manipulation">
           <Plus className="mr-2 h-4 w-4" />
           Add Project
         </Button>
       </DialogTrigger>
-      <DialogContent className="sm:max-w-[425px]" showCloseButton={!loading} onInteractOutside={(e) => loading && e.preventDefault()} onEscapeKeyDown={(e) => loading && e.preventDefault()}>
+      <DialogContent className="w-[calc(100%-2rem)] max-w-[425px] max-h-[90vh] overflow-y-auto" showCloseButton={!loading} onInteractOutside={(e) => loading && e.preventDefault()} onEscapeKeyDown={(e) => loading && e.preventDefault()}>
         <form onSubmit={handleSubmit}>
-          <DialogHeader>
-            <DialogTitle>Add New Project</DialogTitle>
-            <DialogDescription>
+          <DialogHeader className="space-y-2">
+            <DialogTitle className="text-lg sm:text-xl">Add New Project</DialogTitle>
+            <DialogDescription className="text-sm leading-relaxed">
               Create a new project for this client.
             </DialogDescription>
           </DialogHeader>
           <div className="grid gap-4 py-4">
             <div className="grid gap-2">
-              <Label htmlFor="name">Project Name *</Label>
+              <Label htmlFor="name" className="text-sm sm:text-[15px]">Project Name *</Label>
               <Input
                 id="name"
                 value={formData.name}
@@ -82,10 +82,11 @@ export function CreateProjectDialog({ clientId, onProjectAdded }: CreateProjectD
                 placeholder="Website Redesign"
                 required
                 disabled={loading}
+                className="h-10 sm:h-11 text-[15px]"
               />
             </div>
             <div className="grid gap-2">
-              <Label htmlFor="details">Details</Label>
+              <Label htmlFor="details" className="text-sm sm:text-[15px]">Details</Label>
               <Textarea
                 id="details"
                 value={formData.details}
@@ -93,20 +94,21 @@ export function CreateProjectDialog({ clientId, onProjectAdded }: CreateProjectD
                 placeholder="Project description and details (optional)"
                 rows={3}
                 disabled={loading}
+                className="text-[15px] min-h-[80px]"
               />
             </div>
             {error && (
-              <Alert variant="destructive">
+              <Alert variant="destructive" className="text-sm">
                 <AlertCircle className="h-4 w-4" />
-                <AlertDescription>{error}</AlertDescription>
+                <AlertDescription className="text-sm leading-relaxed">{error}</AlertDescription>
               </Alert>
             )}
           </div>
-          <DialogFooter>
-            <Button type="button" variant="outline" onClick={() => setOpen(false)} disabled={loading}>
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button type="button" variant="outline" onClick={() => setOpen(false)} disabled={loading} className="h-10 sm:h-11 text-sm sm:text-[15px] flex-1 sm:flex-none touch-manipulation">
               Cancel
             </Button>
-            <Button type="submit" disabled={loading}>
+            <Button type="submit" disabled={loading} className="h-10 sm:h-11 text-sm sm:text-[15px] flex-1 sm:flex-none touch-manipulation">
               {loading ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />

@@ -27,12 +27,12 @@ export function ClientSearch({ clients, onClientUpdated, onClientDeleted }: Clie
   return (
     <div className="space-y-4">
       <div className="relative">
-        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
         <Input
-          placeholder="Search clients by name, email, or notes..."
+          placeholder="Search clients..."
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
-          className="pl-9"
+          className="pl-9 h-10 sm:h-11 text-[15px]"
         />
       </div>
 

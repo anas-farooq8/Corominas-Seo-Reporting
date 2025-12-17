@@ -59,22 +59,22 @@ export function CreateClientDialog({ onClientAdded }: CreateClientDialogProps) {
   return (
     <Dialog open={open} onOpenChange={(open) => !loading && setOpen(open)}>
       <DialogTrigger asChild>
-        <Button className="w-full sm:w-auto">
+        <Button className="w-full sm:w-auto h-10 sm:h-11 text-sm sm:text-[15px] touch-manipulation">
           <Plus className="mr-2 h-4 w-4" />
           Add Client
         </Button>
       </DialogTrigger>
-      <DialogContent className="sm:max-w-[425px]" showCloseButton={!loading} onInteractOutside={(e) => loading && e.preventDefault()} onEscapeKeyDown={(e) => loading && e.preventDefault()}>
+      <DialogContent className="w-[calc(100%-2rem)] max-w-[425px] max-h-[90vh] overflow-y-auto" showCloseButton={!loading} onInteractOutside={(e) => loading && e.preventDefault()} onEscapeKeyDown={(e) => loading && e.preventDefault()}>
         <form onSubmit={handleSubmit}>
-          <DialogHeader>
-            <DialogTitle>Add New Client</DialogTitle>
-            <DialogDescription>
+          <DialogHeader className="space-y-2">
+            <DialogTitle className="text-lg sm:text-xl">Add New Client</DialogTitle>
+            <DialogDescription className="text-sm leading-relaxed">
               Create a new client to manage their projects and data sources.
             </DialogDescription>
           </DialogHeader>
           <div className="grid gap-4 py-4">
             <div className="grid gap-2">
-              <Label htmlFor="name">Name *</Label>
+              <Label htmlFor="name" className="text-sm sm:text-[15px]">Name *</Label>
               <Input
                 id="name"
                 value={formData.name}
@@ -82,10 +82,11 @@ export function CreateClientDialog({ onClientAdded }: CreateClientDialogProps) {
                 placeholder="Client name"
                 required
                 disabled={loading}
+                className="h-10 sm:h-11 text-[15px]"
               />
             </div>
             <div className="grid gap-2">
-              <Label htmlFor="email">Email *</Label>
+              <Label htmlFor="email" className="text-sm sm:text-[15px]">Email *</Label>
               <Input
                 id="email"
                 type="email"
@@ -94,10 +95,11 @@ export function CreateClientDialog({ onClientAdded }: CreateClientDialogProps) {
                 placeholder="client@example.com"
                 required
                 disabled={loading}
+                className="h-10 sm:h-11 text-[15px]"
               />
             </div>
             <div className="grid gap-2">
-              <Label htmlFor="notes">Notes</Label>
+              <Label htmlFor="notes" className="text-sm sm:text-[15px]">Notes</Label>
               <Textarea
                 id="notes"
                 value={formData.notes}
@@ -105,20 +107,21 @@ export function CreateClientDialog({ onClientAdded }: CreateClientDialogProps) {
                 placeholder="Additional notes (optional)"
                 rows={3}
                 disabled={loading}
+                className="text-[15px] min-h-[80px]"
               />
             </div>
             {error && (
-              <Alert variant="destructive">
+              <Alert variant="destructive" className="text-sm">
                 <AlertCircle className="h-4 w-4" />
-                <AlertDescription>{error}</AlertDescription>
+                <AlertDescription className="text-sm leading-relaxed">{error}</AlertDescription>
               </Alert>
             )}
           </div>
-          <DialogFooter>
-            <Button type="button" variant="outline" onClick={() => setOpen(false)} disabled={loading}>
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button type="button" variant="outline" onClick={() => setOpen(false)} disabled={loading} className="h-10 sm:h-11 text-sm sm:text-[15px] flex-1 sm:flex-none touch-manipulation">
               Cancel
             </Button>
-            <Button type="submit" disabled={loading}>
+            <Button type="submit" disabled={loading} className="h-10 sm:h-11 text-sm sm:text-[15px] flex-1 sm:flex-none touch-manipulation">
               {loading ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />

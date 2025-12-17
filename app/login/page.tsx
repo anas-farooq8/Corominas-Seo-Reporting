@@ -80,33 +80,33 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center p-4 sm:p-6 md:p-8 bg-gradient-to-br from-purple-50 via-purple-100 to-purple-200">
-      <Card className="w-full max-w-md shadow-lg border-border/50 backdrop-blur-sm">
-        <CardHeader className="space-y-2 sm:space-y-3 pb-4 sm:pb-6">
-          <div className="flex items-center justify-center gap-2 mb-1 sm:mb-2">
+    <div className="flex min-h-screen items-center justify-center px-4 py-6 sm:p-6 md:p-8 bg-gradient-to-br from-purple-50 via-purple-100 to-purple-200">
+      <Card className="w-full max-w-[420px] shadow-lg border-border/50 backdrop-blur-sm">
+        <CardHeader className="space-y-3 sm:space-y-4 pb-5 sm:pb-6 px-5 sm:px-6 pt-6 sm:pt-7">
+          <div className="flex items-center justify-center gap-2 sm:gap-2.5 mb-1 sm:mb-2">
             <img 
               src="https://www.google.com/s2/favicons?domain=corominas-consulting.de&sz=64" 
               alt="Corominas Consulting Logo" 
-              className="h-8 w-8 sm:h-10 sm:w-10"
+              className="h-9 w-9 sm:h-11 sm:w-11 md:h-12 md:w-12"
             />
-            <span className="text-lg sm:text-2xl font-bold">SEO Reporting</span>
+            <span className="text-xl sm:text-2xl md:text-[26px] font-bold leading-tight">SEO Reporting</span>
           </div>
-          <CardTitle className="text-lg sm:text-2xl text-center">Welcome Back</CardTitle>
-          <CardDescription className="text-center text-xs sm:text-base">
+          <CardTitle className="text-xl sm:text-2xl md:text-[28px] text-center font-semibold">Welcome Back</CardTitle>
+          <CardDescription className="text-center text-sm sm:text-base leading-relaxed px-2">
             Sign in to your Corominas Consulting dashboard
           </CardDescription>
         </CardHeader>
-        <CardContent className="pb-4 sm:pb-6">
-          <form onSubmit={handleLogin} className="space-y-4 sm:space-y-5">
+        <CardContent className="pb-6 sm:pb-7 px-5 sm:px-6">
+          <form onSubmit={handleLogin} className="space-y-5 sm:space-y-6">
             {error && (
-              <Alert variant="destructive" className="animate-in fade-in-50">
-                <AlertCircle className="h-4 w-4" />
-                <AlertDescription>{error}</AlertDescription>
+              <Alert variant="destructive" className="animate-in fade-in-50 text-sm">
+                <AlertCircle className="h-4 w-4 sm:h-[18px] sm:w-[18px]" />
+                <AlertDescription className="text-sm leading-relaxed">{error}</AlertDescription>
               </Alert>
             )}
 
-            <div className="space-y-1.5 sm:space-y-2">
-              <Label htmlFor="email" className="text-xs sm:text-sm font-medium">
+            <div className="space-y-2">
+              <Label htmlFor="email" className="text-sm sm:text-[15px] font-medium">
                 Email Address
               </Label>
               <Input
@@ -121,14 +121,14 @@ export default function LoginPage() {
                 required
                 disabled={loading}
                 autoComplete="email"
-                className="h-10 sm:h-11 text-sm sm:text-base"
+                className="h-11 sm:h-12 text-[15px] sm:text-base px-3.5"
                 aria-invalid={error ? "true" : "false"}
                 aria-describedby={error ? "login-error" : undefined}
               />
             </div>
 
-            <div className="space-y-1.5 sm:space-y-2">
-              <Label htmlFor="password" className="text-xs sm:text-sm font-medium">
+            <div className="space-y-2">
+              <Label htmlFor="password" className="text-sm sm:text-[15px] font-medium">
                 Password
               </Label>
               <div className="relative">
@@ -144,21 +144,21 @@ export default function LoginPage() {
                   required
                   disabled={loading}
                   autoComplete="current-password"
-                  className="h-10 sm:h-11 pr-10 sm:pr-11 text-sm sm:text-base"
+                  className="h-11 sm:h-12 pr-12 text-[15px] sm:text-base px-3.5"
                   aria-invalid={error ? "true" : "false"}
                   aria-describedby={error ? "login-error" : undefined}
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer p-1 rounded-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer p-2 rounded-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring touch-manipulation"
                   disabled={loading}
                   aria-label={showPassword ? "Hide password" : "Show password"}
                 >
                   {showPassword ? (
-                    <EyeOff className="h-5 w-5" />
+                    <EyeOff className="h-5 w-5 sm:h-[22px] sm:w-[22px]" />
                   ) : (
-                    <Eye className="h-5 w-5" />
+                    <Eye className="h-5 w-5 sm:h-[22px] sm:w-[22px]" />
                   )}
                 </button>
               </div>
@@ -166,12 +166,12 @@ export default function LoginPage() {
 
             <Button 
               type="submit" 
-              className="w-full h-10 sm:h-11 text-sm sm:text-base font-medium cursor-pointer" 
+              className="w-full h-11 sm:h-12 text-[15px] sm:text-base font-medium cursor-pointer mt-6 touch-manipulation" 
               disabled={loading}
             >
               {loading ? (
                 <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  <Loader2 className="mr-2 h-[18px] w-[18px] sm:h-5 sm:w-5 animate-spin" />
                   Signing in...
                 </>
               ) : (

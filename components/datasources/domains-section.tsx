@@ -54,20 +54,20 @@ export function DomainsSection({
     const property = properties[0]
     return (
       <div className="space-y-3">
-        <h3 className="text-sm font-semibold text-foreground">Google Analytics Property</h3>
-        <div className="group relative flex items-center gap-4 p-4 border-2 rounded-xl bg-gradient-to-br from-background to-muted/30 hover:shadow-md hover:border-primary/20 transition-all duration-200">
-          <div className="relative p-2 rounded-lg bg-primary/10 group-hover:bg-primary/15 transition-colors">
+        <h3 className="text-xs sm:text-sm font-semibold text-foreground">Google Analytics Property</h3>
+        <div className="group relative flex flex-col sm:flex-row items-start gap-3 sm:gap-4 p-3 sm:p-4 border-2 rounded-xl bg-gradient-to-br from-background to-muted/30 hover:shadow-md hover:border-primary/20 transition-all duration-200">
+          <div className="relative p-2 rounded-lg bg-primary/10 group-hover:bg-primary/15 transition-colors flex-shrink-0">
             <BarChart3 className="h-5 w-5 text-primary" />
           </div>
-          <div className="flex-1 min-w-0">
-            <h4 className="font-semibold text-base truncate mb-2">{property.display_name}</h4>
-            <div className="flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
+          <div className="flex-1 min-w-0 w-full">
+            <h4 className="font-semibold text-sm sm:text-base truncate mb-2">{property.display_name}</h4>
+            <div className="flex flex-wrap items-center gap-2 sm:gap-3 text-xs text-muted-foreground">
               <div className="flex items-center gap-1.5">
-                <Clock className="h-3.5 w-3.5" />
-                <span>{property.time_zone}</span>
+                <Clock className="h-3.5 w-3.5 flex-shrink-0" />
+                <span className="truncate">{property.time_zone}</span>
               </div>
               <div className="flex items-center gap-1.5">
-                <DollarSign className="h-3.5 w-3.5" />
+                <DollarSign className="h-3.5 w-3.5 flex-shrink-0" />
                 <span>{property.currency_code}</span>
               </div>
             </div>

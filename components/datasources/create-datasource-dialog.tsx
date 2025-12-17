@@ -265,16 +265,16 @@ export function CreateDatasourceDialog({ projectId, existingTypes, onDatasourceA
   return (
     <Dialog open={open} onOpenChange={(open) => !loading && setOpen(open)}>
       <DialogTrigger asChild>
-        <Button size="sm" variant="outline">
+        <Button size="sm" variant="outline" className="w-full sm:w-auto h-10 sm:h-11 text-sm sm:text-[15px] touch-manipulation">
           <Plus className="mr-2 h-4 w-4" />
           Add Data Source
         </Button>
       </DialogTrigger>
-      <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto" showCloseButton={!loading} onInteractOutside={(e) => loading && e.preventDefault()} onEscapeKeyDown={(e) => loading && e.preventDefault()}>
+      <DialogContent className="w-[calc(100%-2rem)] sm:max-w-[600px] max-h-[90vh] overflow-y-auto" showCloseButton={!loading} onInteractOutside={(e) => loading && e.preventDefault()} onEscapeKeyDown={(e) => loading && e.preventDefault()}>
         <form onSubmit={handleSubmit}>
-          <DialogHeader>
-            <DialogTitle>Add Data Source</DialogTitle>
-            <DialogDescription>
+          <DialogHeader className="space-y-2">
+            <DialogTitle className="text-lg sm:text-xl">Add Data Source</DialogTitle>
+            <DialogDescription className="text-sm leading-relaxed">
               {selectedType === "mangools" 
                 ? "Select a domain from your Mangools account. Note: Each domain can only be attached once, and each project can have only one Mangools data source."
                 : selectedType === "google_analytics"
@@ -287,13 +287,13 @@ export function CreateDatasourceDialog({ projectId, existingTypes, onDatasourceA
           <div className="grid gap-4 py-4">
             {/* Data Source Type Selection */}
             <div className="grid gap-2">
-              <Label htmlFor="type">Data Source Type *</Label>
+              <Label htmlFor="type" className="text-sm sm:text-[15px]">Data Source Type *</Label>
               <Select
                 value={selectedType}
                 onValueChange={(value) => setSelectedType(value as "mangools" | "semrush" | "google_analytics")}
                 disabled={loading || fetchingDomains || fetchingProperties}
               >
-                <SelectTrigger id="type" className="cursor-pointer">
+                <SelectTrigger id="type" className="cursor-pointer h-10 sm:h-11 text-[15px]">
                   <SelectValue placeholder="Select a data source type" />
                 </SelectTrigger>
                 <SelectContent>
@@ -314,9 +314,9 @@ export function CreateDatasourceDialog({ projectId, existingTypes, onDatasourceA
             {selectedType === "mangools" && (
               <>
                 {fetchingDomains ? (
-                  <div className="flex items-center justify-center py-8">
-                    <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-                    <span className="ml-3 text-sm text-muted-foreground">
+                  <div className="flex flex-col sm:flex-row items-center justify-center py-6 sm:py-8 gap-2 sm:gap-3">
+                    <Loader2 className="h-6 w-6 sm:h-8 sm:w-8 animate-spin text-muted-foreground" />
+                    <span className="text-xs sm:text-sm text-muted-foreground text-center">
                       Loading domains from Mangools...
                     </span>
                   </div>
@@ -324,16 +324,16 @@ export function CreateDatasourceDialog({ projectId, existingTypes, onDatasourceA
                   <>
                     {/* Search */}
                     <div className="grid gap-2">
-                      <Label htmlFor="search">Search Domains</Label>
+                      <Label htmlFor="search" className="text-sm sm:text-[15px]">Search Domains</Label>
                       <div className="relative">
-                        <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                        <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground pointer-events-none" />
                         <Input
                           id="search"
                           type="text"
-                          placeholder="Search by domain or location..."
+                          placeholder="Search by domain..."
                           value={searchQuery}
                           onChange={(e) => setSearchQuery(e.target.value)}
-                          className="pl-9"
+                          className="pl-9 h-10 sm:h-11 text-[15px]"
                           disabled={loading}
                         />
                       </div>
@@ -341,10 +341,10 @@ export function CreateDatasourceDialog({ projectId, existingTypes, onDatasourceA
 
                     {/* Domain List */}
                     <div className="grid gap-2">
-                      <Label>Available Domains ({filteredDomains.length})</Label>
-                      <div className="border rounded-lg max-h-[300px] overflow-y-auto">
+                      <Label className="text-sm sm:text-[15px]">Available Domains ({filteredDomains.length})</Label>
+                      <div className="border rounded-lg max-h-[250px] sm:max-h-[300px] overflow-y-auto">
                         {filteredDomains.length === 0 ? (
-                          <div className="p-8 text-center text-sm text-muted-foreground">
+                          <div className="p-6 sm:p-8 text-center text-xs sm:text-sm text-muted-foreground">
                             {searchQuery ? "No domains match your search" : "No domains available"}
                           </div>
                         ) : (
@@ -352,7 +352,7 @@ export function CreateDatasourceDialog({ projectId, existingTypes, onDatasourceA
                             {filteredDomains.map((domain) => (
                               <label
                                 key={domain._id}
-                                className={`flex items-start gap-3 p-3 cursor-pointer hover:bg-muted/50 transition-colors ${
+                                className={`flex items-start gap-2 sm:gap-3 p-3 cursor-pointer hover:bg-muted/50 transition-colors ${
                                   domain.isAttached ? "opacity-50 cursor-not-allowed" : ""
                                 } ${selectedDomain === domain._id ? "bg-muted" : ""}`}
                               >
@@ -363,11 +363,11 @@ export function CreateDatasourceDialog({ projectId, existingTypes, onDatasourceA
                                   checked={selectedDomain === domain._id}
                                   onChange={(e) => setSelectedDomain(e.target.value)}
                                   disabled={domain.isAttached || loading}
-                                  className="mt-1"
+                                  className="mt-1 flex-shrink-0"
                                 />
                                 <div className="flex-1 min-w-0">
                                   <div className="flex items-center gap-2">
-                                    <p className="font-medium text-sm truncate">
+                                    <p className="font-medium text-xs sm:text-sm truncate">
                                       {domain.domain}
                                     </p>
                                     {domain.isAttached && (
@@ -377,18 +377,18 @@ export function CreateDatasourceDialog({ projectId, existingTypes, onDatasourceA
                                       <CheckCircle2 className="h-4 w-4 text-green-600 flex-shrink-0" />
                                     )}
                                   </div>
-                                  <div className="flex flex-wrap gap-2 mt-1">
+                                  <div className="flex flex-wrap gap-1.5 sm:gap-2 mt-1">
                                     {domain.location && (
-                                      <span className="text-xs text-muted-foreground">
+                                      <span className="text-[11px] sm:text-xs text-muted-foreground truncate max-w-[150px] sm:max-w-none">
                                         📍 {domain.location.label}
                                       </span>
                                     )}
-                                    <span className="text-xs text-muted-foreground">
+                                    <span className="text-[11px] sm:text-xs text-muted-foreground whitespace-nowrap">
                                       🔑 {domain.count} keywords
                                     </span>
                                   </div>
                                   {domain.isAttached && (
-                                    <p className="text-xs text-yellow-600 mt-1">
+                                    <p className="text-[11px] sm:text-xs text-yellow-600 mt-1">
                                       {domain.attachedInfo}
                                     </p>
                                   )}
@@ -408,9 +408,9 @@ export function CreateDatasourceDialog({ projectId, existingTypes, onDatasourceA
             {selectedType === "google_analytics" && (
               <>
                 {fetchingProperties ? (
-                  <div className="flex items-center justify-center py-8">
-                    <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-                    <span className="ml-3 text-sm text-muted-foreground">
+                  <div className="flex flex-col sm:flex-row items-center justify-center py-6 sm:py-8 gap-2 sm:gap-3">
+                    <Loader2 className="h-6 w-6 sm:h-8 sm:w-8 animate-spin text-muted-foreground" />
+                    <span className="text-xs sm:text-sm text-muted-foreground text-center">
                       Loading properties from Google Analytics...
                     </span>
                   </div>
@@ -418,16 +418,16 @@ export function CreateDatasourceDialog({ projectId, existingTypes, onDatasourceA
                   <>
                     {/* Search */}
                     <div className="grid gap-2">
-                      <Label htmlFor="property-search">Search Properties</Label>
+                      <Label htmlFor="property-search" className="text-sm sm:text-[15px]">Search Properties</Label>
                       <div className="relative">
-                        <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                        <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground pointer-events-none" />
                         <Input
                           id="property-search"
                           type="text"
                           placeholder="Search by property name..."
                           value={propertySearchQuery}
                           onChange={(e) => setPropertySearchQuery(e.target.value)}
-                          className="pl-9"
+                          className="pl-9 h-10 sm:h-11 text-[15px]"
                           disabled={loading}
                         />
                       </div>
@@ -435,10 +435,10 @@ export function CreateDatasourceDialog({ projectId, existingTypes, onDatasourceA
 
                     {/* Property List */}
                     <div className="grid gap-2">
-                      <Label>Available Properties ({filteredProperties.length})</Label>
-                      <div className="border rounded-lg max-h-[300px] overflow-y-auto">
+                      <Label className="text-sm sm:text-[15px]">Available Properties ({filteredProperties.length})</Label>
+                      <div className="border rounded-lg max-h-[250px] sm:max-h-[300px] overflow-y-auto">
                         {filteredProperties.length === 0 ? (
-                          <div className="p-8 text-center text-sm text-muted-foreground">
+                          <div className="p-6 sm:p-8 text-center text-xs sm:text-sm text-muted-foreground">
                             {propertySearchQuery ? "No properties match your search" : "No properties available"}
                           </div>
                         ) : (
@@ -446,7 +446,7 @@ export function CreateDatasourceDialog({ projectId, existingTypes, onDatasourceA
                             {filteredProperties.map((property) => (
                               <label
                                 key={property.name}
-                                className={`flex items-start gap-3 p-3 cursor-pointer hover:bg-muted/50 transition-colors ${
+                                className={`flex items-start gap-2 sm:gap-3 p-3 cursor-pointer hover:bg-muted/50 transition-colors ${
                                   property.isAttached ? "opacity-50 cursor-not-allowed" : ""
                                 } ${selectedProperty === property.name ? "bg-muted" : ""}`}
                               >
@@ -457,11 +457,11 @@ export function CreateDatasourceDialog({ projectId, existingTypes, onDatasourceA
                                   checked={selectedProperty === property.name}
                                   onChange={(e) => setSelectedProperty(e.target.value)}
                                   disabled={property.isAttached || loading}
-                                  className="mt-1"
+                                  className="mt-1 flex-shrink-0"
                                 />
                                 <div className="flex-1 min-w-0">
                                   <div className="flex items-center gap-2">
-                                    <p className="font-medium text-sm truncate">
+                                    <p className="font-medium text-xs sm:text-sm truncate">
                                       {property.display_name}
                                     </p>
                                     {property.isAttached && (
@@ -471,16 +471,16 @@ export function CreateDatasourceDialog({ projectId, existingTypes, onDatasourceA
                                       <CheckCircle2 className="h-4 w-4 text-green-600 flex-shrink-0" />
                                     )}
                                   </div>
-                                  <div className="flex flex-wrap gap-2 mt-1">
-                                    <span className="text-xs text-muted-foreground">
+                                  <div className="flex flex-wrap gap-1.5 sm:gap-2 mt-1">
+                                    <span className="text-[11px] sm:text-xs text-muted-foreground truncate max-w-[120px] sm:max-w-none">
                                       🕐 {property.time_zone}
                                     </span>
-                                    <span className="text-xs text-muted-foreground">
+                                    <span className="text-[11px] sm:text-xs text-muted-foreground whitespace-nowrap">
                                       💰 {property.currency_code}
                                     </span>
                                   </div>
                                   {property.isAttached && (
-                                    <p className="text-xs text-yellow-600 mt-1">
+                                    <p className="text-[11px] sm:text-xs text-yellow-600 mt-1">
                                       {property.attachedInfo}
                                     </p>
                                   )}
@@ -498,18 +498,18 @@ export function CreateDatasourceDialog({ projectId, existingTypes, onDatasourceA
 
             {/* Error Message */}
             {error && (
-              <div className="flex items-start gap-2 p-3 text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg">
+              <div className="flex items-start gap-2 p-3 text-xs sm:text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg">
                 <AlertCircle className="h-4 w-4 mt-0.5 flex-shrink-0" />
-                <p>{error}</p>
+                <p className="leading-relaxed">{error}</p>
               </div>
             )}
           </div>
 
-          <DialogFooter>
-            <Button type="button" variant="outline" onClick={() => setOpen(false)} disabled={loading}>
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button type="button" variant="outline" onClick={() => setOpen(false)} disabled={loading} className="h-10 sm:h-11 text-sm sm:text-[15px] flex-1 sm:flex-none touch-manipulation">
               Cancel
             </Button>
-            <Button type="submit" disabled={loading || fetchingDomains || fetchingProperties || !canSubmit}>
+            <Button type="submit" disabled={loading || fetchingDomains || fetchingProperties || !canSubmit} className="h-10 sm:h-11 text-sm sm:text-[15px] flex-1 sm:flex-none touch-manipulation">
               {loading ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
