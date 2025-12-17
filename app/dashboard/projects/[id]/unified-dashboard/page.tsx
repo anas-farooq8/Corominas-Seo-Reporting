@@ -76,15 +76,7 @@ export default function UnifiedDashboardPage({ params }: { params: Promise<{ id:
     }
   }
 
-  if (loading) {
-    return (
-      <div className="flex-1 flex items-center justify-center min-h-screen">
-        <LoadingSpinner message="Loading Dashboard..." />
-      </div>
-    )
-  }
-
-  if (error || pages.length === 0) {
+  if (error || (!loading && pages.length === 0)) {
     return (
       <div className="flex-1 p-4 md:p-8">
         <ErrorDisplay
@@ -112,15 +104,16 @@ export default function UnifiedDashboardPage({ params }: { params: Promise<{ id:
           </Button>
           <div className="flex-1">
             <h1 className="text-2xl md:text-3xl font-bold text-foreground">
-              {projectName} Dashboard
+              {loading ? "Loading..." : `${projectName} Dashboard`}
             </h1>
             <p className="text-sm text-muted-foreground mt-1">
-              Unified analytics dashboard
+              {loading ? "Please wait" : "Unified analytics dashboard"}
             </p>
           </div>
         </div>
         
         {/* Page Navigation Tabs */}
+        {!loading && pages.length > 0 && (
         <div className="px-4 md:px-6">
           <div className="flex gap-2 border-b">
             {pages.map((page) => (
@@ -138,15 +131,24 @@ export default function UnifiedDashboardPage({ params }: { params: Promise<{ id:
             ))}
           </div>
         </div>
+        )}
       </div>
 
       {/* Content Area */}
       <div className="flex-1 overflow-auto">
-        {activePageConfig?.datasourceType === "google_analytics" && (
-          <GoogleAnalyticsDashboardPage datasourceId={activePageConfig.datasourceId} />
-        )}
-        {activePageConfig?.datasourceType === "mangools" && (
-          <MangoolsDashboardPage datasourceId={activePageConfig.datasourceId} />
+        {loading ? (
+          <div className="flex items-center justify-center min-h-[600px]">
+            <LoadingSpinner message="Loading Dashboard..." />
+          </div>
+        ) : (
+          <>
+            {activePageConfig?.datasourceType === "google_analytics" && (
+              <GoogleAnalyticsDashboardPage datasourceId={activePageConfig.datasourceId} />
+            )}
+            {activePageConfig?.datasourceType === "mangools" && (
+              <MangoolsDashboardPage datasourceId={activePageConfig.datasourceId} />
+            )}
+          </>
         )}
       </div>
     </div>
