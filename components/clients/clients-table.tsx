@@ -19,7 +19,7 @@ export function ClientsTable({ clients, onClientUpdated, onClientDeleted, isSear
 
   if (clients.length === 0) {
     return (
-      <div className="text-center py-8 sm:py-12 text-sm sm:text-base text-muted-foreground px-4">
+      <div className="text-center py-6 sm:py-8 text-xs sm:text-sm text-muted-foreground px-3">
         {isSearching ? "No clients match your criteria." : "No clients found. Create your first client to get started."}
       </div>
     )
@@ -31,11 +31,11 @@ export function ClientsTable({ clients, onClientUpdated, onClientDeleted, isSear
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead className="text-sm sm:text-[15px]">Name</TableHead>
-              <TableHead className="hidden sm:table-cell text-sm sm:text-[15px]">Email</TableHead>
-              <TableHead className="hidden lg:table-cell text-sm sm:text-[15px]">Notes</TableHead>
-              <TableHead className="text-center text-sm sm:text-[15px] whitespace-nowrap">Projects</TableHead>
-              <TableHead className="text-right text-sm sm:text-[15px] w-[100px] sm:w-[120px]">Actions</TableHead>
+              <TableHead className="text-xs sm:text-sm">Name</TableHead>
+              <TableHead className="hidden sm:table-cell text-xs sm:text-sm">Email</TableHead>
+              <TableHead className="hidden lg:table-cell text-xs sm:text-sm">Notes</TableHead>
+              <TableHead className="text-center text-xs sm:text-sm whitespace-nowrap">Projects</TableHead>
+              <TableHead className="text-right text-xs sm:text-sm w-[80px] sm:w-[100px]">Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -45,18 +45,18 @@ export function ClientsTable({ clients, onClientUpdated, onClientDeleted, isSear
                 className="cursor-pointer hover:bg-muted/50"
                 onClick={() => router.push(`/dashboard/clients/${client.id}`)}
               >
-                <TableCell className="font-medium text-sm sm:text-[15px] min-w-[120px]">
+                <TableCell className="font-medium text-xs sm:text-sm min-w-[100px]">
                   <div className="flex flex-col">
                     <span>{client.name}</span>
-                    <span className="sm:hidden text-xs text-muted-foreground mt-0.5">{client.email}</span>
+                    <span className="sm:hidden text-[11px] text-muted-foreground mt-0.5">{client.email}</span>
                   </div>
                 </TableCell>
-                <TableCell className="hidden sm:table-cell text-sm min-w-[180px]">{client.email}</TableCell>
-                <TableCell className="hidden lg:table-cell text-sm max-w-[200px] xl:max-w-xs truncate">
+                <TableCell className="hidden sm:table-cell text-xs sm:text-sm min-w-[150px]">{client.email}</TableCell>
+                <TableCell className="hidden lg:table-cell text-xs sm:text-sm max-w-[180px] xl:max-w-xs truncate">
                   {client.notes || <span className="text-muted-foreground">N/A</span>}
                 </TableCell>
                 <TableCell className="text-center">
-                  <Badge variant="secondary" className="text-xs sm:text-sm">{client.project_count || 0}</Badge>
+                  <Badge variant="secondary" className="text-[11px] sm:text-xs">{client.project_count || 0}</Badge>
                 </TableCell>
                 <TableCell className="text-right">
                   <div className="flex items-center justify-end gap-0.5 sm:gap-1" onClick={(e) => e.stopPropagation()}>

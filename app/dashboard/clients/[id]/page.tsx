@@ -50,30 +50,30 @@ export default function ClientDetailPage({ params }: { params: Promise<{ id: str
   }
 
   return (
-    <div className="flex-1 space-y-5 sm:space-y-6 p-4 sm:p-6 md:p-8">
-      <div className="space-y-3 sm:space-y-4">
-        <Button variant="ghost" onClick={() => router.push("/dashboard/clients")} className="h-9 sm:h-10 text-sm sm:text-[15px] -ml-2 touch-manipulation">
-          <ArrowLeft className="mr-2 h-4 w-4" />
+    <div className="flex-1 space-y-2 sm:space-y-2.5 p-3 sm:p-4 md:p-5">
+      <div className="space-y-2 sm:space-y-2.5">
+        <Button variant="ghost" onClick={() => router.push("/dashboard/clients")} className="h-8 sm:h-9 text-xs sm:text-sm -ml-2 touch-manipulation">
+          <ArrowLeft className="mr-1.5 h-3.5 w-3.5" />
           Back to Clients
         </Button>
 
         {loading ? (
           <div>
-            <h1 className="text-xl sm:text-2xl md:text-3xl font-bold text-foreground">Loading...</h1>
-            <p className="text-sm sm:text-[15px] text-muted-foreground mt-1">Please wait</p>
+            <h1 className="text-lg sm:text-xl md:text-2xl font-bold text-foreground">Loading...</h1>
+            <p className="text-xs sm:text-sm text-muted-foreground mt-0.5">Please wait</p>
           </div>
         ) : error || !client ? (
           <div>
-            <h1 className="text-xl sm:text-2xl md:text-3xl font-bold text-foreground">Client Not Found</h1>
-            <p className="text-sm sm:text-[15px] text-muted-foreground mt-1">Unable to load client details</p>
+            <h1 className="text-lg sm:text-xl md:text-2xl font-bold text-foreground">Client Not Found</h1>
+            <p className="text-xs sm:text-sm text-muted-foreground mt-0.5">Unable to load client details</p>
           </div>
         ) : (
-          <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 sm:gap-4">
+          <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2 sm:gap-3">
             <div className="flex-1">
-              <h1 className="text-xl sm:text-2xl md:text-3xl font-bold text-foreground">{client.name}</h1>
-              <p className="text-sm sm:text-[15px] text-muted-foreground mt-1 leading-relaxed">{client.email}</p>
+              <h1 className="text-lg sm:text-xl md:text-2xl font-bold text-foreground">{client.name}</h1>
+              <p className="text-xs sm:text-sm text-muted-foreground mt-0.5 leading-relaxed">{client.email}</p>
               {client.notes && (
-                <p className="text-sm sm:text-[15px] text-muted-foreground mt-2 max-w-2xl leading-relaxed">{client.notes}</p>
+                <p className="text-xs sm:text-sm text-muted-foreground mt-1 max-w-2xl leading-relaxed">{client.notes}</p>
               )}
             </div>
             <div className="w-full sm:w-auto">
@@ -84,13 +84,13 @@ export default function ClientDetailPage({ params }: { params: Promise<{ id: str
       </div>
 
       <Card>
-        <CardHeader className="px-4 sm:px-6 py-4 sm:py-5">
-          <CardTitle className="text-lg sm:text-xl">Projects</CardTitle>
-          <CardDescription className="text-sm">
+        <CardHeader className="px-3 sm:px-4 pt-3 pb-2">
+          <CardTitle className="text-base sm:text-lg">Projects</CardTitle>
+          <CardDescription className="text-xs sm:text-sm">
             {loading ? "Loading projects..." : error || !client ? "Unable to load projects" : `Manage projects for ${client.name}`}
           </CardDescription>
         </CardHeader>
-        <CardContent className="px-4 sm:px-6 pb-4 sm:pb-6">
+        <CardContent className="px-3 sm:px-4 pt-0 pb-3 sm:pb-4">
           {loading ? (
             <LoadingSpinner message="Loading client details..." variant="card" />
           ) : error || !client ? (

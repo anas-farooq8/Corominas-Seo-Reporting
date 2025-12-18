@@ -59,22 +59,22 @@ export function CreateProjectDialog({ clientId, onProjectAdded }: CreateProjectD
   return (
     <Dialog open={open} onOpenChange={(open) => !loading && setOpen(open)}>
       <DialogTrigger asChild>
-        <Button size="sm" className="w-full sm:w-auto h-9 sm:h-10 text-sm sm:text-[15px] touch-manipulation">
-          <Plus className="mr-2 h-4 w-4" />
+        <Button size="sm" className="w-full sm:w-auto h-8 sm:h-9 text-xs sm:text-sm touch-manipulation">
+          <Plus className="mr-1.5 h-3.5 w-3.5" />
           Add Project
         </Button>
       </DialogTrigger>
-      <DialogContent className="w-[calc(100%-2rem)] max-w-[425px] max-h-[90vh] overflow-y-auto" showCloseButton={!loading} onInteractOutside={(e) => loading && e.preventDefault()} onEscapeKeyDown={(e) => loading && e.preventDefault()}>
+      <DialogContent className="w-[calc(100%-2rem)] max-w-[400px] max-h-[90vh] overflow-y-auto" showCloseButton={!loading} onInteractOutside={(e) => loading && e.preventDefault()} onEscapeKeyDown={(e) => loading && e.preventDefault()}>
         <form onSubmit={handleSubmit}>
-          <DialogHeader className="space-y-2">
-            <DialogTitle className="text-lg sm:text-xl">Add New Project</DialogTitle>
-            <DialogDescription className="text-sm leading-relaxed">
+          <DialogHeader className="space-y-1.5">
+            <DialogTitle className="text-base sm:text-lg">Add New Project</DialogTitle>
+            <DialogDescription className="text-xs sm:text-sm leading-relaxed">
               Create a new project for this client.
             </DialogDescription>
           </DialogHeader>
-          <div className="grid gap-4 py-4">
-            <div className="grid gap-2">
-              <Label htmlFor="name" className="text-sm sm:text-[15px]">Project Name *</Label>
+          <div className="grid gap-3 py-3">
+            <div className="grid gap-1.5">
+              <Label htmlFor="name" className="text-xs sm:text-sm">Project Name *</Label>
               <Input
                 id="name"
                 value={formData.name}
@@ -82,11 +82,11 @@ export function CreateProjectDialog({ clientId, onProjectAdded }: CreateProjectD
                 placeholder="Website Redesign"
                 required
                 disabled={loading}
-                className="h-10 sm:h-11 text-[15px]"
+                className="h-9 text-sm"
               />
             </div>
-            <div className="grid gap-2">
-              <Label htmlFor="details" className="text-sm sm:text-[15px]">Details</Label>
+            <div className="grid gap-1.5">
+              <Label htmlFor="details" className="text-xs sm:text-sm">Details</Label>
               <Textarea
                 id="details"
                 value={formData.details}
@@ -94,24 +94,24 @@ export function CreateProjectDialog({ clientId, onProjectAdded }: CreateProjectD
                 placeholder="Project description and details (optional)"
                 rows={3}
                 disabled={loading}
-                className="text-[15px] min-h-[80px]"
+                className="text-sm min-h-[70px]"
               />
             </div>
             {error && (
-              <Alert variant="destructive" className="text-sm">
-                <AlertCircle className="h-4 w-4" />
-                <AlertDescription className="text-sm leading-relaxed">{error}</AlertDescription>
+              <Alert variant="destructive" className="text-xs sm:text-sm py-2">
+                <AlertCircle className="h-3.5 w-3.5" />
+                <AlertDescription className="text-xs sm:text-sm leading-relaxed">{error}</AlertDescription>
               </Alert>
             )}
           </div>
           <DialogFooter className="gap-2 sm:gap-0">
-            <Button type="button" variant="outline" onClick={() => setOpen(false)} disabled={loading} className="h-10 sm:h-11 text-sm sm:text-[15px] flex-1 sm:flex-none touch-manipulation">
+            <Button type="button" variant="outline" onClick={() => setOpen(false)} disabled={loading} className="h-8 sm:h-9 text-xs sm:text-sm flex-1 sm:flex-none touch-manipulation">
               Cancel
             </Button>
-            <Button type="submit" disabled={loading} className="h-10 sm:h-11 text-sm sm:text-[15px] flex-1 sm:flex-none touch-manipulation">
+            <Button type="submit" disabled={loading} className="h-8 sm:h-9 text-xs sm:text-sm flex-1 sm:flex-none touch-manipulation">
               {loading ? (
                 <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
                   Creating...
                 </>
               ) : (

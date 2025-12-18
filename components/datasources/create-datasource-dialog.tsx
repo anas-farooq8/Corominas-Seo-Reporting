@@ -265,16 +265,16 @@ export function CreateDatasourceDialog({ projectId, existingTypes, onDatasourceA
   return (
     <Dialog open={open} onOpenChange={(open) => !loading && setOpen(open)}>
       <DialogTrigger asChild>
-        <Button size="sm" variant="outline" className="w-full sm:w-auto h-10 sm:h-11 text-sm sm:text-[15px] touch-manipulation">
-          <Plus className="mr-2 h-4 w-4" />
+        <Button size="sm" variant="outline" className="w-full sm:w-auto h-8 sm:h-9 text-xs sm:text-sm touch-manipulation">
+          <Plus className="mr-1.5 h-3.5 w-3.5" />
           Add Data Source
         </Button>
       </DialogTrigger>
       <DialogContent className="w-[calc(100%-2rem)] sm:max-w-[600px] max-h-[90vh] overflow-y-auto" showCloseButton={!loading} onInteractOutside={(e) => loading && e.preventDefault()} onEscapeKeyDown={(e) => loading && e.preventDefault()}>
         <form onSubmit={handleSubmit}>
-          <DialogHeader className="space-y-2">
-            <DialogTitle className="text-lg sm:text-xl">Add Data Source</DialogTitle>
-            <DialogDescription className="text-sm leading-relaxed">
+          <DialogHeader className="space-y-1.5">
+            <DialogTitle className="text-base sm:text-lg">Add Data Source</DialogTitle>
+            <DialogDescription className="text-xs sm:text-sm leading-relaxed">
               {selectedType === "mangools" 
                 ? "Select a domain from your Mangools account. Note: Each domain can only be attached once, and each project can have only one Mangools data source."
                 : selectedType === "google_analytics"
@@ -286,14 +286,14 @@ export function CreateDatasourceDialog({ projectId, existingTypes, onDatasourceA
           
           <div className="grid gap-4 py-4">
             {/* Data Source Type Selection */}
-            <div className="grid gap-2">
-              <Label htmlFor="type" className="text-sm sm:text-[15px]">Data Source Type *</Label>
+            <div className="grid gap-1.5">
+              <Label htmlFor="type" className="text-xs sm:text-sm">Data Source Type *</Label>
               <Select
                 value={selectedType}
                 onValueChange={(value) => setSelectedType(value as "mangools" | "semrush" | "google_analytics")}
                 disabled={loading || fetchingDomains || fetchingProperties}
               >
-                <SelectTrigger id="type" className="cursor-pointer h-10 sm:h-11 text-[15px]">
+                <SelectTrigger id="type" className="cursor-pointer h-9 text-sm">
                   <SelectValue placeholder="Select a data source type" />
                 </SelectTrigger>
                 <SelectContent>
@@ -323,25 +323,25 @@ export function CreateDatasourceDialog({ projectId, existingTypes, onDatasourceA
                 ) : (
                   <>
                     {/* Search */}
-                    <div className="grid gap-2">
-                      <Label htmlFor="search" className="text-sm sm:text-[15px]">Search Domains</Label>
+                    <div className="grid gap-1.5">
+                      <Label htmlFor="search" className="text-xs sm:text-sm">Search Domains</Label>
                       <div className="relative">
-                        <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground pointer-events-none" />
+                        <Search className="absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground pointer-events-none" />
                         <Input
                           id="search"
                           type="text"
                           placeholder="Search by domain..."
                           value={searchQuery}
                           onChange={(e) => setSearchQuery(e.target.value)}
-                          className="pl-9 h-10 sm:h-11 text-[15px]"
+                          className="pl-8 h-9 text-sm"
                           disabled={loading}
                         />
                       </div>
                     </div>
 
                     {/* Domain List */}
-                    <div className="grid gap-2">
-                      <Label className="text-sm sm:text-[15px]">Available Domains ({filteredDomains.length})</Label>
+                    <div className="grid gap-1.5">
+                      <Label className="text-xs sm:text-sm">Available Domains ({filteredDomains.length})</Label>
                       <div className="border rounded-lg max-h-[250px] sm:max-h-[300px] overflow-y-auto">
                         {filteredDomains.length === 0 ? (
                           <div className="p-6 sm:p-8 text-center text-xs sm:text-sm text-muted-foreground">
@@ -417,25 +417,25 @@ export function CreateDatasourceDialog({ projectId, existingTypes, onDatasourceA
                 ) : (
                   <>
                     {/* Search */}
-                    <div className="grid gap-2">
-                      <Label htmlFor="property-search" className="text-sm sm:text-[15px]">Search Properties</Label>
+                    <div className="grid gap-1.5">
+                      <Label htmlFor="property-search" className="text-xs sm:text-sm">Search Properties</Label>
                       <div className="relative">
-                        <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground pointer-events-none" />
+                        <Search className="absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground pointer-events-none" />
                         <Input
                           id="property-search"
                           type="text"
                           placeholder="Search by property name..."
                           value={propertySearchQuery}
                           onChange={(e) => setPropertySearchQuery(e.target.value)}
-                          className="pl-9 h-10 sm:h-11 text-[15px]"
+                          className="pl-8 h-9 text-sm"
                           disabled={loading}
                         />
                       </div>
                     </div>
 
                     {/* Property List */}
-                    <div className="grid gap-2">
-                      <Label className="text-sm sm:text-[15px]">Available Properties ({filteredProperties.length})</Label>
+                    <div className="grid gap-1.5">
+                      <Label className="text-xs sm:text-sm">Available Properties ({filteredProperties.length})</Label>
                       <div className="border rounded-lg max-h-[250px] sm:max-h-[300px] overflow-y-auto">
                         {filteredProperties.length === 0 ? (
                           <div className="p-6 sm:p-8 text-center text-xs sm:text-sm text-muted-foreground">
@@ -506,10 +506,10 @@ export function CreateDatasourceDialog({ projectId, existingTypes, onDatasourceA
           </div>
 
           <DialogFooter className="gap-2 sm:gap-0">
-            <Button type="button" variant="outline" onClick={() => setOpen(false)} disabled={loading} className="h-10 sm:h-11 text-sm sm:text-[15px] flex-1 sm:flex-none touch-manipulation">
+            <Button type="button" variant="outline" onClick={() => setOpen(false)} disabled={loading} className="h-8 sm:h-9 text-xs sm:text-sm flex-1 sm:flex-none touch-manipulation">
               Cancel
             </Button>
-            <Button type="submit" disabled={loading || fetchingDomains || fetchingProperties || !canSubmit} className="h-10 sm:h-11 text-sm sm:text-[15px] flex-1 sm:flex-none touch-manipulation">
+            <Button type="submit" disabled={loading || fetchingDomains || fetchingProperties || !canSubmit} className="h-8 sm:h-9 text-xs sm:text-sm flex-1 sm:flex-none touch-manipulation">
               {loading ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />

@@ -45,7 +45,7 @@ export function DomainsSection({
     
     if (properties.length === 0) {
       return (
-        <div className="text-sm text-muted-foreground">
+        <div className="text-xs sm:text-sm text-muted-foreground">
           No Google Analytics property attached.
         </div>
       )
@@ -53,21 +53,21 @@ export function DomainsSection({
 
     const property = properties[0]
     return (
-      <div className="space-y-3">
-        <h3 className="text-xs sm:text-sm font-semibold text-foreground">Google Analytics Property</h3>
-        <div className="group relative flex flex-col sm:flex-row items-start gap-3 sm:gap-4 p-3 sm:p-4 border-2 rounded-xl bg-gradient-to-br from-background to-muted/30 hover:shadow-md hover:border-primary/20 transition-all duration-200">
-          <div className="relative p-2 rounded-lg bg-primary/10 group-hover:bg-primary/15 transition-colors flex-shrink-0">
-            <BarChart3 className="h-5 w-5 text-primary" />
+      <div>
+        <h3 className="text-sm font-semibold text-foreground mb-1.5">Google Analytics Property</h3>
+        <div className="group relative flex flex-col sm:flex-row items-start gap-3 p-3 border rounded-lg bg-gradient-to-br from-background to-muted/30 hover:shadow-sm hover:border-primary/20 transition-all duration-200">
+          <div className="relative p-2 rounded bg-primary/10 group-hover:bg-primary/15 transition-colors flex-shrink-0">
+            <BarChart3 className="h-6 w-6 text-primary" />
           </div>
           <div className="flex-1 min-w-0 w-full">
-            <h4 className="font-semibold text-sm sm:text-base truncate mb-2">{property.display_name}</h4>
-            <div className="flex flex-wrap items-center gap-2 sm:gap-3 text-xs text-muted-foreground">
-              <div className="flex items-center gap-1.5">
-                <Clock className="h-3.5 w-3.5 flex-shrink-0" />
+            <h4 className="font-semibold text-sm sm:text-base truncate mb-1">{property.display_name}</h4>
+            <div className="flex flex-wrap items-center gap-2 text-xs sm:text-sm text-muted-foreground">
+              <div className="flex items-center gap-1">
+                <Clock className="h-4 w-4 flex-shrink-0" />
                 <span className="truncate">{property.time_zone}</span>
               </div>
-              <div className="flex items-center gap-1.5">
-                <DollarSign className="h-3.5 w-3.5 flex-shrink-0" />
+              <div className="flex items-center gap-1">
+                <DollarSign className="h-4 w-4 flex-shrink-0" />
                 <span>{property.currency_code}</span>
               </div>
             </div>
@@ -79,7 +79,7 @@ export function DomainsSection({
 
   // Other datasource types
   return (
-    <div className="text-sm text-muted-foreground">
+    <div className="text-xs sm:text-sm text-muted-foreground">
       Data management coming soon for this data source type.
     </div>
   )

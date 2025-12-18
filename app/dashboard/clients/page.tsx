@@ -43,11 +43,11 @@ export default function ClientsPage() {
   }
 
   return (
-    <div className="flex-1 space-y-5 sm:space-y-6 p-4 sm:p-6 md:p-8">
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4">
+    <div className="flex-1 space-y-2 sm:space-y-2.5 p-3 sm:p-4 md:p-5">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-3">
         <div>
-          <h1 className="text-xl sm:text-2xl md:text-3xl font-bold text-foreground">Clients</h1>
-          <p className="text-sm sm:text-[15px] text-muted-foreground mt-1 leading-relaxed">
+          <h1 className="text-lg sm:text-xl md:text-2xl font-bold text-foreground">Clients</h1>
+          <p className="text-xs sm:text-sm text-muted-foreground mt-0.5 leading-relaxed">
             Manage clients, their projects, and SEO data sources
           </p>
         </div>
@@ -57,11 +57,11 @@ export default function ClientsPage() {
       </div>
 
       <Card>
-        <CardHeader className="px-4 sm:px-6 py-4 sm:py-5">
-          <CardTitle className="text-lg sm:text-xl">All Clients</CardTitle>
-          <CardDescription className="text-sm">View and manage all clients</CardDescription>
+        <CardHeader className="px-3 sm:px-4 pt-3 pb-2">
+          <CardTitle className="text-base sm:text-lg">All Clients</CardTitle>
+          <CardDescription className="text-xs sm:text-sm">View and manage all clients</CardDescription>
         </CardHeader>
-        <CardContent className="px-4 sm:px-6 pb-4 sm:pb-6">
+        <CardContent className="px-3 sm:px-4 pt-0 pb-3 sm:pb-4">
           {loading ? (
             <LoadingSpinner message="Loading clients..." variant="card" />
           ) : error ? (
