@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server"
+import { promises as dns } from "dns"
 
 // ============================================
 // Domain Verification Utility Functions
@@ -17,30 +18,18 @@ function checkDomainSyntax(domain: string): boolean {
 
 /**
  * Check if domain resolves via DNS (A record)
+ * Uses Node.js built-in dns module for reliable server-side DNS resolution
  */
 async function checkDNS(domain: string): Promise<boolean> {
   try {
-    // Use DNS over HTTPS (DoH) via Google's public DNS
-    const response = await fetch(
-      `https://dns.google/resolve?name=${encodeURIComponent(domain)}&type=A`,
-      {
-        headers: {
-          'Accept': 'application/dns-json',
-        },
-        signal: AbortSignal.timeout(5000), // 5 second timeout
-      }
-    )
+    // Use Node.js's built-in DNS resolver (much more reliable than external APIs)
+    const addresses = await dns.resolve4(domain)
     
-    if (!response.ok) {
-      return false
-    }
-    
-    const data = await response.json()
-    
-    // Check if we got valid A records
-    return data.Status === 0 && Array.isArray(data.Answer) && data.Answer.length > 0
-  } catch (error) {
-    console.error("DNS check failed:", error)
+    // If we get at least one IP address, the domain resolves
+    return addresses && addresses.length > 0
+  } catch (error: any) {
+    // DNS resolution failed
+    console.error("DNS check failed for domain:", domain, error.code || error.message)
     return false
   }
 }
@@ -48,23 +37,39 @@ async function checkDNS(domain: string): Promise<boolean> {
 /**
  * Check if domain responds over HTTP or HTTPS
  */
-async function checkHTTP(domain: string, timeout: number = 5000): Promise<boolean> {
+async function checkHTTP(domain: string, timeout: number = 10000): Promise<boolean> {
   for (const scheme of ["https", "http"]) {
     try {
       const url = `${scheme}://${domain}`
       const controller = new AbortController()
       const timeoutId = setTimeout(() => controller.abort(), timeout)
       
-      const response = await fetch(url, {
-        method: "HEAD",
-        redirect: "follow",
-        signal: controller.signal,
-      })
-      
-      clearTimeout(timeoutId)
-      
-      if (response.status < 500) {
-        return true
+      // Try HEAD first, then GET if HEAD fails
+      for (const method of ["HEAD", "GET"]) {
+        try {
+          const response = await fetch(url, {
+            method,
+            redirect: "follow",
+            signal: controller.signal,
+            headers: {
+              'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+            },
+          })
+          
+          clearTimeout(timeoutId)
+          
+          // Accept any response code that indicates the server is responding
+          // (including 404, 403, etc. - we just want to know the domain is reachable)
+          if (response.status < 600) {
+            return true
+          }
+        } catch (methodError) {
+          // If HEAD fails, try GET. If GET fails, try next scheme
+          if (method === "HEAD") {
+            continue
+          }
+          throw methodError
+        }
       }
     } catch (error) {
       // Try next scheme

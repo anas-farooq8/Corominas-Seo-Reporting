@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useMemo } from "react"
+import { useState, useEffect, useMemo, useTransition } from "react"
 import { Button } from "@/components/ui/button"
 import {
   Dialog,
@@ -54,8 +54,11 @@ export function CreateDatasourceDialog({ projectId, existingTypes, onDatasourceA
   // Semrush-specific state
   const [semrushDomain, setSemrushDomain] = useState("")
   const [verifyingDomain, setVerifyingDomain] = useState(false)
-  const [domainVerified, setDomainVerified] = useState(false)
-  const [verificationResult, setVerificationResult] = useState<any>(null)
+  const [domainVerificationState, setDomainVerificationState] = useState<{
+    verified: boolean
+    result: any | null
+    showResult: boolean
+  }>({ verified: false, result: null, showResult: false })
   
   const [error, setError] = useState<string | null>(null)
 
@@ -71,8 +74,7 @@ export function CreateDatasourceDialog({ projectId, existingTypes, onDatasourceA
       setSelectedProperty("")
       setSemrushDomain("")
       setVerifyingDomain(false)
-      setDomainVerified(false)
-      setVerificationResult(null)
+      setDomainVerificationState({ verified: false, result: null, showResult: false })
       setError(null)
     }
   }, [open])
@@ -180,8 +182,7 @@ export function CreateDatasourceDialog({ projectId, existingTypes, onDatasourceA
 
     setVerifyingDomain(true)
     setError(null)
-    setDomainVerified(false)
-    setVerificationResult(null)
+    setDomainVerificationState({ verified: false, result: null, showResult: false })
 
     try {
       const response = await fetch("/api/semrush/verify-domain", {
@@ -197,25 +198,24 @@ export function CreateDatasourceDialog({ projectId, existingTypes, onDatasourceA
       }
 
       const result = await response.json()
-      setVerificationResult(result)
 
       if (result.is_valid) {
         // Check if domain is already attached
         const attachedResponse = await fetch("/api/semrush/attached")
+        let isAttached = false
         if (attachedResponse.ok) {
           const attachedDomains: { domain: string }[] = await attachedResponse.json()
-          const isAttached = attachedDomains.some(d => d.domain === result.domain)
-          
-          if (isAttached) {
-            setError("This domain is already attached to another project")
-            setDomainVerified(false)
-          } else {
-            setDomainVerified(true)
-          }
+          isAttached = attachedDomains.some(d => d.domain === result.domain)
+        }
+        
+        if (isAttached) {
+          setError("This domain is already attached to another project")
+          setDomainVerificationState({ verified: false, result, showResult: true })
         } else {
-          setDomainVerified(true)
+          setDomainVerificationState({ verified: true, result, showResult: true })
         }
       } else {
+        // Set error message based on what failed
         if (!result.syntax_valid) {
           setError("Invalid domain format. Please enter a valid domain (e.g., example.com)")
         } else if (!result.dns_resolves) {
@@ -223,11 +223,14 @@ export function CreateDatasourceDialog({ projectId, existingTypes, onDatasourceA
         } else {
           setError("Domain verification failed. Please try again.")
         }
+        
+        setDomainVerificationState({ verified: false, result, showResult: true })
       }
+      
+      setVerifyingDomain(false)
     } catch (err) {
       console.error("Error verifying domain:", err)
       setError(err instanceof Error ? err.message : "Failed to verify domain")
-    } finally {
       setVerifyingDomain(false)
     }
   }
@@ -275,7 +278,7 @@ export function CreateDatasourceDialog({ projectId, existingTypes, onDatasourceA
     }
 
     // For Semrush, require verified domain
-    if (selectedType === "semrush" && (!semrushDomain || !domainVerified)) {
+    if (selectedType === "semrush" && (!semrushDomain || !domainVerificationState.verified)) {
       setError("Please verify a domain before creating the datasource")
       return
     }
@@ -320,7 +323,7 @@ export function CreateDatasourceDialog({ projectId, existingTypes, onDatasourceA
       }
 
       // If Semrush, attach the verified domain
-      if (selectedType === "semrush" && semrushDomain && domainVerified) {
+      if (selectedType === "semrush" && semrushDomain && domainVerificationState.verified) {
         await attachSemrushDomain(
           datasource.id,
           semrushDomain.trim().toLowerCase(),
@@ -347,7 +350,7 @@ export function CreateDatasourceDialog({ projectId, existingTypes, onDatasourceA
   const canSubmit = selectedType && 
     (selectedType !== "mangools" || selectedDomain) &&
     (selectedType !== "google_analytics" || selectedProperty) &&
-    (selectedType !== "semrush" || (semrushDomain && domainVerified))
+    (selectedType !== "semrush" || (semrushDomain && domainVerificationState.verified))
 
   return (
     <Dialog open={open} onOpenChange={(open) => !loading && setOpen(open)}>
@@ -598,9 +601,14 @@ export function CreateDatasourceDialog({ projectId, existingTypes, onDatasourceA
                       value={semrushDomain}
                       onChange={(e) => {
                         setSemrushDomain(e.target.value)
-                        setDomainVerified(false)
-                        setVerificationResult(null)
+                        setDomainVerificationState({ verified: false, result: null, showResult: false })
                         setError(null)
+                      }}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" && semrushDomain.trim() && !verifyingDomain) {
+                          e.preventDefault()
+                          handleVerifyDomain()
+                        }
                       }}
                       className="h-9 text-sm"
                       disabled={loading || verifyingDomain}
@@ -631,25 +639,25 @@ export function CreateDatasourceDialog({ projectId, existingTypes, onDatasourceA
                 </div>
 
                 {/* Verification Result */}
-                {verificationResult && (
-                  <div className={`flex items-start gap-2 p-3 text-xs sm:text-sm rounded-lg border ${
-                    domainVerified 
+                {domainVerificationState.showResult && domainVerificationState.result && (
+                  <div className={`flex items-start gap-2 p-3 text-xs sm:text-sm rounded-lg border transition-colors ${
+                    domainVerificationState.verified 
                       ? "text-green-700 bg-green-50 border-green-200" 
                       : "text-red-700 bg-red-50 border-red-200"
                   }`}>
-                    {domainVerified ? (
+                    {domainVerificationState.verified ? (
                       <CheckCircle2 className="h-4 w-4 mt-0.5 flex-shrink-0" />
                     ) : (
                       <AlertCircle className="h-4 w-4 mt-0.5 flex-shrink-0" />
                     )}
                     <div className="space-y-1">
                       <p className="font-medium">
-                        {domainVerified ? "Domain verified successfully!" : "Domain verification failed"}
+                        {domainVerificationState.verified ? "Domain verified successfully!" : "Domain verification failed"}
                       </p>
                       <div className="text-[11px] space-y-0.5">
-                        <p>✓ Syntax: {verificationResult.syntax_valid ? "Valid" : "Invalid"}</p>
-                        <p>✓ DNS: {verificationResult.dns_resolves ? "Resolves" : "Does not resolve"}</p>
-                        <p>✓ HTTP: {verificationResult.http_reachable ? "Reachable" : "Not reachable"}</p>
+                        <p>✓ Syntax: {domainVerificationState.result.syntax_valid ? "Valid" : "Invalid"}</p>
+                        <p>✓ DNS: {domainVerificationState.result.dns_resolves ? "Resolves" : "Does not resolve"}</p>
+                        <p>✓ HTTP: {domainVerificationState.result.http_reachable ? "Reachable" : "Not reachable"}</p>
                       </div>
                     </div>
                   </div>
