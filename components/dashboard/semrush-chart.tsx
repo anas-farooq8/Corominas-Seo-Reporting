@@ -76,22 +76,21 @@ export const SEMrushChart = memo(function SEMrushChart({
             />
             <YAxis tick={{ fontSize: 10 }} width={35} />
             <Tooltip content={<CustomTooltip />} />
-            {/* Render layers in stable order */}
-            {LAYER_ORDER.map((layer) => 
-              visibleLayers[layer.key] ? (
-                <Area
-                  key={layer.key}
-                  type="monotone"
-                  dataKey={layer.dataKey}
-                  stackId="1"
-                  stroke={layer.color}
-                  fill={layer.color}
-                  fillOpacity={0.8}
-                  animationDuration={400}
-                  animationEasing="ease-in-out"
-                />
-              ) : null
-            )}
+            {/* Render all layers to maintain consistent stacking order */}
+            {LAYER_ORDER.map((layer) => (
+              <Area
+                key={layer.key}
+                type="monotone"
+                dataKey={layer.dataKey}
+                stackId="1"
+                stroke={layer.color}
+                fill={layer.color}
+                fillOpacity={0.8}
+                animationDuration={400}
+                animationEasing="ease-in-out"
+                hide={!visibleLayers[layer.key]}
+              />
+            ))}
           </AreaChart>
         </ResponsiveContainer>
         {/* Desktop Chart */}
@@ -109,22 +108,21 @@ export const SEMrushChart = memo(function SEMrushChart({
             <YAxis tick={{ fontSize: 12 }} width={60} />
             <Tooltip content={<CustomTooltip />} />
             <Legend content={<CustomSEMrushLegend />} wrapperStyle={{ paddingTop: '10px' }} />
-            {/* Render layers in stable order */}
-            {LAYER_ORDER.map((layer) => 
-              visibleLayers[layer.key] ? (
-                <Area
-                  key={layer.key}
-                  type="monotone"
-                  dataKey={layer.dataKey}
-                  stackId="1"
-                  stroke={layer.color}
-                  fill={layer.color}
-                  fillOpacity={0.8}
-                  animationDuration={400}
-                  animationEasing="ease-in-out"
-                />
-              ) : null
-            )}
+            {/* Render all layers to maintain consistent stacking order */}
+            {LAYER_ORDER.map((layer) => (
+              <Area
+                key={layer.key}
+                type="monotone"
+                dataKey={layer.dataKey}
+                stackId="1"
+                stroke={layer.color}
+                fill={layer.color}
+                fillOpacity={0.8}
+                animationDuration={400}
+                animationEasing="ease-in-out"
+                hide={!visibleLayers[layer.key]}
+              />
+            ))}
           </AreaChart>
         </ResponsiveContainer>
       </CardContent>
