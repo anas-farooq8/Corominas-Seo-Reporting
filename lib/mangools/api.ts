@@ -103,32 +103,46 @@ export const fetchMangoolsDomains = cache(async (): Promise<MangoolsApiDomain[]>
       is_with_deleted: "false"
     })
 
-    const response = await fetch(`${url}?${params.toString()}`, {
-      method: "GET",
-      headers: {
-        "x-access-token": accessToken,
+    // Create abort controller with 30 second timeout
+    const controller = new AbortController()
+    const timeoutId = setTimeout(() => controller.abort(), 30000)
 
-        // required for CORS trust
-        "Origin": "https://app.mangools.com",
-        "Referer": "https://app.mangools.com/serpwatcher/",
+    try {
+      const response = await fetch(`${url}?${params.toString()}`, {
+        method: "GET",
+        headers: {
+          "x-access-token": accessToken,
 
-        // normal browser headers
-        "Accept": "*/*",
-        "Accept-Language": "en-US,en;q=0.9",
-        "User-Agent":
-          "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36",
-      },
-    });
+          // required for CORS trust
+          "Origin": "https://app.mangools.com",
+          "Referer": "https://app.mangools.com/serpwatcher/",
 
-    if (!response.ok) {
-      const errorText = await response.text()
-      console.error("[Mangools API] Error response:", errorText)
-      throw new Error(`Mangools API error: ${response.status} ${response.statusText}`)
+          // normal browser headers
+          "Accept": "*/*",
+          "Accept-Language": "en-US,en;q=0.9",
+          "User-Agent":
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36",
+        },
+        signal: controller.signal,
+      });
+      clearTimeout(timeoutId)
+
+      if (!response.ok) {
+        const errorText = await response.text()
+        console.error("[Mangools API] Error response:", errorText)
+        throw new Error(`Mangools API error: ${response.status} ${response.statusText}`)
+      }
+
+      const data = (await response.json()) as MangoolsApiDomain[]
+      
+      return data
+    } catch (fetchError: any) {
+      clearTimeout(timeoutId)
+      if (fetchError.name === 'AbortError') {
+        throw new Error('Mangools API request timed out after 30 seconds')
+      }
+      throw fetchError
     }
-
-    const data = (await response.json()) as MangoolsApiDomain[]
-    
-    return data
   } catch (error) {
     console.error("[Mangools API] Fetch failed:", error)
     throw error
@@ -154,47 +168,61 @@ export async function fetchTrackingDetail(trackingId: string): Promise<MangoolsT
       is_with_deleted: "false"
     })
 
-    const response = await fetch(`${url}?${params.toString()}`, {
-      method: "GET",
-      headers: {
-        "x-access-token": accessToken,
+    // Create abort controller with 30 second timeout
+    const controller = new AbortController()
+    const timeoutId = setTimeout(() => controller.abort(), 30000)
 
-        // required for CORS trust
-        "Origin": "https://app.mangools.com",
-        "Referer": "https://app.mangools.com/serpwatcher/",
+    try {
+      const response = await fetch(`${url}?${params.toString()}`, {
+        method: "GET",
+        headers: {
+          "x-access-token": accessToken,
 
-        // normal browser headers
-        "Accept": "*/*",
-        "Accept-Language": "en-US,en;q=0.9",
-        "User-Agent":
-          "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36",
-      },
-    })
+          // required for CORS trust
+          "Origin": "https://app.mangools.com",
+          "Referer": "https://app.mangools.com/serpwatcher/",
 
-    if (!response.ok) {
-      const errorText = await response.text()
-      console.error("[Mangools API] Error response:", errorText)
-      throw new Error(`Mangools API error: ${response.status} ${response.statusText}`)
+          // normal browser headers
+          "Accept": "*/*",
+          "Accept-Language": "en-US,en;q=0.9",
+          "User-Agent":
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36",
+        },
+        signal: controller.signal,
+      })
+      clearTimeout(timeoutId)
+
+      if (!response.ok) {
+        const errorText = await response.text()
+        console.error("[Mangools API] Error response:", errorText)
+        throw new Error(`Mangools API error: ${response.status} ${response.statusText}`)
+      }
+
+      const rawData = await response.json()
+      
+      // Parse only what we need from the response
+      const parsedData: MangoolsTrackingDetail = {
+        tracking: {
+          _id: rawData.tracking._id,
+          domain: rawData.tracking.domain,
+          location: {
+            label: rawData.tracking.location.label
+          }
+        },
+        keywords: rawData.keywords.map((kw: any) => ({
+          _id: kw._id,
+          kw: kw.kw
+        }))
+      }
+      
+      return parsedData
+    } catch (fetchError: any) {
+      clearTimeout(timeoutId)
+      if (fetchError.name === 'AbortError') {
+        throw new Error('Mangools API request timed out after 30 seconds')
+      }
+      throw fetchError
     }
-
-    const rawData = await response.json()
-    
-    // Parse only what we need from the response
-    const parsedData: MangoolsTrackingDetail = {
-      tracking: {
-        _id: rawData.tracking._id,
-        domain: rawData.tracking.domain,
-        location: {
-          label: rawData.tracking.location.label
-        }
-      },
-      keywords: rawData.keywords.map((kw: any) => ({
-        _id: kw._id,
-        kw: kw.kw
-      }))
-    }
-    
-    return parsedData
   } catch (error) {
     console.error("[Mangools API] Fetch tracking detail failed:", error)
     throw error
@@ -264,32 +292,46 @@ export async function fetchTrackingStats(
     
     const fullUrl = `${url}?${params.toString()}`
 
-    const response = await fetch(fullUrl, {
-      method: "POST",
-      headers: {
-        "x-access-token": accessToken,
+    // Create abort controller with 30 second timeout
+    const controller = new AbortController()
+    const timeoutId = setTimeout(() => controller.abort(), 30000)
 
-        // required for CORS trust
-        "Origin": "https://app.mangools.com",
-        "Referer": "https://app.mangools.com/serpwatcher/",
+    try {
+      const response = await fetch(fullUrl, {
+        method: "POST",
+        headers: {
+          "x-access-token": accessToken,
 
-        // normal browser headers
-        "Accept": "*/*",
-        "Accept-Language": "en-US,en;q=0.9",
-        "User-Agent":
-          "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36",
-      },
-      body: JSON.stringify({}),
-    })
+          // required for CORS trust
+          "Origin": "https://app.mangools.com",
+          "Referer": "https://app.mangools.com/serpwatcher/",
 
-    if (!response.ok) {
-      const errorText = await response.text()
-      console.error("[Mangools API] Error response:", errorText)
-      throw new Error(`Mangools API error: ${response.status} ${response.statusText}`)
+          // normal browser headers
+          "Accept": "*/*",
+          "Accept-Language": "en-US,en;q=0.9",
+          "User-Agent":
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36",
+        },
+        body: JSON.stringify({}),
+        signal: controller.signal,
+      })
+      clearTimeout(timeoutId)
+
+      if (!response.ok) {
+        const errorText = await response.text()
+        console.error("[Mangools API] Error response:", errorText)
+        throw new Error(`Mangools API error: ${response.status} ${response.statusText}`)
+      }
+
+      const data = await response.json()
+      return data
+    } catch (fetchError: any) {
+      clearTimeout(timeoutId)
+      if (fetchError.name === 'AbortError') {
+        throw new Error('Mangools API request timed out after 30 seconds')
+      }
+      throw fetchError
     }
-
-    const data = await response.json()
-    return data
   } catch (error) {
     console.error("[Mangools API] Fetch tracking stats failed:", error)
     throw error
