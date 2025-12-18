@@ -107,10 +107,18 @@ export const fetchMangoolsDomains = cache(async (): Promise<MangoolsApiDomain[]>
       method: "GET",
       headers: {
         "x-access-token": accessToken,
-        "Content-Type": "application/json",
-        Accept: "*/*",
+
+        // required for CORS trust
+        "Origin": "https://app.mangools.com",
+        "Referer": "https://app.mangools.com/serpwatcher/",
+
+        // normal browser headers
+        "Accept": "*/*",
+        "Accept-Language": "en-US,en;q=0.9",
+        "User-Agent":
+          "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36",
       },
-    })
+    });
 
     if (!response.ok) {
       const errorText = await response.text()
@@ -150,8 +158,16 @@ export async function fetchTrackingDetail(trackingId: string): Promise<MangoolsT
       method: "GET",
       headers: {
         "x-access-token": accessToken,
-        "Content-Type": "application/json",
-        Accept: "*/*",
+
+        // required for CORS trust
+        "Origin": "https://app.mangools.com",
+        "Referer": "https://app.mangools.com/serpwatcher/",
+
+        // normal browser headers
+        "Accept": "*/*",
+        "Accept-Language": "en-US,en;q=0.9",
+        "User-Agent":
+          "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36",
       },
     })
 
@@ -252,8 +268,16 @@ export async function fetchTrackingStats(
       method: "POST",
       headers: {
         "x-access-token": accessToken,
-        "Content-Type": "application/json",
-        Accept: "*/*",
+
+        // required for CORS trust
+        "Origin": "https://app.mangools.com",
+        "Referer": "https://app.mangools.com/serpwatcher/",
+
+        // normal browser headers
+        "Accept": "*/*",
+        "Accept-Language": "en-US,en;q=0.9",
+        "User-Agent":
+          "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36",
       },
       body: JSON.stringify({}),
     })
