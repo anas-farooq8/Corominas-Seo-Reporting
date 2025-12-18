@@ -6,7 +6,7 @@
 
 import { revalidatePath } from "next/cache"
 import * as db from "@/lib/db/datasources"
-import type { Datasource, DatasourceInput, MangoolsDomain, GoogleAnalyticsProperty } from "@/lib/supabase/types"
+import type { Datasource, DatasourceInput, MangoolsDomain, GoogleAnalyticsProperty, SemrushDomain } from "@/lib/supabase/types"
 
 /**
  * Get all datasources for a project with their respective data (domains, etc.)
@@ -98,6 +98,29 @@ export async function attachGoogleAnalyticsProperty(
   } catch (error) {
     console.error("Error attaching Google Analytics property:", error)
     throw new Error("Failed to attach Google Analytics property")
+  }
+}
+
+/**
+ * Attach a Semrush domain to a datasource
+ */
+export async function attachSemrushDomain(
+  datasourceId: string,
+  domain: string,
+  projectId: string
+): Promise<SemrushDomain> {
+  try {
+    const attachedDomain = await db.attachSemrushDomain(
+      datasourceId,
+      domain
+    )
+    
+    revalidatePath(`/dashboard/projects/${projectId}`)
+    
+    return attachedDomain
+  } catch (error) {
+    console.error("Error attaching Semrush domain:", error)
+    throw new Error("Failed to attach Semrush domain")
   }
 }
 

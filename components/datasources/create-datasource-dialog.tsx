@@ -14,7 +14,7 @@ import {
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { createDatasource, attachDomain, attachGoogleAnalyticsProperty } from "@/lib/actions/datasources"
+import { createDatasource, attachDomain, attachGoogleAnalyticsProperty, attachSemrushDomain } from "@/lib/actions/datasources"
 import { Plus, Loader2, Search, AlertCircle, CheckCircle2 } from "lucide-react"
 import type { Datasource, MangoolsApiDomain, GoogleAnalyticsApiProperty } from "@/lib/supabase/types"
 
@@ -51,6 +51,12 @@ export function CreateDatasourceDialog({ projectId, existingTypes, onDatasourceA
   const [propertySearchQuery, setPropertySearchQuery] = useState("")
   const [selectedProperty, setSelectedProperty] = useState<string>("")
   
+  // Semrush-specific state
+  const [semrushDomain, setSemrushDomain] = useState("")
+  const [verifyingDomain, setVerifyingDomain] = useState(false)
+  const [domainVerified, setDomainVerified] = useState(false)
+  const [verificationResult, setVerificationResult] = useState<any>(null)
+  
   const [error, setError] = useState<string | null>(null)
 
   // Reset state when dialog opens/closes
@@ -63,6 +69,10 @@ export function CreateDatasourceDialog({ projectId, existingTypes, onDatasourceA
       setProperties([])
       setPropertySearchQuery("")
       setSelectedProperty("")
+      setSemrushDomain("")
+      setVerifyingDomain(false)
+      setDomainVerified(false)
+      setVerificationResult(null)
       setError(null)
     }
   }, [open])
@@ -161,6 +171,67 @@ export function CreateDatasourceDialog({ projectId, existingTypes, onDatasourceA
     fetchProperties()
   }, [selectedType])
 
+  // Handle Semrush domain verification
+  async function handleVerifyDomain() {
+    if (!semrushDomain.trim()) {
+      setError("Please enter a domain")
+      return
+    }
+
+    setVerifyingDomain(true)
+    setError(null)
+    setDomainVerified(false)
+    setVerificationResult(null)
+
+    try {
+      const response = await fetch("/api/semrush/verify-domain", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ domain: semrushDomain.trim().toLowerCase() }),
+      })
+
+      if (!response.ok) {
+        throw new Error("Failed to verify domain")
+      }
+
+      const result = await response.json()
+      setVerificationResult(result)
+
+      if (result.is_valid) {
+        // Check if domain is already attached
+        const attachedResponse = await fetch("/api/semrush/attached")
+        if (attachedResponse.ok) {
+          const attachedDomains: { domain: string }[] = await attachedResponse.json()
+          const isAttached = attachedDomains.some(d => d.domain === result.domain)
+          
+          if (isAttached) {
+            setError("This domain is already attached to another project")
+            setDomainVerified(false)
+          } else {
+            setDomainVerified(true)
+          }
+        } else {
+          setDomainVerified(true)
+        }
+      } else {
+        if (!result.syntax_valid) {
+          setError("Invalid domain format. Please enter a valid domain (e.g., example.com)")
+        } else if (!result.dns_resolves) {
+          setError("Domain does not resolve via DNS. Please check the domain name.")
+        } else {
+          setError("Domain verification failed. Please try again.")
+        }
+      }
+    } catch (err) {
+      console.error("Error verifying domain:", err)
+      setError(err instanceof Error ? err.message : "Failed to verify domain")
+    } finally {
+      setVerifyingDomain(false)
+    }
+  }
+
   // Filter domains based on search query
   const filteredDomains = useMemo(() => {
     if (!searchQuery.trim()) return domains
@@ -203,6 +274,12 @@ export function CreateDatasourceDialog({ projectId, existingTypes, onDatasourceA
       return
     }
 
+    // For Semrush, require verified domain
+    if (selectedType === "semrush" && (!semrushDomain || !domainVerified)) {
+      setError("Please verify a domain before creating the datasource")
+      return
+    }
+
     setLoading(true)
     setError(null)
 
@@ -242,6 +319,15 @@ export function CreateDatasourceDialog({ projectId, existingTypes, onDatasourceA
         }
       }
 
+      // If Semrush, attach the verified domain
+      if (selectedType === "semrush" && semrushDomain && domainVerified) {
+        await attachSemrushDomain(
+          datasource.id,
+          semrushDomain.trim().toLowerCase(),
+          projectId
+        )
+      }
+
       setOpen(false)
       onDatasourceAdded?.(datasource)
     } catch (error) {
@@ -255,12 +341,13 @@ export function CreateDatasourceDialog({ projectId, existingTypes, onDatasourceA
   const availableTypes = [
     { value: "mangools", label: "Mangools", disabled: existingTypes.includes("mangools") },
     { value: "google_analytics", label: "Google Analytics", disabled: existingTypes.includes("google_analytics") },
-    { value: "semrush", label: "Semrush (Coming Soon)", disabled: true },
+    { value: "semrush", label: "Semrush", disabled: existingTypes.includes("semrush") },
   ]
 
   const canSubmit = selectedType && 
     (selectedType !== "mangools" || selectedDomain) &&
-    (selectedType !== "google_analytics" || selectedProperty)
+    (selectedType !== "google_analytics" || selectedProperty) &&
+    (selectedType !== "semrush" || (semrushDomain && domainVerified))
 
   return (
     <Dialog open={open} onOpenChange={(open) => !loading && setOpen(open)}>
@@ -279,6 +366,8 @@ export function CreateDatasourceDialog({ projectId, existingTypes, onDatasourceA
                 ? "Select a domain from your Mangools account. Note: Each domain can only be attached once, and each project can have only one Mangools data source."
                 : selectedType === "google_analytics"
                 ? "Select a property from your Google Analytics account. Note: Each property can only be attached once, and each project can have only one Google Analytics data source."
+                : selectedType === "semrush"
+                ? "Enter a domain to track with Semrush. We'll verify the domain before adding it. Note: Each domain can only be attached once, and each project can have only one Semrush data source."
                 : "Add a new data source to this project. Each type can only be added once per project."
               }
             </DialogDescription>
@@ -496,6 +585,78 @@ export function CreateDatasourceDialog({ projectId, existingTypes, onDatasourceA
               </>
             )}
 
+            {/* Semrush Domain Input and Verification */}
+            {selectedType === "semrush" && (
+              <>
+                <div className="grid gap-1.5">
+                  <Label htmlFor="semrush-domain" className="text-xs sm:text-sm">Domain *</Label>
+                  <div className="flex gap-2">
+                    <Input
+                      id="semrush-domain"
+                      type="text"
+                      placeholder="example.com"
+                      value={semrushDomain}
+                      onChange={(e) => {
+                        setSemrushDomain(e.target.value)
+                        setDomainVerified(false)
+                        setVerificationResult(null)
+                        setError(null)
+                      }}
+                      className="h-9 text-sm"
+                      disabled={loading || verifyingDomain}
+                    />
+                    <Button
+                      type="button"
+                      onClick={handleVerifyDomain}
+                      disabled={!semrushDomain.trim() || loading || verifyingDomain}
+                      className="h-9 text-xs sm:text-sm whitespace-nowrap"
+                      variant="secondary"
+                    >
+                      {verifyingDomain ? (
+                        <>
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          Verifying...
+                        </>
+                      ) : (
+                        <>
+                          <Search className="mr-2 h-4 w-4" />
+                          Verify
+                        </>
+                      )}
+                    </Button>
+                  </div>
+                  <p className="text-[11px] sm:text-xs text-muted-foreground">
+                    Enter the domain without protocol (e.g., example.com)
+                  </p>
+                </div>
+
+                {/* Verification Result */}
+                {verificationResult && (
+                  <div className={`flex items-start gap-2 p-3 text-xs sm:text-sm rounded-lg border ${
+                    domainVerified 
+                      ? "text-green-700 bg-green-50 border-green-200" 
+                      : "text-red-700 bg-red-50 border-red-200"
+                  }`}>
+                    {domainVerified ? (
+                      <CheckCircle2 className="h-4 w-4 mt-0.5 flex-shrink-0" />
+                    ) : (
+                      <AlertCircle className="h-4 w-4 mt-0.5 flex-shrink-0" />
+                    )}
+                    <div className="space-y-1">
+                      <p className="font-medium">
+                        {domainVerified ? "Domain verified successfully!" : "Domain verification failed"}
+                      </p>
+                      <div className="text-[11px] space-y-0.5">
+                        <p>✓ Syntax: {verificationResult.syntax_valid ? "Valid" : "Invalid"}</p>
+                        <p>✓ DNS: {verificationResult.dns_resolves ? "Resolves" : "Does not resolve"}</p>
+                        <p>✓ HTTP: {verificationResult.http_reachable ? "Reachable" : "Not reachable"}</p>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </>
+            )}
+
             {/* Error Message */}
             {error && (
               <div className="flex items-start gap-2 p-3 text-xs sm:text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg">
@@ -509,7 +670,7 @@ export function CreateDatasourceDialog({ projectId, existingTypes, onDatasourceA
             <Button type="button" variant="outline" onClick={() => setOpen(false)} disabled={loading} className="h-8 sm:h-9 text-xs sm:text-sm flex-1 sm:flex-none touch-manipulation">
               Cancel
             </Button>
-            <Button type="submit" disabled={loading || fetchingDomains || fetchingProperties || !canSubmit} className="h-8 sm:h-9 text-xs sm:text-sm flex-1 sm:flex-none touch-manipulation">
+            <Button type="submit" disabled={loading || fetchingDomains || fetchingProperties || verifyingDomain || !canSubmit} className="h-8 sm:h-9 text-xs sm:text-sm flex-1 sm:flex-none touch-manipulation">
               {loading ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />

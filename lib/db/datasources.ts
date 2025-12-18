@@ -7,7 +7,8 @@ import type {
   Datasource, 
   DatasourceInput, 
   MangoolsDomain,
-  GoogleAnalyticsProperty, 
+  GoogleAnalyticsProperty,
+  SemrushDomain, 
   getDataSourcesWithRespectiveData 
 } from "@/lib/supabase/types"
 
@@ -25,6 +26,9 @@ export async function getDataSourcesWithRespectiveData(projectId: string): Promi
       ),
       google_analytics_properties (
         *
+      ),
+      semrush_domains (
+        *
       )
     `)
     .eq("project_id", projectId)
@@ -34,7 +38,7 @@ export async function getDataSourcesWithRespectiveData(projectId: string): Promi
 
   return (data || []).map((datasource: any) => ({
     ...datasource,
-    domain_count: (datasource.mangools_domains?.length || 0) + (datasource.google_analytics_properties?.length || 0)
+    domain_count: (datasource.mangools_domains?.length || 0) + (datasource.google_analytics_properties?.length || 0) + (datasource.semrush_domains?.length || 0)
   }))
 }
 
@@ -117,6 +121,27 @@ export async function attachGoogleAnalyticsProperty(
       display_name: displayName,
       time_zone: timeZone,
       currency_code: currencyCode
+    })
+    .select()
+    .single()
+
+  if (error) throw error
+  return data
+}
+
+/**
+ * Attach a Semrush domain to a datasource
+ */
+export async function attachSemrushDomain(
+  datasourceId: string,
+  domain: string
+): Promise<SemrushDomain> {
+  const supabase = await createClient()
+  const { data, error } = await supabase
+    .from("semrush_domains")
+    .insert({
+      datasource_id: datasourceId,
+      domain
     })
     .select()
     .single()

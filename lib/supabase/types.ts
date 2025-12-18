@@ -49,6 +49,14 @@ export interface GoogleAnalyticsProperty {
   updated_at: string
 }
 
+export interface SemrushDomain {
+  id: string
+  datasource_id: string
+  domain: string  // The verified domain (e.g., "example.com")
+  created_at: string
+  updated_at: string
+}
+
 // Alias for MangoolsDomain used in datasource components
 export type DatasourceDomain = MangoolsDomain
 
@@ -69,6 +77,7 @@ export interface ProjectWithDatasources extends Project {
 export interface DatasourceWithDomains extends Datasource {
   mangools_domains?: MangoolsDomain[]
   google_analytics_properties?: GoogleAnalyticsProperty[]
+  semrush_domains?: SemrushDomain[]
   domain_count?: number
 }
 
