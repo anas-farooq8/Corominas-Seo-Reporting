@@ -38,7 +38,9 @@ export default function ClientDetailPage({ params }: { params: Promise<{ id: str
   }
 
   function handleProjectAdded(project: ProjectWithDatasources) {
-    setProjects((prev) => [{ ...project, datasource_count: 0 }, ...prev])
+    // Keep the same ordering as the server response:
+    // append the newly created project to the end of the list
+    setProjects((prev) => [...prev, { ...project, datasource_count: 0 }])
   }
 
   function handleProjectUpdated(project: ProjectWithDatasources) {

@@ -7,7 +7,7 @@ import { LoadingSpinner } from "@/components/ui/loading-spinner"
 import { ErrorDisplay } from "@/components/ui/error-display"
 import { ArrowLeft } from "lucide-react"
 import type { getDataSourcesWithRespectiveData } from "@/lib/supabase/types"
-import { GoogleAnalyticsDashboardPage } from "@/components/dashboard/google-analytics-dashboard-page"
+import { CombinedPage1Dashboard } from "@/components/dashboard/combined-page1-dashboard"
 import { MangoolsDashboardPage } from "@/components/dashboard/mangools-dashboard-page"
 
 interface PageConfig {
@@ -44,21 +44,24 @@ export default function UnifiedDashboardPage({ params }: { params: Promise<{ id:
       // Build pages based on connected datasources
       const connectedPages: PageConfig[] = []
       const googleAnalyticsDatasource = data.datasources?.find((ds: any) => ds.type === "google_analytics")
+      const semrushDatasource = data.datasources?.find((ds: any) => ds.type === "semrush")
       const mangoolsDatasource = data.datasources?.find((ds: any) => ds.type === "mangools")
       
-      if (googleAnalyticsDatasource) {
+      // Page 1: Google Analytics + SEMrush (show if either is connected)
+      if (googleAnalyticsDatasource || semrushDatasource) {
         connectedPages.push({
           id: "page-1",
-          label: "Google Analytics",
-          datasourceType: "google_analytics",
-          datasourceId: googleAnalyticsDatasource.id
+          label: "Page 1",
+          datasourceType: "combined",
+          datasourceId: googleAnalyticsDatasource?.id || semrushDatasource?.id || ""
         })
       }
       
+      // Page 2: Mangools
       if (mangoolsDatasource) {
         connectedPages.push({
-          id: googleAnalyticsDatasource ? "page-2" : "page-1",
-          label: "Mangools SEO",
+          id: "page-2",
+          label: "Page 2",
           datasourceType: "mangools",
           datasourceId: mangoolsDatasource.id
         })
@@ -142,9 +145,17 @@ export default function UnifiedDashboardPage({ params }: { params: Promise<{ id:
           </div>
         ) : (
           <>
-            {activePageConfig?.datasourceType === "google_analytics" && (
-              <GoogleAnalyticsDashboardPage datasourceId={activePageConfig.datasourceId} />
-            )}
+            {activePageConfig?.datasourceType === "combined" && (() => {
+              const googleAnalyticsDs = datasources.find((ds: any) => ds.type === "google_analytics")
+              const semrushDs = datasources.find((ds: any) => ds.type === "semrush")
+              
+              return (
+                <CombinedPage1Dashboard 
+                  googleAnalyticsId={googleAnalyticsDs?.id}
+                  semrushId={semrushDs?.id}
+                />
+              )
+            })()}
             {activePageConfig?.datasourceType === "mangools" && (
               <MangoolsDashboardPage datasourceId={activePageConfig.datasourceId} />
             )}
@@ -154,4 +165,3 @@ export default function UnifiedDashboardPage({ params }: { params: Promise<{ id:
     </div>
   )
 }
-
