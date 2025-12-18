@@ -1,24 +1,14 @@
 import { NextResponse } from "next/server"
 import { fetchMangoolsDashboardData } from "@/lib/actions/mangools-dashboard"
 
-// This route is kept for backward compatibility but is no longer used
-// New approach: /api/mangools/dashboard?trackingId=xxx (without datasourceId in path)
 export async function GET(
   request: Request,
+  { params }: { params: Promise<{ datasourceId: string }> }
 ) {
   try {
-    const { searchParams } = new URL(request.url)
+    const { datasourceId } = await params
     
-    const trackingId = searchParams.get('trackingId')
-    
-    if (!trackingId) {
-      return NextResponse.json(
-        { error: "Tracking ID is required" },
-        { status: 400 }
-      )
-    }
-
-    const data = await fetchMangoolsDashboardData(trackingId)
+    const data = await fetchMangoolsDashboardData(datasourceId)
     
     if (!data) {
       return NextResponse.json(
@@ -36,3 +26,4 @@ export async function GET(
     )
   }
 }
+

@@ -15,6 +15,7 @@ import {
   type RankChangeKeyword,
   type NewRanking,
 } from "@/lib/mangools/dashboard-utils"
+import { getCachedDashboardData, saveDashboardCache } from "@/lib/cache/dashboard-cache"
 
 export interface MangoolsDashboardData {
   domain: string
@@ -37,33 +38,40 @@ export interface MangoolsDashboardData {
 
 /**
  * Fetch all data needed for the Mangools dashboard
+ * Uses cache when available to reduce API calls
  * @param datasourceId - The datasource ID
- * @param domainName - Optional: domain name if already known (avoids DB lookup)
- * @param trackingId - Optional: tracking ID if already known (avoids DB lookup)
  */
 export async function fetchMangoolsDashboardData(
-  trackingId: string
+  datasourceId: string
 ): Promise<MangoolsDashboardData | null> {
   try {
-    // Step 1: Fetch tracking detail to get keyword names and total count
-    const trackingDetail = await fetchTrackingDetail(trackingId)
+    // Get the tracking_id from database
+    const supabase = await createClient()
+    const { data: domain, error: domainError } = await supabase
+      .from("mangools_domains")
+      .select("tracking_id, domain")
+      .eq("datasource_id", datasourceId)
+      .single()
+    
+    if (domainError || !domain) {
+      console.error("Domain not found for datasource:", datasourceId, domainError)
+      return null
+    }
+    
+    const trackingId = domain.tracking_id
     
     // Calculate date ranges for the last 2 completed months
     const today = new Date()
     
     // Month B: Previous complete month (the month before current month)
-    // First day of Month B
     const monthBStart = new Date(today.getFullYear(), today.getMonth() - 1, 1)
-    // Last day of Month B (day 0 of current month = last day of previous month)
     const monthBEnd = new Date(today.getFullYear(), today.getMonth(), 0)
     
     // Month A: The month before Month B
-    // First day of Month A
     const monthAStart = new Date(today.getFullYear(), today.getMonth() - 2, 1)
-    // Last day of Month A (day 0 of Month B = last day of Month A)
     const monthAEnd = new Date(today.getFullYear(), today.getMonth() - 1, 0)
     
-    // Format dates as YYYY-MM-DD (using local date, not UTC)
+    // Format dates as YYYY-MM-DD
     const formatDate = (date: Date) => {
       const year = date.getFullYear()
       const month = String(date.getMonth() + 1).padStart(2, '0')
@@ -72,9 +80,45 @@ export async function fetchMangoolsDashboardData(
     }
     
     const fromA = formatDate(monthAStart)
+    const toB = formatDate(monthBEnd)
+    
+    // Check cache first
+    const cachedData = await getCachedDashboardData(datasourceId, trackingId, fromA, toB)
+    if (cachedData) {
+      console.log("✓ Returning cached Mangools dashboard data")
+      return cachedData as MangoolsDashboardData
+    }
+    
+    // Cache miss - fetch from API
+    console.log("⟳ Fetching fresh Mangools dashboard data from API")
+    
+    // Calculate individual month end dates
     const toA = formatDate(monthAEnd)
     const fromB = formatDate(monthBStart)
-    const toB = formatDate(monthBEnd)
+    
+    // Fetch tracking detail to get keyword names and total count
+    const trackingDetail = await fetchTrackingDetail(trackingId)
+    
+    // Fetch stats for both months in parallel
+    const [monthA, monthB] = await Promise.all([
+      fetchTrackingStats(trackingId, fromA, toA),
+      fetchTrackingStats(trackingId, fromB, toB),
+    ])
+    
+    // Use keyword names from detail endpoint to populate comparisons
+    const keywordsData = trackingDetail.keywords.map(kw => ({
+      _id: kw._id,
+      kw: kw.kw,
+    }))
+
+    // Compare monthly data
+    const comparisons = compareMonthlyKeywords(monthA, monthB, keywordsData)
+    
+    // Generate all tables
+    const topKeywords = getTopKeywords(comparisons)
+    const topWinners = getTopWinners(comparisons)
+    const controlledLosers = getControlledLosers(comparisons)
+    const newRankings = getNewRankings(comparisons)
     
     // Format month names for display
     const formatMonthName = (date: Date) => {
@@ -85,29 +129,7 @@ export async function fetchMangoolsDashboardData(
     const monthAName = formatMonthName(monthAStart)
     const monthBName = formatMonthName(monthBStart)
 
-    // Step 2: Fetch stats for both months in parallel
-    const [monthA, monthB] = await Promise.all([
-      fetchTrackingStats(trackingId, fromA, toA),
-      fetchTrackingStats(trackingId, fromB, toB),
-    ])
-    
-    
-    // Step 3: Use keyword names from detail endpoint to populate comparisons (matching by _id)
-    const keywordsData = trackingDetail.keywords.map(kw => ({
-      _id: kw._id,
-      kw: kw.kw,
-    }))
-
-    // Compare monthly data
-    const comparisons = compareMonthlyKeywords(monthA, monthB, keywordsData)
-    
-    // Generate all tables (no limits - show all)
-    const topKeywords = getTopKeywords(comparisons)
-    const topWinners = getTopWinners(comparisons) // Get all winners
-    const controlledLosers = getControlledLosers(comparisons) // Get all losers
-    const newRankings = getNewRankings(comparisons)
-
-    return {
+    const dashboardData: MangoolsDashboardData = {
       domain: trackingDetail.tracking.domain,
       trackingId: trackingId,
       location: trackingDetail.tracking.location.label,
@@ -125,9 +147,15 @@ export async function fetchMangoolsDashboardData(
       newRankings,
       controlledLosers,
     }
+    
+    // Save to cache (fire and forget - don't wait)
+    saveDashboardCache(datasourceId, trackingId, fromA, toB, dashboardData)
+      .catch(err => console.error("Failed to save cache:", err))
+    
+    return dashboardData
   } catch (error) {
     console.error("Error fetching Mangools dashboard data:", error)
-    throw error // Re-throw to see the full error
+    throw error
   }
 }
 

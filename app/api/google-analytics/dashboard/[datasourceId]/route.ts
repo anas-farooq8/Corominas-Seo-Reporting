@@ -1,32 +1,13 @@
 import { NextResponse } from "next/server"
 import { fetchGADashboardData } from "@/lib/actions/google-analytics-dashboard"
 
-// This route is kept for backward compatibility but is no longer used
-// New approach: /api/google-analytics/dashboard?propertyName=xxx (without datasourceId in path)
 export async function GET(
   request: Request,
+  { params }: { params: Promise<{ datasourceId: string }> }
 ) {
   try {
-    const { searchParams } = new URL(request.url)
-    
-    const propertyName = searchParams.get('propertyName')
-    const displayName = searchParams.get('displayName')
-    const timeZone = searchParams.get('timeZone')
-    const currencyCode = searchParams.get('currencyCode')
-    
-    if (!propertyName) {
-      return NextResponse.json(
-        { error: "Property name is required" },
-        { status: 400 }
-      )
-    }
-
-    const data = await fetchGADashboardData(
-      propertyName,
-      displayName,
-      timeZone,
-      currencyCode
-    )
+    const { datasourceId } = await params
+    const data = await fetchGADashboardData(datasourceId)
     
     if (!data) {
       return NextResponse.json(

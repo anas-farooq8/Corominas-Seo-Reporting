@@ -7,14 +7,12 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Calendar, TrendingUp, MousePointerClick, ArrowUp, ArrowDown } from "lucide-react"
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from "recharts"
 import type { GADashboardData } from "@/lib/actions/google-analytics-dashboard"
-import type { getDataSourcesWithRespectiveData } from "@/lib/supabase/types"
 
 interface GoogleAnalyticsDashboardPageProps {
-  datasourceId: string // Kept for backward compatibility, but not used
-  gaData?: getDataSourcesWithRespectiveData // Pass data from parent to avoid redundant fetch
+  datasourceId: string
 }
 
-export function GoogleAnalyticsDashboardPage({ datasourceId, gaData }: GoogleAnalyticsDashboardPageProps) {
+export function GoogleAnalyticsDashboardPage({ datasourceId }: GoogleAnalyticsDashboardPageProps) {
   const [data, setData] = useState<GADashboardData | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -28,23 +26,7 @@ export function GoogleAnalyticsDashboardPage({ datasourceId, gaData }: GoogleAna
     try {
       setLoading(true)
       setError(null)
-      
-      // Extract property data if gaData is provided
-      const property = gaData?.google_analytics_properties?.[0]
-      
-      if (!property?.name) {
-        throw new Error("Google Analytics property not found")
-      }
-      
-      // Build URL with property metadata to avoid redundant DB lookup
-      const params = new URLSearchParams({
-        propertyName: property.name,
-        displayName: property.display_name,
-        timeZone: property.time_zone,
-        currencyCode: property.currency_code
-      })
-      
-      const response = await fetch(`/api/google-analytics/dashboard?${params.toString()}`)
+      const response = await fetch(`/api/google-analytics/dashboard/${datasourceId}`)
       if (!response.ok) {
         throw new Error("Failed to fetch dashboard data")
       }
