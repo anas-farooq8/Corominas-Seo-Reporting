@@ -33,7 +33,7 @@ export function DatasourceCard({
 
   return (
     <Card>
-      <CardHeader className="pb-3 px-4 sm:px-6 pt-4 sm:pt-5">
+      <CardHeader className="pb-2 px-4 sm:px-6 pt-1.5 sm:pt-1.5">
         <div className="flex items-start justify-between gap-2">
           <div className="flex-1 min-w-0">
             <CardTitle className="text-base sm:text-lg leading-tight">{typeLabel}</CardTitle>
@@ -50,7 +50,7 @@ export function DatasourceCard({
           </div>
         </div>
       </CardHeader>
-      <CardContent className="pt-0 px-4 sm:px-6 pb-4 sm:pb-5">
+      <CardContent className="pt-0 px-4 sm:px-6 pb-3 sm:pb-3">
         <DomainsSection
           datasource={datasource}
           hasDomains={hasDomains}
