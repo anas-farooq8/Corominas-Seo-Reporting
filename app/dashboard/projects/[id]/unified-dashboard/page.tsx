@@ -143,10 +143,16 @@ export default function UnifiedDashboardPage({ params }: { params: Promise<{ id:
         ) : (
           <>
             {activePageConfig?.datasourceType === "google_analytics" && (
-              <GoogleAnalyticsDashboardPage datasourceId={activePageConfig.datasourceId} />
+              <GoogleAnalyticsDashboardPage 
+                datasourceId={activePageConfig.datasourceId}
+                gaData={datasources.find(ds => ds.id === activePageConfig.datasourceId)}
+              />
             )}
             {activePageConfig?.datasourceType === "mangools" && (
-              <MangoolsDashboardPage datasourceId={activePageConfig.datasourceId} />
+              <MangoolsDashboardPage 
+                datasourceId={activePageConfig.datasourceId}
+                mangoolsData={datasources.find(ds => ds.id === activePageConfig.datasourceId)}
+              />
             )}
           </>
         )}

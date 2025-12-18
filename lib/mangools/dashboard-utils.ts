@@ -8,23 +8,46 @@ export interface KeywordComparison {
   rankB: number | null
   rankChangeB: number | null
   rankBAvg: number | null
-  rankBBest: number | null
   searchVolumeB: number | null
-  estimatedVisitsB: number | null
-  performanceIndexChangeB: number | null
   
   // Previous month (A) data
   rankA: number | null
   rankChangeA: number | null
   rankAAvg: number | null
-  rankABest: number | null
-  searchVolumeA: number | null
-  estimatedVisitsA: number | null
-  performanceIndexChangeA: number | null
 
   // Computed rank change between months (rankB - rankA)
   // Negative = improved (went up), Positive = declined (went down)
   monthlyRankChange: number | null
+}
+
+// Top Keywords table data
+export interface TopKeyword {
+  _id: string
+  keyword: string
+  rankB: number | null
+  rankBAvg: number | null
+  rankChangeB: number | null
+  rankA: number | null
+  rankAAvg: number | null
+  rankChangeA: number | null
+}
+
+// Top Winners and Controlled Losers table data
+export interface RankChangeKeyword {
+  _id: string
+  kw: string
+  rankA: number | null
+  rankB: number | null
+  monthlyRankChange: number | null
+}
+
+// New Rankings table data
+export interface NewRanking {
+  _id: string
+  kw: string
+  rankA: number | null
+  rankB: number | null
+  searchVolumeB: number | null
 }
 
 /**
@@ -51,10 +74,6 @@ export function compareMonthlyKeywords(
     const rankB = kwB.rank?.last ?? null
     const rankA = kwA?.rank?.last ?? null
     
-    // Handle best values: if -1, convert to 101
-    const rankBBest = kwB.rank?.best === -1 ? 101 : (kwB.rank?.best ?? null)
-    const rankABest = kwA?.rank?.best === -1 ? 101 : (kwA?.rank?.best ?? null)
-    
     // Compute monthly rank change: rankB - rankA
     // Negative = improved (went up), Positive = declined (went down)
     let monthlyRankChange: number | null = null
@@ -70,19 +89,12 @@ export function compareMonthlyKeywords(
       // Month B (current month) - all data from kwB
       rankB: rankB,
       rankBAvg: kwB.rank?.avg ?? null,
-      rankBBest: rankBBest,
-      estimatedVisitsB: kwB.estimated_visits ?? null,
-      performanceIndexChangeB: kwB.performanceIndexChange ?? null,
       searchVolumeB: kwB.search_volume ?? null,
       rankChangeB: kwB.rank_change ?? null,
       
       // Previous month (A) - all data from kwA
       rankA: rankA,
       rankAAvg: kwA?.rank?.avg ?? null,
-      rankABest: rankABest,
-      estimatedVisitsA: kwA?.estimated_visits ?? null,
-      performanceIndexChangeA: kwA?.performanceIndexChange ?? null,
-      searchVolumeA: kwA?.search_volume ?? null,
       rankChangeA: kwA?.rank_change ?? null,
       
       // Computed monthly rank change
@@ -96,22 +108,19 @@ export function compareMonthlyKeywords(
 }
 
 /**
- * Get top keywords sorted by search volume and best rank
+ * Get top keywords (already sorted, returns only needed fields)
  */
-export function getTopKeywords(comparisons: KeywordComparison[]): KeywordComparison[] {
-  return [...comparisons]
-    .sort((a, b) => {
-      // First sort by search volume (higher is better)
-      const aVol = a.searchVolumeB ?? 0
-      const bVol = b.searchVolumeB ?? 0
-      if (bVol !== aVol) {
-        return bVol - aVol
-      }
-      // If equal, sort by best rank (lower is better)
-      const aBest = a.rankBBest ?? Infinity
-      const bBest = b.rankBBest ?? Infinity
-      return aBest - bBest
-    })
+export function getTopKeywords(comparisons: KeywordComparison[]): TopKeyword[] {
+  return comparisons.map(kw => ({
+    _id: kw._id,
+    keyword: kw.keyword,
+    rankB: kw.rankB,
+    rankBAvg: kw.rankBAvg,
+    rankChangeB: kw.rankChangeB,
+    rankA: kw.rankA,
+    rankAAvg: kw.rankAAvg,
+    rankChangeA: kw.rankChangeA,
+  }))
 }
 
 /**
@@ -119,7 +128,7 @@ export function getTopKeywords(comparisons: KeywordComparison[]): KeywordCompari
  * Note: Negative monthlyRankChange = improvement (rank got better/lower number)
  * Example: rankA=20, rankB=9 → monthlyRankChange=-11 (improved by 11 positions)
  */
-export function getTopWinners(comparisons: KeywordComparison[], limit?: number): KeywordComparison[] {
+export function getTopWinners(comparisons: KeywordComparison[], limit?: number): RankChangeKeyword[] {
   const filtered = [...comparisons]
     .filter(kw => {
       const isNew = (kw.rankA === null || kw.rankA > 100) && kw.rankB !== null && kw.rankB <= 100
@@ -131,6 +140,13 @@ export function getTopWinners(comparisons: KeywordComparison[], limit?: number):
       const bChange = b.monthlyRankChange ?? 0
       return aChange - bChange // Most negative (best improvement) first
     })
+    .map(kw => ({
+      _id: kw._id,
+      kw: kw.keyword,
+      rankA: kw.rankA,
+      rankB: kw.rankB,
+      monthlyRankChange: kw.monthlyRankChange,
+    }))
   
   return limit ? filtered.slice(0, limit) : filtered
 }
@@ -138,14 +154,20 @@ export function getTopWinners(comparisons: KeywordComparison[], limit?: number):
 /**
  * Get new rankings (keywords that went from unranked to ranked ≤100)
  */
-export function getNewRankings(comparisons: KeywordComparison[]): KeywordComparison[] {
-  const newRankings = [...comparisons]
+export function getNewRankings(comparisons: KeywordComparison[]): NewRanking[] {
+  return [...comparisons]
     .filter(kw => {
       const isNew = (kw.rankA === null || kw.rankA > 100) && kw.rankB !== null && kw.rankB <= 100
       return isNew
     })
     .sort((a, b) => (b.searchVolumeB ?? 0) - (a.searchVolumeB ?? 0)) // Sort by search volume
-  return newRankings
+    .map(kw => ({
+      _id: kw._id,
+      kw: kw.keyword,
+      rankA: kw.rankA,
+      rankB: kw.rankB,
+      searchVolumeB: kw.searchVolumeB,
+    }))
 }
 
 /**
@@ -153,7 +175,7 @@ export function getNewRankings(comparisons: KeywordComparison[]): KeywordCompari
  * Note: Positive monthlyRankChange = decline (rank got worse/higher number)
  * Example: rankA=5, rankB=8 → monthlyRankChange=+3 (declined by 3 positions)
  */
-export function getControlledLosers(comparisons: KeywordComparison[], limit?: number): KeywordComparison[] {
+export function getControlledLosers(comparisons: KeywordComparison[], limit?: number): RankChangeKeyword[] {
   const filtered = [...comparisons]
     .filter(kw => {
       const isNew = (kw.rankA === null || kw.rankA > 100) && kw.rankB !== null && kw.rankB <= 100
@@ -165,6 +187,13 @@ export function getControlledLosers(comparisons: KeywordComparison[], limit?: nu
       const bChange = b.monthlyRankChange ?? 0
       return bChange - aChange // Most positive (worst decline) first
     })
+    .map(kw => ({
+      _id: kw._id,
+      kw: kw.keyword,
+      rankA: kw.rankA,
+      rankB: kw.rankB,
+      monthlyRankChange: kw.monthlyRankChange,
+    }))
   
   return limit ? filtered.slice(0, limit) : filtered
 }

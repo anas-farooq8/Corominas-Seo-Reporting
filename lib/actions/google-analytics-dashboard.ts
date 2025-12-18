@@ -20,25 +20,21 @@ export interface GADashboardData {
 }
 
 /**
- * Fetch Google Analytics dashboard data for a datasource
+ * Fetch Google Analytics dashboard data
+ * @param propertyName - The GA property name (e.g., "properties/469744307")
+ * @param displayName - Optional: property display name (avoids DB lookup)
+ * @param timeZone - Optional: property time zone (avoids DB lookup)
+ * @param currencyCode - Optional: property currency code (avoids DB lookup)
  */
-export async function fetchGADashboardData(datasourceId: string): Promise<GADashboardData | null> {
+export async function fetchGADashboardData(
+  propertyName: string,
+  displayName?: string | null,
+  timeZone?: string | null,
+  currencyCode?: string | null
+): Promise<GADashboardData | null> {
   try {
-    // Get the Google Analytics property for this datasource
-    const supabase = await createClient()
-    const { data: property, error } = await supabase
-      .from("google_analytics_properties")
-      .select("*")
-      .eq("datasource_id", datasourceId)
-      .single()
-
-    if (error || !property) {
-      console.error('[GA Dashboard] Property not found:', error)
-      throw new Error("Google Analytics property not found for this datasource")
-    }
-
     // Extract property ID from name (e.g., "properties/469744307" -> "469744307")
-    const propertyId = property.name.split('/')[1]
+    const propertyId = propertyName.split('/')[1]
     
     if (!propertyId) {
       throw new Error("Invalid property name format")
@@ -48,10 +44,10 @@ export async function fetchGADashboardData(datasourceId: string): Promise<GADash
     const trafficData = await fetchGATrafficData(propertyId)
 
     return {
-      propertyName: property.name,
-      displayName: property.display_name,
-      timeZone: property.time_zone,
-      currencyCode: property.currency_code,
+      propertyName: propertyName,
+      displayName: displayName || propertyName,
+      timeZone: timeZone || 'UTC',
+      currencyCode: currencyCode || 'USD',
       dailyData: trafficData.dailyData,
       lastMonthOrganicSessions: trafficData.lastMonthOrganicSessions,
       lastMonthOrganicConversions: trafficData.lastMonthOrganicConversions,

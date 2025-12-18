@@ -12,11 +12,11 @@ import {
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { ArrowUpDown, ArrowUp, ArrowDown, ChevronDown, ChevronUp } from "lucide-react"
-import type { KeywordComparison } from "@/lib/mangools/dashboard-utils"
+import type { TopKeyword } from "@/lib/mangools/dashboard-utils"
 import { formatRankChange } from "@/lib/mangools/dashboard-utils"
 
 interface TopKeywordsTableProps {
-  keywords: KeywordComparison[]
+  keywords: TopKeyword[]
   monthAName: string
   monthBName: string
 }

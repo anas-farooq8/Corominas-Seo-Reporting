@@ -1,11 +1,7 @@
 import { NextResponse } from "next/server"
 import { fetchGADashboardData } from "@/lib/actions/google-analytics-dashboard"
 
-// This route is kept for backward compatibility but is no longer used
-// New approach: /api/google-analytics/dashboard?propertyName=xxx (without datasourceId in path)
-export async function GET(
-  request: Request,
-) {
+export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url)
     

@@ -9,12 +9,14 @@ import { TopWinnersTable } from "@/components/mangools/top-winners-table"
 import { NewRankingsTable } from "@/components/mangools/new-rankings-table"
 import { ControlledLosersTable } from "@/components/mangools/controlled-losers-table"
 import type { MangoolsDashboardData } from "@/lib/actions/mangools-dashboard"
+import type { getDataSourcesWithRespectiveData } from "@/lib/supabase/types"
 
 interface MangoolsDashboardPageProps {
-  datasourceId: string
+  datasourceId: string // Kept for backward compatibility, but not used
+  mangoolsData?: getDataSourcesWithRespectiveData // Pass data from parent to avoid redundant fetch
 }
 
-export function MangoolsDashboardPage({ datasourceId }: MangoolsDashboardPageProps) {
+export function MangoolsDashboardPage({ datasourceId, mangoolsData }: MangoolsDashboardPageProps) {
   const [data, setData] = useState<MangoolsDashboardData | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -28,7 +30,16 @@ export function MangoolsDashboardPage({ datasourceId }: MangoolsDashboardPagePro
     try {
       setLoading(true)
       setError(null)
-      const response = await fetch(`/api/mangools/dashboard/${datasourceId}`)
+      
+      // Extract tracking_id from mangoolsData if provided
+      const trackingId = mangoolsData?.mangools_domains?.[0]?.tracking_id
+      
+      if (!trackingId) {
+        throw new Error("Tracking ID not found")
+      }
+      
+      // Call API with only trackingId - no redundant DB lookup needed
+      const response = await fetch(`/api/mangools/dashboard?trackingId=${trackingId}`)
       if (!response.ok) {
         throw new Error("Failed to fetch dashboard data")
       }

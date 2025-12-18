@@ -12,11 +12,11 @@ import {
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { TrendingUp, ChevronDown, ChevronUp } from "lucide-react"
-import type { KeywordComparison } from "@/lib/mangools/dashboard-utils"
+import type { RankChangeKeyword } from "@/lib/mangools/dashboard-utils"
 import { formatRankChange } from "@/lib/mangools/dashboard-utils"
 
 interface TopWinnersTableProps {
-  winners: KeywordComparison[]
+  winners: RankChangeKeyword[]
 }
 
 const INITIAL_DISPLAY_COUNT = 5
@@ -75,7 +75,7 @@ export function TopWinnersTable({ winners }: TopWinnersTableProps) {
                   const changeDisplay = formatRankChange(kw.monthlyRankChange ?? 0)
                   return (
                     <TableRow key={kw._id}>
-                      <TableCell className="font-medium text-[10px] sm:text-sm py-1.5 sm:py-3">{kw.keyword}</TableCell>
+                      <TableCell className="font-medium text-[10px] sm:text-sm py-1.5 sm:py-3">{kw.kw}</TableCell>
                       <TableCell className="text-center text-muted-foreground text-[10px] sm:text-sm py-1.5 sm:py-3">{kw.rankA}</TableCell>
                       <TableCell className="text-center font-semibold text-[10px] sm:text-sm py-1.5 sm:py-3">{kw.rankB}</TableCell>
                       <TableCell className={`text-center font-semibold text-[10px] sm:text-sm py-1.5 sm:py-3 ${changeDisplay.color}`}>

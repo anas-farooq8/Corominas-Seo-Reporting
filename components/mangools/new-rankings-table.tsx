@@ -12,10 +12,10 @@ import {
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Sparkles, ChevronDown, ChevronUp } from "lucide-react"
-import type { KeywordComparison } from "@/lib/mangools/dashboard-utils"
+import type { NewRanking } from "@/lib/mangools/dashboard-utils"
 
 interface NewRankingsTableProps {
-  newRankings: KeywordComparison[]
+  newRankings: NewRanking[]
 }
 
 const INITIAL_DISPLAY_COUNT = 5
@@ -72,7 +72,7 @@ export function NewRankingsTable({ newRankings }: NewRankingsTableProps) {
               ) : (
                 displayedRankings.map((kw) => (
                   <TableRow key={kw._id}>
-                    <TableCell className="font-medium text-[10px] sm:text-sm py-1.5 sm:py-3">{kw.keyword}</TableCell>
+                    <TableCell className="font-medium text-[10px] sm:text-sm py-1.5 sm:py-3">{kw.kw}</TableCell>
                     <TableCell className="text-center text-muted-foreground text-[10px] sm:text-sm py-1.5 sm:py-3">
                       {kw.rankA !== null ? kw.rankA : "N/A"}
                     </TableCell>

@@ -1,11 +1,7 @@
 import { NextResponse } from "next/server"
 import { fetchMangoolsDashboardData } from "@/lib/actions/mangools-dashboard"
 
-// This route is kept for backward compatibility but is no longer used
-// New approach: /api/mangools/dashboard?trackingId=xxx (without datasourceId in path)
-export async function GET(
-  request: Request,
-) {
+export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url)
     
@@ -36,3 +32,4 @@ export async function GET(
     )
   }
 }
+

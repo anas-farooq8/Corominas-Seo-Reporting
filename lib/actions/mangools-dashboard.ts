@@ -11,7 +11,9 @@ import {
   getTopWinners,
   getNewRankings,
   getControlledLosers,
-  type KeywordComparison,
+  type TopKeyword,
+  type RankChangeKeyword,
+  type NewRanking,
 } from "@/lib/mangools/dashboard-utils"
 
 export interface MangoolsDashboardData {
@@ -27,38 +29,22 @@ export interface MangoolsDashboardData {
     monthAName: string // e.g., "Oct Year"
     monthBName: string // e.g., "Nov Year"
   }
-  topKeywords: KeywordComparison[]
-  topWinners: KeywordComparison[]
-  newRankings: KeywordComparison[]
-  controlledLosers: KeywordComparison[]
+  topKeywords: TopKeyword[]           // Already sorted, no re-sorting needed in UI
+  topWinners: RankChangeKeyword[]
+  newRankings: NewRanking[]
+  controlledLosers: RankChangeKeyword[]
 }
 
 /**
  * Fetch all data needed for the Mangools dashboard
+ * @param datasourceId - The datasource ID
+ * @param domainName - Optional: domain name if already known (avoids DB lookup)
+ * @param trackingId - Optional: tracking ID if already known (avoids DB lookup)
  */
-export async function fetchMangoolsDashboardData(datasourceId: string): Promise<MangoolsDashboardData | null> {
+export async function fetchMangoolsDashboardData(
+  trackingId: string
+): Promise<MangoolsDashboardData | null> {
   try {
-    // Get the domain from database
-    const supabase = await createClient()
-    const { data: domain, error } = await supabase
-      .from("mangools_domains")
-      .select("*")
-      .eq("datasource_id", datasourceId)
-      .single()
-
-    if (error || !domain) {
-      console.error("Domain not found for datasource:", datasourceId, error)
-      return null
-    }
-    
-    // Handle both old schema (mangools_id) and new schema (tracking_id)
-    const trackingId = (domain as any).tracking_id || (domain as any).mangools_id
-    
-    if (!trackingId) {
-      console.error("No tracking_id or mangools_id found in domain:", domain)
-      return null
-    }
-    
     // Step 1: Fetch tracking detail to get keyword names and total count
     const trackingDetail = await fetchTrackingDetail(trackingId)
     
@@ -122,7 +108,7 @@ export async function fetchMangoolsDashboardData(datasourceId: string): Promise<
     const newRankings = getNewRankings(comparisons)
 
     return {
-      domain: domain.domain,
+      domain: trackingDetail.tracking.domain,
       trackingId: trackingId,
       location: trackingDetail.tracking.location.label,
       totalKeywords: trackingDetail.keywords.length,
