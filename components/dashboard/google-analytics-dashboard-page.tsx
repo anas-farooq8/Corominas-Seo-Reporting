@@ -184,7 +184,7 @@ export function GoogleAnalyticsDashboardPage({
         <CardHeader className="px-4 sm:px-6 py-2 sm:py-3">
           <CardTitle className="text-base sm:text-lg md:text-xl">Total Traffic vs Organic Traffic (Past 12 Months)</CardTitle>
           <CardDescription className="text-xs sm:text-sm">
-            Total traffic vs organic search traffic comparison • {chartData.length} days of data
+            This chart shows how many visitors come to your website each day. <strong>Total Traffic</strong> includes everyone who visits from any source (social media, ads, direct links, etc.). <strong>Organic Traffic</strong> shows visitors who found you through Google or other search engines by typing in keywords. The gap between these lines shows how much of your traffic comes from free search results versus paid or other sources. When organic traffic grows, it means more people are finding you naturally through search.
           </CardDescription>
         </CardHeader>
         <CardContent className="px-2 sm:px-4 md:px-6 pb-0.5 sm:pb-0">
@@ -303,7 +303,7 @@ export function GoogleAnalyticsDashboardPage({
         <CardHeader className="px-4 sm:px-6 py-2 sm:py-3">
           <CardTitle className="text-base sm:text-lg md:text-xl">Organic Sessions vs Organic Conversions (Past 12 Months)</CardTitle>
           <CardDescription className="text-xs sm:text-sm">
-            Organic Sessions vs Organic Conversions over time • {chartData.length} days of data
+            This chart tracks how well your website converts visitors into customers. <strong>Organic Sessions</strong> are visits from people who found you through Google search. <strong>Organic Conversions</strong> are when those visitors take a desired action (like making a purchase, filling out a form, or signing up). When conversions grow faster than sessions, it means your website is getting better at turning visitors into customers. If conversions stay flat while sessions grow, you may need to improve your website&apos;s ability to convert visitors.
           </CardDescription>
         </CardHeader>
         <CardContent className="px-2 sm:px-4 md:px-6 pb-0.5 sm:pb-0">

@@ -55,7 +55,7 @@ export const SEMrushChart = memo(function SEMrushChart({
           <div className="flex-1">
             <CardTitle className="text-base sm:text-lg md:text-xl">Total Ranking Keywords (Past 12 Months)</CardTitle>
             <CardDescription className="text-xs sm:text-sm">
-              Keyword distribution by ranking position • {chartData.length} days of data
+              This chart shows how many search terms (keywords) your website appears for in Google results, grouped by how high they rank. Keywords in the <strong>Top 3</strong> positions get the most clicks, while those ranking <strong>4-10</strong> still get good visibility. Lower positions (11-100) mean fewer people see your site. The colored layers show how your keywords are distributed across these positions over time. More keywords moving into the top positions means better visibility and more potential visitors finding your website.
             </CardDescription>
           </div>
           <ChartLayerFilters visibleLayers={visibleLayers} onToggleLayer={onToggleLayer} />

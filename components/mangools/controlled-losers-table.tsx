@@ -49,7 +49,7 @@ export function ControlledLosersTable({ losers }: ControlledLosersTableProps) {
           </button>
         </div>
         <CardDescription className={`text-xs sm:text-sm ${showDescription ? 'block' : 'hidden sm:block'}`}>
-          These keywords dropped slightly in ranking (3 positions or less), but they&apos;re nothing to worry about. Small fluctuations like these are completely normal in SEO as search engines continuously update their algorithms and competitors make changes. We track them here for your reference and awareness, but they don&apos;t indicate a major issue. If any keyword were to drop more significantly, it would require closer attention.
+          These keywords dropped slightly in ranking (3 positions or less), but they&apos;re nothing to worry about. Small fluctuations like these are completely normal in SEO as search engines continuously update their algorithms and competitors make changes. We track them here for your reference and awareness, but they don&apos;t indicate a major issue.
         </CardDescription>
       </CardHeader>
       <CardContent className="px-0 sm:px-6 pt-1 sm:pt-1.5 pb-4 sm:pb-6">
