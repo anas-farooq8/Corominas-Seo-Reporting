@@ -217,7 +217,7 @@ export function GoogleAnalyticsDashboardPage({
                   fontSize: '11px'
                 }}
                 labelFormatter={(_, payload) => payload && payload[0] ? payload[0].payload.fullDate : ''}
-                formatter={(value: number, name: string) => [formatNumber(value), name]}
+                formatter={(value, name) => [formatNumber(Number(value ?? 0)), String(name)]}
               />
               <Line
                 type="monotone"
@@ -269,7 +269,7 @@ export function GoogleAnalyticsDashboardPage({
                   marginBottom: '8px'
                 }}
                 labelFormatter={(_, payload) => payload && payload[0] ? payload[0].payload.fullDate : ''}
-                formatter={(value: number, name: string) => [formatNumber(value), name]}
+                formatter={(value, name) => [formatNumber(Number(value ?? 0)), String(name)]}
               />
               <Legend content={<CustomGATrafficLegend />} wrapperStyle={{ paddingTop: '5px' }} />
               <Line
@@ -336,7 +336,7 @@ export function GoogleAnalyticsDashboardPage({
                   fontSize: '11px'
                 }}
                 labelFormatter={(_, payload) => payload && payload[0] ? payload[0].payload.fullDate : ''}
-                formatter={(value: number, name: string) => [formatNumber(value), name]}
+                formatter={(value, name) => [formatNumber(Number(value ?? 0)), String(name)]}
               />
               <Line
                 type="monotone"
@@ -387,7 +387,7 @@ export function GoogleAnalyticsDashboardPage({
                   marginBottom: '8px'
                 }}
                 labelFormatter={(_, payload) => payload && payload[0] ? payload[0].payload.fullDate : ''}
-                formatter={(value: number, name: string) => [formatNumber(value), name]}
+                formatter={(value, name) => [formatNumber(Number(value ?? 0)), String(name)]}
               />
               <Legend content={<CustomGASessionsLegend />} wrapperStyle={{ paddingTop: '5px' }} />
               <Line
