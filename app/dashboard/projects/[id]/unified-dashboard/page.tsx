@@ -10,6 +10,7 @@ import type { getDataSourcesWithRespectiveData } from "@/lib/supabase/types"
 import { CombinedPage1Dashboard } from "@/components/dashboard/combined-page1-dashboard"
 import { MangoolsDashboardPage } from "@/components/dashboard/mangools-dashboard-page"
 import { Page3Dashboard } from "@/components/dashboard/page3-dashboard"
+import { Page4LandingPagesDashboard } from "@/components/dashboard/page4-landing-pages-dashboard"
 
 interface PageConfig {
   id: string
@@ -75,6 +76,16 @@ export default function UnifiedDashboardPage({ params }: { params: Promise<{ id:
         datasourceType: "page3",
         datasourceId: ""
       })
+      
+      // Page 4: Google Analytics Landing Pages
+      if (googleAnalyticsDatasource) {
+        connectedPages.push({
+          id: "page-4",
+          label: "Page 4",
+          datasourceType: "google_analytics_landing_pages",
+          datasourceId: googleAnalyticsDatasource.id
+        })
+      }
       
       setPages(connectedPages)
       if (connectedPages.length > 0) {
@@ -170,6 +181,9 @@ export default function UnifiedDashboardPage({ params }: { params: Promise<{ id:
             )}
             {activePageConfig?.datasourceType === "page3" && (
               <Page3Dashboard />
+            )}
+            {activePageConfig?.datasourceType === "google_analytics_landing_pages" && (
+              <Page4LandingPagesDashboard datasourceId={activePageConfig.datasourceId} />
             )}
           </>
         )}
