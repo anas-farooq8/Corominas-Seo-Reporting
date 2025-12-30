@@ -180,16 +180,40 @@ export function Page4LandingPagesDashboard({
     }
   }
 
-  // Handle checkbox toggle
+  // Handle checkbox toggle (ensure at least one is always selected)
   const handleTogglePage = (url: string) => {
     const newSelected = new Set(selectedPages)
     if (newSelected.has(url)) {
-      newSelected.delete(url)
+      // Only allow unchecking if there's more than one selected
+      if (newSelected.size > 1) {
+        newSelected.delete(url)
+      }
+      // If it's the last one selected, don't uncheck it
     } else {
       newSelected.add(url)
     }
     setSelectedPages(newSelected)
   }
+
+  // Handle select all / select first only
+  const handleToggleAll = () => {
+    if (isAllSelected) {
+      // If all selected, select only the first one
+      const firstUrl = landingPagesWithColors.length > 0 ? landingPagesWithColors[0].landingPage : ''
+      setSelectedPages(firstUrl ? new Set([firstUrl]) : new Set())
+    } else {
+      // If some selected, select only the first one
+      const firstUrl = landingPagesWithColors.length > 0 ? landingPagesWithColors[0].landingPage : ''
+      setSelectedPages(firstUrl ? new Set([firstUrl]) : new Set())
+    }
+  }
+
+  // Determine master checkbox state
+  const allPagesCount = landingPagesWithColors.length
+  const selectedCount = selectedPages.size
+  const isAllSelected = selectedCount === allPagesCount && allPagesCount > 0
+  const isSomeSelected = selectedCount > 0 && selectedCount < allPagesCount
+  const isNoneSelected = selectedCount === 0
 
   // Custom tooltip with sorted values
   const CustomTooltip = ({ active, payload }: any) => {
@@ -284,7 +308,7 @@ export function Page4LandingPagesDashboard({
       {/* Landing Pages Chart + Table */}
       <Card>
         <CardHeader className="px-4 sm:px-6 py-2 sm:py-3">
-          <CardTitle className="text-base sm:text-lg md:text-xl">Top Landing Pages - Organic Traffic & Conversions (Past 12 Months)</CardTitle>
+          <CardTitle className="text-base sm:text-lg md:text-xl">Top Landing Pages - Organic Traffic (Past 12 Months)</CardTitle>
           <CardDescription className="text-xs sm:text-sm">
             This chart displays your top 10 landing pages that receive the most organic search traffic. Each colored line represents a different landing page and tracks how many visitors it attracted each day. <strong>Landing pages</strong> are the first pages people see when they arrive at your website from Google search. By default, the top 3 pages are shown to keep the chart readable. Use the checkboxes in the table below to show or hide specific pages. When multiple pages show similar trends, it indicates consistent overall site performance. If one page suddenly spikes, it might mean a specific article or page is ranking well for new search terms.
           </CardDescription>
@@ -329,7 +353,15 @@ export function Page4LandingPagesDashboard({
             <table className="w-full text-sm">
               <thead className="border-b bg-primary/10">
                 <tr className="text-left">
-                  <th className="pb-3 pt-2 px-2 font-semibold text-primary w-12"></th>
+                  <th className="pb-3 pt-2 px-2 font-semibold text-primary w-12">
+                    <div className="cursor-pointer flex items-center" onClick={handleToggleAll}>
+                      <Checkbox
+                        checked={isAllSelected ? true : isSomeSelected ? 'indeterminate' : false}
+                        className="h-5 w-5 cursor-pointer"
+                        onCheckedChange={handleToggleAll}
+                      />
+                    </div>
+                  </th>
                   <th className="pb-3 pt-2 px-2 font-semibold text-primary">Landing Page</th>
                   <th 
                     className="pb-3 pt-2 px-2 font-semibold text-primary text-right cursor-pointer hover:bg-primary/20 transition-colors"

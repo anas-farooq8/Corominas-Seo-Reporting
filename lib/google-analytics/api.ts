@@ -490,11 +490,8 @@ export async function fetchGALandingPagesData(propertyId: string): Promise<GALan
         })
       }
       
-      console.log('[GA Landing Pages] Top landing pages count:', topLandingPages.length)
-      console.log('[GA Landing Pages] Total unique landing pages:', Object.keys(landingPageTotals).length)
-      console.log('[GA Landing Pages] Total sessions (all pages):', totalSessions)
-      console.log('[GA Landing Pages] Total conversions (all pages):', totalConversions)
-      console.log('[GA Landing Pages] Total days of data:', dailyData.length)
+      // Log summary for monitoring
+      console.log('[GA Landing Pages] Fetched', topLandingPages.length, 'landing pages with', totalSessions, 'total sessions')
       
       return {
         dailyData,
