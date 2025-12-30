@@ -9,6 +9,7 @@ import { ArrowLeft } from "lucide-react"
 import type { getDataSourcesWithRespectiveData } from "@/lib/supabase/types"
 import { CombinedPage1Dashboard } from "@/components/dashboard/combined-page1-dashboard"
 import { MangoolsDashboardPage } from "@/components/dashboard/mangools-dashboard-page"
+import { Page3Dashboard } from "@/components/dashboard/page3-dashboard"
 
 interface PageConfig {
   id: string
@@ -66,6 +67,14 @@ export default function UnifiedDashboardPage({ params }: { params: Promise<{ id:
           datasourceId: mangoolsDatasource.id
         })
       }
+      
+      // Page 3: Always show (coming soon)
+      connectedPages.push({
+        id: "page-3",
+        label: "Page 3",
+        datasourceType: "page3",
+        datasourceId: ""
+      })
       
       setPages(connectedPages)
       if (connectedPages.length > 0) {
@@ -158,6 +167,9 @@ export default function UnifiedDashboardPage({ params }: { params: Promise<{ id:
             })()}
             {activePageConfig?.datasourceType === "mangools" && (
               <MangoolsDashboardPage datasourceId={activePageConfig.datasourceId} />
+            )}
+            {activePageConfig?.datasourceType === "page3" && (
+              <Page3Dashboard />
             )}
           </>
         )}

@@ -133,7 +133,7 @@ export function CombinedPage1Dashboard({ googleAnalyticsId, semrushId }: Combine
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-[600px]">
-        <LoadingSpinner message="Loading Dashboard..." />
+        <LoadingSpinner message="Loading SEO dashboard data..." />
       </div>
     )
   }
