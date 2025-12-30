@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useMemo } from "react"
+import { useState } from "react"
 import {
   Table,
   TableBody,
@@ -10,7 +10,6 @@ import {
   TableRow,
 } from "@/components/ui/table"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
 import { TrendingUp, ChevronDown, ChevronUp } from "lucide-react"
 import type { RankChangeKeyword } from "@/lib/mangools/dashboard-utils"
 import { formatRankChange } from "@/lib/mangools/dashboard-utils"
@@ -19,15 +18,12 @@ interface TopWinnersTableProps {
   winners: RankChangeKeyword[]
 }
 
-const INITIAL_DISPLAY_COUNT = 5
+const DISPLAY_COUNT = 5
 
 export function TopWinnersTable({ winners }: TopWinnersTableProps) {
-  const [showAll, setShowAll] = useState(false)
   const [showDescription, setShowDescription] = useState(false)
   
-  const displayedWinners = useMemo(() => {
-    return showAll ? winners : winners.slice(0, INITIAL_DISPLAY_COUNT)
-  }, [winners, showAll])
+  const displayedWinners = winners.slice(0, DISPLAY_COUNT)
   return (
     <Card>
       <CardHeader className="px-4 sm:px-6 py-2 sm:py-3 pb-0.5 sm:pb-1">
@@ -88,31 +84,6 @@ export function TopWinnersTable({ winners }: TopWinnersTableProps) {
             </TableBody>
           </Table>
         </div>
-        
-        {/* Show More / Show Less Button */}
-        {winners.length > INITIAL_DISPLAY_COUNT && (
-          <div className="mt-4 flex justify-center px-4 sm:px-0">
-            {showAll ? (
-              <Button 
-                variant="outline" 
-                onClick={() => setShowAll(false)}
-                className="gap-2 h-10 sm:h-11 text-xs sm:text-sm touch-manipulation"
-              >
-                <ChevronUp className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-                Show Less
-              </Button>
-            ) : (
-              <Button 
-                variant="outline" 
-                onClick={() => setShowAll(true)}
-                className="gap-2 h-10 sm:h-11 text-xs sm:text-sm touch-manipulation"
-              >
-                <ChevronDown className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-                Show More ({winners.length - INITIAL_DISPLAY_COUNT} more)
-              </Button>
-            )}
-          </div>
-        )}
       </CardContent>
     </Card>
   )
