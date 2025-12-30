@@ -17,6 +17,7 @@ interface KPICardProps {
     change: number
     isIncrease: boolean
   }
+  comparisonLabel?: string // e.g., "3-month comparison"
 }
 
 const colorClasses = {
@@ -46,6 +47,7 @@ export const KPICard = memo(function KPICard({
   previousLabel,
   colorScheme,
   percentageChange,
+  comparisonLabel,
 }: KPICardProps) {
   const colors = colorClasses[colorScheme]
 
@@ -62,17 +64,24 @@ export const KPICard = memo(function KPICard({
           <div className={`text-lg sm:text-2xl md:text-3xl font-bold ${colors.text}`}>
             {formatNumber(currentValue)}
           </div>
-          <div
-            className={`flex items-center gap-0.5 text-xs sm:text-sm font-bold flex-shrink-0 ${
-              percentageChange.isIncrease ? "text-green-600" : "text-red-600"
-            }`}
-          >
-            {percentageChange.isIncrease ? (
-              <ArrowUp className="h-3 w-3 sm:h-4 sm:w-4" />
-            ) : (
-              <ArrowDown className="h-3 w-3 sm:h-4 sm:w-4" />
+          <div className="flex flex-col items-end gap-0">
+            <div
+              className={`flex items-center gap-0.5 text-xs sm:text-sm font-bold flex-shrink-0 ${
+                percentageChange.isIncrease ? "text-green-600" : "text-red-600"
+              }`}
+            >
+              {percentageChange.isIncrease ? (
+                <ArrowUp className="h-3 w-3 sm:h-4 sm:w-4" />
+              ) : (
+                <ArrowDown className="h-3 w-3 sm:h-4 sm:w-4" />
+              )}
+              <span className="text-xs sm:text-sm">{percentageChange.change.toFixed(2)}%</span>
+            </div>
+            {comparisonLabel && (
+              <span className="text-[9px] sm:text-[10px] text-muted-foreground">
+                ({comparisonLabel})
+              </span>
             )}
-            <span className="text-xs sm:text-sm">{percentageChange.change.toFixed(2)}%</span>
           </div>
         </div>
         <p className="text-[10px] sm:text-xs text-muted-foreground mt-0.5 sm:mt-1 leading-tight">

@@ -16,7 +16,8 @@ import {
   formatFullDate,
   formatDateRange,
   CustomGATrafficLegend,
-  CustomGASessionsLegend
+  CustomGASessionsLegend,
+  selectBestComparisonWindow
 } from "@/lib/utils/dashboard-helpers"
 import { KPICard } from "./kpi-card"
 
@@ -92,22 +93,48 @@ export function GoogleAnalyticsDashboardPage({
     }))
   }, [data])
 
-  // Memoize KPI calculations
+  // Memoize KPI calculations - using best comparison window
   const sessionsKPI = useMemo(() => {
     if (!data) return null
+    
+    const bestWindow = selectBestComparisonWindow(
+      data.dailyData,
+      (item) => item.organicSessions,
+      data.dateRanges.endDate
+    )
+    
     return {
-      change: calculatePercentageChange(data.lastMonthOrganicSessions, data.previousMonthOrganicSessions),
-      currentLabel: getMonthYear(data.dateRanges.endDate),
-      previousLabel: getPreviousMonthYear(data.dateRanges.endDate)
+      change: {
+        change: bestWindow.change,
+        isIncrease: bestWindow.isIncrease
+      },
+      currentValue: Math.round(bestWindow.current),
+      previousValue: Math.round(bestWindow.previous),
+      currentLabel: `Last ${bestWindow.periodType === '1-month' ? 'Month' : bestWindow.periodType.replace('-month', ' Months')}`,
+      previousLabel: `Previous ${bestWindow.periodType === '1-month' ? 'Month' : bestWindow.periodType.replace('-month', ' Months')}`,
+      comparisonLabel: bestWindow.periodLabel
     }
   }, [data])
 
   const conversionsKPI = useMemo(() => {
     if (!data) return null
+    
+    const bestWindow = selectBestComparisonWindow(
+      data.dailyData,
+      (item) => item.organicConversions,
+      data.dateRanges.endDate
+    )
+    
     return {
-      change: calculatePercentageChange(data.lastMonthOrganicConversions, data.previousMonthOrganicConversions),
-      currentLabel: getMonthYear(data.dateRanges.endDate),
-      previousLabel: getPreviousMonthYear(data.dateRanges.endDate)
+      change: {
+        change: bestWindow.change,
+        isIncrease: bestWindow.isIncrease
+      },
+      currentValue: Math.round(bestWindow.current),
+      previousValue: Math.round(bestWindow.previous),
+      currentLabel: `Last ${bestWindow.periodType === '1-month' ? 'Month' : bestWindow.periodType.replace('-month', ' Months')}`,
+      previousLabel: `Previous ${bestWindow.periodType === '1-month' ? 'Month' : bestWindow.periodType.replace('-month', ' Months')}`,
+      comparisonLabel: bestWindow.periodLabel
     }
   }, [data])
 
@@ -158,23 +185,25 @@ export function GoogleAnalyticsDashboardPage({
           <KPICard
             title="Organic Sessions"
             icon={<TrendingUp className="h-3 w-3 sm:h-3.5 sm:w-3.5 flex-shrink-0" />}
-            currentValue={data.lastMonthOrganicSessions}
-            previousValue={data.previousMonthOrganicSessions}
+            currentValue={sessionsKPI.currentValue}
+            previousValue={sessionsKPI.previousValue}
             currentLabel={sessionsKPI.currentLabel}
             previousLabel={sessionsKPI.previousLabel}
             colorScheme="green"
             percentageChange={sessionsKPI.change}
+            comparisonLabel={sessionsKPI.comparisonLabel}
           />
 
           <KPICard
             title="Organic Conversions"
             icon={<MousePointerClick className="h-3 w-3 sm:h-3.5 sm:w-3.5 flex-shrink-0" />}
-            currentValue={data.lastMonthOrganicConversions}
-            previousValue={data.previousMonthOrganicConversions}
+            currentValue={conversionsKPI.currentValue}
+            previousValue={conversionsKPI.previousValue}
             currentLabel={conversionsKPI.currentLabel}
             previousLabel={conversionsKPI.previousLabel}
             colorScheme="blue"
             percentageChange={conversionsKPI.change}
+            comparisonLabel={conversionsKPI.comparisonLabel}
           />
         </div>
       )}

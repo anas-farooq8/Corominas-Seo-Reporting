@@ -10,7 +10,8 @@ import {
   calculatePercentageChange, 
   formatDateRange,
   getMonthYear,
-  getPreviousMonthYear
+  getPreviousMonthYear,
+  selectBestComparisonWindow
 } from "@/lib/utils/dashboard-helpers"
 import { KPICard } from "./kpi-card"
 import { SEMrushChart } from "./semrush-chart"
@@ -89,31 +90,70 @@ export function CombinedPage1Dashboard({ googleAnalyticsId, semrushId }: Combine
     }
   }, [googleAnalyticsId, semrushId])
 
-  // Memoize KPI calculations
+  // Memoize KPI calculations - using best comparison window
   const semrushKPI = useMemo(() => {
     if (!semrushData) return null
+    
+    const bestWindow = selectBestComparisonWindow(
+      semrushData.dailyData,
+      (item) => item.totalKeywords,
+      semrushData.dateRanges.endDate
+    )
+    
     return {
-      change: calculatePercentageChange(semrushData.lastMonthTotal, semrushData.previousMonthTotal),
-      currentLabel: getMonthYear(semrushData.dateRanges.endDate),
-      previousLabel: getPreviousMonthYear(semrushData.dateRanges.endDate)
+      change: {
+        change: bestWindow.change,
+        isIncrease: bestWindow.isIncrease
+      },
+      currentValue: Math.round(bestWindow.current),
+      previousValue: Math.round(bestWindow.previous),
+      currentLabel: `Last ${bestWindow.periodType === '1-month' ? 'Month' : bestWindow.periodType.replace('-month', ' Months')}`,
+      previousLabel: `Previous ${bestWindow.periodType === '1-month' ? 'Month' : bestWindow.periodType.replace('-month', ' Months')}`,
+      comparisonLabel: bestWindow.periodLabel
     }
   }, [semrushData])
 
   const gaSessionsKPI = useMemo(() => {
     if (!gaData) return null
+    
+    const bestWindow = selectBestComparisonWindow(
+      gaData.dailyData,
+      (item) => item.organicSessions,
+      gaData.dateRanges.endDate
+    )
+    
     return {
-      change: calculatePercentageChange(gaData.lastMonthOrganicSessions, gaData.previousMonthOrganicSessions),
-      currentLabel: getMonthYear(gaData.dateRanges.endDate),
-      previousLabel: getPreviousMonthYear(gaData.dateRanges.endDate)
+      change: {
+        change: bestWindow.change,
+        isIncrease: bestWindow.isIncrease
+      },
+      currentValue: Math.round(bestWindow.current),
+      previousValue: Math.round(bestWindow.previous),
+      currentLabel: `Last ${bestWindow.periodType === '1-month' ? 'Month' : bestWindow.periodType.replace('-month', ' Months')}`,
+      previousLabel: `Previous ${bestWindow.periodType === '1-month' ? 'Month' : bestWindow.periodType.replace('-month', ' Months')}`,
+      comparisonLabel: bestWindow.periodLabel
     }
   }, [gaData])
 
   const gaConversionsKPI = useMemo(() => {
     if (!gaData) return null
+    
+    const bestWindow = selectBestComparisonWindow(
+      gaData.dailyData,
+      (item) => item.organicConversions,
+      gaData.dateRanges.endDate
+    )
+    
     return {
-      change: calculatePercentageChange(gaData.lastMonthOrganicConversions, gaData.previousMonthOrganicConversions),
-      currentLabel: getMonthYear(gaData.dateRanges.endDate),
-      previousLabel: getPreviousMonthYear(gaData.dateRanges.endDate)
+      change: {
+        change: bestWindow.change,
+        isIncrease: bestWindow.isIncrease
+      },
+      currentValue: Math.round(bestWindow.current),
+      previousValue: Math.round(bestWindow.previous),
+      currentLabel: `Last ${bestWindow.periodType === '1-month' ? 'Month' : bestWindow.periodType.replace('-month', ' Months')}`,
+      previousLabel: `Previous ${bestWindow.periodType === '1-month' ? 'Month' : bestWindow.periodType.replace('-month', ' Months')}`,
+      comparisonLabel: bestWindow.periodLabel
     }
   }, [gaData])
 
@@ -197,12 +237,13 @@ export function CombinedPage1Dashboard({ googleAnalyticsId, semrushId }: Combine
           <KPICard
             title="Total Ranking Organic Keywords"
             icon={<Key className="h-3 w-3 sm:h-3.5 sm:w-3.5 flex-shrink-0" />}
-            currentValue={semrushData.lastMonthTotal}
-            previousValue={semrushData.previousMonthTotal}
+            currentValue={semrushKPI.currentValue}
+            previousValue={semrushKPI.previousValue}
             currentLabel={semrushKPI.currentLabel}
             previousLabel={semrushKPI.previousLabel}
             colorScheme="purple"
             percentageChange={semrushKPI.change}
+            comparisonLabel={semrushKPI.comparisonLabel}
           />
         )}
 
@@ -211,12 +252,13 @@ export function CombinedPage1Dashboard({ googleAnalyticsId, semrushId }: Combine
           <KPICard
             title="Organic Sessions"
             icon={<TrendingUp className="h-3 w-3 sm:h-3.5 sm:w-3.5 flex-shrink-0" />}
-            currentValue={gaData.lastMonthOrganicSessions}
-            previousValue={gaData.previousMonthOrganicSessions}
+            currentValue={gaSessionsKPI.currentValue}
+            previousValue={gaSessionsKPI.previousValue}
             currentLabel={gaSessionsKPI.currentLabel}
             previousLabel={gaSessionsKPI.previousLabel}
             colorScheme="green"
             percentageChange={gaSessionsKPI.change}
+            comparisonLabel={gaSessionsKPI.comparisonLabel}
           />
         )}
 
@@ -224,12 +266,13 @@ export function CombinedPage1Dashboard({ googleAnalyticsId, semrushId }: Combine
           <KPICard
             title="Organic Conversions"
             icon={<MousePointerClick className="h-3 w-3 sm:h-3.5 sm:w-3.5 flex-shrink-0" />}
-            currentValue={gaData.lastMonthOrganicConversions}
-            previousValue={gaData.previousMonthOrganicConversions}
+            currentValue={gaConversionsKPI.currentValue}
+            previousValue={gaConversionsKPI.previousValue}
             currentLabel={gaConversionsKPI.currentLabel}
             previousLabel={gaConversionsKPI.previousLabel}
             colorScheme="blue"
             percentageChange={gaConversionsKPI.change}
+            comparisonLabel={gaConversionsKPI.comparisonLabel}
           />
         )}
       </div>

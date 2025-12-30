@@ -163,6 +163,159 @@ export const CustomGASessionsLegend = () => {
   )
 }
 
+// ============================================
+// Multi-Window Comparison Helpers
+// ============================================
+
+export interface ComparisonWindow {
+  current: number
+  previous: number
+  change: number
+  isIncrease: boolean
+  periodType: '1-month' | '3-month' | '6-month'
+  periodLabel: string
+}
+
+/**
+ * Calculate average for a time window from daily data
+ * @param dailyData - Array of daily data with date field (YYYYMMDD format)
+ * @param valueExtractor - Function to extract the value from each daily data point
+ * @param endDate - End date string (YYYY-MM-DD)
+ * @param monthsBack - Number of months to go back from endDate
+ * @param windowMonths - Number of months in the window
+ */
+export const calculateWindowAverage = <T extends { date: string }>(
+  dailyData: T[],
+  valueExtractor: (item: T) => number,
+  endDate: string,
+  monthsBack: number,
+  windowMonths: number
+): number => {
+  // Calculate start and end dates for the window
+  const end = new Date(endDate)
+  end.setDate(1) // First day of the end month
+  end.setMonth(end.getMonth() - monthsBack) // Go back monthsBack months
+  
+  const start = new Date(end)
+  start.setMonth(start.getMonth() - windowMonths) // Go back windowMonths more
+  
+  // Convert to YYYYMMDD format for comparison
+  const startYYYYMMDD = parseInt(
+    start.getFullYear() + 
+    String(start.getMonth() + 1).padStart(2, '0') + 
+    '01'
+  )
+  
+  // Get last day of the end month
+  const endLastDay = new Date(end.getFullYear(), end.getMonth() + 1, 0)
+  const endYYYYMMDD = parseInt(
+    endLastDay.getFullYear() + 
+    String(endLastDay.getMonth() + 1).padStart(2, '0') + 
+    String(endLastDay.getDate()).padStart(2, '0')
+  )
+  
+  // Filter data within the window and calculate sum
+  const windowData = dailyData.filter(item => {
+    const itemDate = parseInt(item.date)
+    return itemDate >= startYYYYMMDD && itemDate <= endYYYYMMDD
+  })
+  
+  if (windowData.length === 0) return 0
+  
+  const sum = windowData.reduce((acc, item) => acc + valueExtractor(item), 0)
+  return sum / windowMonths // Return monthly average
+}
+
+/**
+ * Select the best comparison window for a metric based on which shows the most positive trend
+ * @param dailyData - Array of daily data
+ * @param valueExtractor - Function to extract the value from each data point
+ * @param endDate - End date string (YYYY-MM-DD)
+ * @returns The best comparison window with all details
+ */
+export const selectBestComparisonWindow = <T extends { date: string }>(
+  dailyData: T[],
+  valueExtractor: (item: T) => number,
+  endDate: string
+): ComparisonWindow => {
+  const comparisons: ComparisonWindow[] = []
+  
+  // 1-month comparison (last month vs previous month)
+  const last1Month = calculateWindowAverage(dailyData, valueExtractor, endDate, 0, 1)
+  const prev1Month = calculateWindowAverage(dailyData, valueExtractor, endDate, 1, 1)
+  
+  if (prev1Month > 0) {
+    const change1M = ((last1Month - prev1Month) / prev1Month) * 100
+    comparisons.push({
+      current: last1Month,
+      previous: prev1Month,
+      change: Math.abs(change1M),
+      isIncrease: change1M >= 0,
+      periodType: '1-month',
+      periodLabel: '1-month comparison'
+    })
+  }
+  
+  // 3-month comparison (last 3 months vs previous 3 months)
+  const last3Months = calculateWindowAverage(dailyData, valueExtractor, endDate, 0, 3)
+  const prev3Months = calculateWindowAverage(dailyData, valueExtractor, endDate, 3, 3)
+  
+  if (prev3Months > 0) {
+    const change3M = ((last3Months - prev3Months) / prev3Months) * 100
+    comparisons.push({
+      current: last3Months,
+      previous: prev3Months,
+      change: Math.abs(change3M),
+      isIncrease: change3M >= 0,
+      periodType: '3-month',
+      periodLabel: '3-month comparison'
+    })
+  }
+  
+  // 6-month comparison (last 6 months vs previous 6 months)
+  const last6Months = calculateWindowAverage(dailyData, valueExtractor, endDate, 0, 6)
+  const prev6Months = calculateWindowAverage(dailyData, valueExtractor, endDate, 6, 6)
+  
+  if (prev6Months > 0) {
+    const change6M = ((last6Months - prev6Months) / prev6Months) * 100
+    comparisons.push({
+      current: last6Months,
+      previous: prev6Months,
+      change: Math.abs(change6M),
+      isIncrease: change6M >= 0,
+      periodType: '6-month',
+      periodLabel: '6-month comparison'
+    })
+  }
+  
+  // If no valid comparisons, return default
+  if (comparisons.length === 0) {
+    return {
+      current: last1Month,
+      previous: prev1Month,
+      change: 0,
+      isIncrease: true,
+      periodType: '1-month',
+      periodLabel: '1-month comparison'
+    }
+  }
+  
+  // Find the most positive comparison
+  const positiveComparisons = comparisons.filter(c => c.isIncrease)
+  
+  if (positiveComparisons.length > 0) {
+    // Return the one with highest positive change
+    return positiveComparisons.reduce((best, current) => 
+      current.change > best.change ? current : best
+    )
+  } else {
+    // All are negative, return the most neutral (lowest negative change)
+    return comparisons.reduce((best, current) => 
+      current.change < best.change ? current : best
+    )
+  }
+}
+
 // Custom SEMrush Tooltip Factory
 export const createSEMrushTooltip = (formatNumberFn: (num: number) => string) => {
   const CustomTooltip = ({ active, payload }: any) => {

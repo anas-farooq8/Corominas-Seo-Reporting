@@ -9,7 +9,8 @@ import {
   calculatePercentageChange,
   getMonthYear,
   getPreviousMonthYear,
-  formatDateRange
+  formatDateRange,
+  selectBestComparisonWindow
 } from "@/lib/utils/dashboard-helpers"
 import { KPICard } from "./kpi-card"
 import { SEMrushChart } from "./semrush-chart"
@@ -80,17 +81,26 @@ export function SEMrushDashboardPage({ datasourceId, data: externalData, showMet
     }
   }, [datasourceId, externalData])
 
-  // Memoize calculations to prevent unnecessary re-renders
-  const keywordsChange = useMemo(() => 
-    data ? calculatePercentageChange(data.lastMonthTotal, data.previousMonthTotal) : null,
-    [data]
-  )
-
-  const dateLabels = useMemo(() => {
-    if (!data) return { current: '', previous: '' }
+  // Memoize calculations to prevent unnecessary re-renders - using best comparison window
+  const keywordsKPI = useMemo(() => {
+    if (!data) return null
+    
+    const bestWindow = selectBestComparisonWindow(
+      data.dailyData,
+      (item) => item.totalKeywords,
+      data.dateRanges.endDate
+    )
+    
     return {
-      current: getMonthYear(data.dateRanges.endDate),
-      previous: getPreviousMonthYear(data.dateRanges.endDate)
+      change: {
+        change: bestWindow.change,
+        isIncrease: bestWindow.isIncrease
+      },
+      currentValue: Math.round(bestWindow.current),
+      previousValue: Math.round(bestWindow.previous),
+      currentLabel: `Last ${bestWindow.periodType === '1-month' ? 'Month' : bestWindow.periodType.replace('-month', ' Months')}`,
+      previousLabel: `Previous ${bestWindow.periodType === '1-month' ? 'Month' : bestWindow.periodType.replace('-month', ' Months')}`,
+      comparisonLabel: bestWindow.periodLabel
     }
   }, [data])
 
@@ -102,7 +112,7 @@ export function SEMrushDashboardPage({ datasourceId, data: externalData, showMet
     )
   }
 
-  if (error || !data || !keywordsChange) {
+  if (error || !data || !keywordsKPI) {
     return (
       <div className="flex items-center justify-center min-h-[600px] p-4">
         <ErrorDisplay
@@ -136,12 +146,13 @@ export function SEMrushDashboardPage({ datasourceId, data: externalData, showMet
         <KPICard
           title="Total Ranking Organic Keywords"
           icon={<Key className="h-3 w-3 sm:h-3.5 sm:w-3.5 flex-shrink-0" />}
-          currentValue={data.lastMonthTotal}
-          previousValue={data.previousMonthTotal}
-          currentLabel={dateLabels.current}
-          previousLabel={dateLabels.previous}
+          currentValue={keywordsKPI.currentValue}
+          previousValue={keywordsKPI.previousValue}
+          currentLabel={keywordsKPI.currentLabel}
+          previousLabel={keywordsKPI.previousLabel}
           colorScheme="purple"
-          percentageChange={keywordsChange}
+          percentageChange={keywordsKPI.change}
+          comparisonLabel={keywordsKPI.comparisonLabel}
         />
       </div>
 
