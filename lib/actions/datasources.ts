@@ -6,7 +6,7 @@
 
 import { revalidatePath } from "next/cache"
 import * as db from "@/lib/db/datasources"
-import type { Datasource, DatasourceInput, MangoolsDomain, GoogleAnalyticsProperty, SemrushDomain } from "@/lib/supabase/types"
+import type { Datasource, DatasourceInput, MangoolsDomain, GoogleAnalyticsProperty, SemrushDomain, GoogleSearchConsoleSite } from "@/lib/supabase/types"
 
 /**
  * Get all datasources for a project with their respective data (domains, etc.)
@@ -121,6 +121,29 @@ export async function attachSemrushDomain(
   } catch (error) {
     console.error("Error attaching Semrush domain:", error)
     throw new Error("Failed to attach Semrush domain")
+  }
+}
+
+/**
+ * Attach a Google Search Console site to a datasource
+ */
+export async function attachGoogleSearchConsoleSite(
+  datasourceId: string,
+  siteUrl: string,
+  projectId: string
+): Promise<GoogleSearchConsoleSite> {
+  try {
+    const attachedSite = await db.attachGoogleSearchConsoleSite(
+      datasourceId,
+      siteUrl,
+    )
+    
+    revalidatePath(`/dashboard/projects/${projectId}`)
+    
+    return attachedSite
+  } catch (error) {
+    console.error("Error attaching Google Search Console site:", error)
+    throw new Error("Failed to attach Google Search Console site")
   }
 }
 

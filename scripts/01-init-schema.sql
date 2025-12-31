@@ -35,7 +35,7 @@ CREATE TABLE IF NOT EXISTS projects (
 CREATE TABLE IF NOT EXISTS datasources (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   project_id UUID NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
-  type TEXT NOT NULL CHECK (type IN ('mangools', 'semrush', 'google_analytics')),
+  type TEXT NOT NULL CHECK (type IN ('mangools', 'semrush', 'google_analytics', 'google_search_console')),
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
@@ -79,6 +79,17 @@ CREATE TABLE IF NOT EXISTS semrush_domains (
 );
 
 -- ============================================
+-- GOOGLE SEARCH CONSOLE SITES TABLE
+-- ============================================
+CREATE TABLE IF NOT EXISTS google_search_console_sites (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  datasource_id UUID NOT NULL REFERENCES datasources(id) ON DELETE CASCADE,
+  site_url TEXT NOT NULL UNIQUE,  -- The site URL (e.g., "https://example.com/")
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- ============================================
 -- DASHBOARD CACHE TABLE
 -- ============================================
 CREATE TABLE IF NOT EXISTS dashboard_cache (
@@ -105,6 +116,8 @@ CREATE INDEX IF NOT EXISTS idx_ga_properties_datasource_id ON google_analytics_p
 CREATE INDEX IF NOT EXISTS idx_ga_properties_name ON google_analytics_properties(name);
 CREATE INDEX IF NOT EXISTS idx_semrush_domains_datasource_id ON semrush_domains(datasource_id);
 CREATE INDEX IF NOT EXISTS idx_semrush_domains_domain ON semrush_domains(domain);
+CREATE INDEX IF NOT EXISTS idx_gsc_sites_datasource_id ON google_search_console_sites(datasource_id);
+CREATE INDEX IF NOT EXISTS idx_gsc_sites_site_url ON google_search_console_sites(site_url);
 CREATE INDEX IF NOT EXISTS idx_dashboard_cache_datasource_id ON dashboard_cache(datasource_id);
 CREATE INDEX IF NOT EXISTS idx_dashboard_cache_resource_id ON dashboard_cache(resource_id);
 CREATE INDEX IF NOT EXISTS idx_dashboard_cache_dates ON dashboard_cache(start_date, end_date);
@@ -119,6 +132,7 @@ ALTER TABLE datasources ENABLE ROW LEVEL SECURITY;
 ALTER TABLE mangools_domains ENABLE ROW LEVEL SECURITY;
 ALTER TABLE google_analytics_properties ENABLE ROW LEVEL SECURITY;
 ALTER TABLE semrush_domains ENABLE ROW LEVEL SECURITY;
+ALTER TABLE google_search_console_sites ENABLE ROW LEVEL SECURITY;
 ALTER TABLE dashboard_cache ENABLE ROW LEVEL SECURITY;
 
 -- ============================================
@@ -146,6 +160,10 @@ CREATE POLICY "authenticated_users_all_ga_properties" ON google_analytics_proper
 
 DROP POLICY IF EXISTS "authenticated_users_all_semrush_domains" ON semrush_domains;
 CREATE POLICY "authenticated_users_all_semrush_domains" ON semrush_domains
+  FOR ALL USING (auth.role() = 'authenticated');
+
+DROP POLICY IF EXISTS "authenticated_users_all_gsc_sites" ON google_search_console_sites;
+CREATE POLICY "authenticated_users_all_gsc_sites" ON google_search_console_sites
   FOR ALL USING (auth.role() = 'authenticated');
 
 DROP POLICY IF EXISTS "authenticated_users_all_dashboard_cache" ON dashboard_cache;
@@ -191,6 +209,11 @@ CREATE TRIGGER update_ga_properties_updated_at
 DROP TRIGGER IF EXISTS update_semrush_domains_updated_at ON semrush_domains;
 CREATE TRIGGER update_semrush_domains_updated_at
   BEFORE UPDATE ON semrush_domains
+  FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+DROP TRIGGER IF EXISTS update_gsc_sites_updated_at ON google_search_console_sites;
+CREATE TRIGGER update_gsc_sites_updated_at
+  BEFORE UPDATE ON google_search_console_sites
   FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
 DROP TRIGGER IF EXISTS update_dashboard_cache_updated_at ON dashboard_cache;

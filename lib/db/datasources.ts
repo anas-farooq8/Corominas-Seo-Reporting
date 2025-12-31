@@ -8,7 +8,8 @@ import type {
   DatasourceInput, 
   MangoolsDomain,
   GoogleAnalyticsProperty,
-  SemrushDomain, 
+  SemrushDomain,
+  GoogleSearchConsoleSite, 
   getDataSourcesWithRespectiveData 
 } from "@/lib/supabase/types"
 
@@ -29,6 +30,9 @@ export async function getDataSourcesWithRespectiveData(projectId: string): Promi
       ),
       semrush_domains (
         *
+      ),
+      google_search_console_sites (
+        *
       )
     `)
     .eq("project_id", projectId)
@@ -38,7 +42,7 @@ export async function getDataSourcesWithRespectiveData(projectId: string): Promi
 
   return (data || []).map((datasource: any) => ({
     ...datasource,
-    domain_count: (datasource.mangools_domains?.length || 0) + (datasource.google_analytics_properties?.length || 0) + (datasource.semrush_domains?.length || 0)
+    domain_count: (datasource.mangools_domains?.length || 0) + (datasource.google_analytics_properties?.length || 0) + (datasource.semrush_domains?.length || 0) + (datasource.google_search_console_sites?.length || 0)
   }))
 }
 
@@ -142,6 +146,27 @@ export async function attachSemrushDomain(
     .insert({
       datasource_id: datasourceId,
       domain
+    })
+    .select()
+    .single()
+
+  if (error) throw error
+  return data
+}
+
+/**
+ * Attach a Google Search Console site to a datasource
+ */
+export async function attachGoogleSearchConsoleSite(
+  datasourceId: string,
+  siteUrl: string
+): Promise<GoogleSearchConsoleSite> {
+  const supabase = await createClient()
+  const { data, error } = await supabase
+    .from("google_search_console_sites")
+    .insert({
+      datasource_id: datasourceId,
+      site_url: siteUrl
     })
     .select()
     .single()

@@ -128,6 +128,57 @@ export function DomainsSection({
     )
   }
 
+  // Handle Google Search Console datasources
+  if (datasource.type === "google_search_console") {
+    const sites = datasource.google_search_console_sites || []
+    
+    if (sites.length === 0) {
+      return (
+        <div className="text-xs sm:text-sm text-muted-foreground">
+          No Google Search Console site attached.
+        </div>
+      )
+    }
+
+    const site = sites[0]
+    // Extract domain from site URL for favicon
+    const siteUrl = site.site_url.replace(/^https?:\/\//, '').replace(/\/$/, '')
+    
+    return (
+      <div className="space-y-1.5">
+        <h3 className="text-xs sm:text-sm font-semibold text-foreground">Google Search Console Site</h3>
+        <div className="group relative flex flex-col sm:flex-row items-start gap-2 sm:gap-3 p-3 sm:p-3.5 border rounded-lg bg-gradient-to-br from-background to-muted/30 hover:shadow-sm hover:border-primary/20 transition-all duration-200">
+          <div className="relative p-1.5 rounded bg-primary/10 group-hover:bg-primary/15 transition-colors flex-shrink-0">
+            <img
+              src={`https://www.google.com/s2/favicons?domain=${siteUrl}&sz=64`}
+              alt={`${siteUrl} favicon`}
+              className="h-7 w-7 object-contain"
+              onError={(e) => {
+                e.currentTarget.style.display = 'none';
+                e.currentTarget.nextElementSibling?.classList.remove('hidden');
+              }}
+            />
+            <Globe className="h-7 w-7 text-primary hidden" />
+          </div>
+          <div className="flex-1 min-w-0 w-full">
+            <h4 className="font-semibold text-sm sm:text-base truncate mb-1">{site.site_url}</h4>
+            <div className="flex flex-wrap items-center gap-2 sm:gap-3 text-xs text-muted-foreground">
+              <a 
+                href={site.site_url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-1 hover:text-primary transition-colors"
+              >
+                <Globe className="h-4 w-4 flex-shrink-0" />
+                <span className="truncate">Visit website</span>
+              </a>
+            </div>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
   // Other datasource types
   return (
     <div className="text-xs sm:text-sm text-muted-foreground">

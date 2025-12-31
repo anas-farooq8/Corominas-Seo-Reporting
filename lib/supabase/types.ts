@@ -23,7 +23,7 @@ export interface Project {
 export interface Datasource {
   id: string
   project_id: string
-  type: "mangools" | "semrush" | "google_analytics"
+  type: "mangools" | "semrush" | "google_analytics" | "google_search_console"
   created_at: string
   updated_at: string
 }
@@ -57,6 +57,14 @@ export interface SemrushDomain {
   updated_at: string
 }
 
+export interface GoogleSearchConsoleSite {
+  id: string
+  datasource_id: string
+  site_url: string  // The site URL (e.g., "https://example.com/")
+  created_at: string
+  updated_at: string
+}
+
 // Alias for MangoolsDomain used in datasource components
 export type DatasourceDomain = MangoolsDomain
 
@@ -78,6 +86,7 @@ export interface DatasourceWithDomains extends Datasource {
   mangools_domains?: MangoolsDomain[]
   google_analytics_properties?: GoogleAnalyticsProperty[]
   semrush_domains?: SemrushDomain[]
+  google_search_console_sites?: GoogleSearchConsoleSite[]
   domain_count?: number
 }
 
@@ -129,5 +138,5 @@ export interface ProjectInput {
 
 export interface DatasourceInput {
   project_id: string
-  type: "mangools" | "semrush" | "google_analytics"
+  type: "mangools" | "semrush" | "google_analytics" | "google_search_console"
 }

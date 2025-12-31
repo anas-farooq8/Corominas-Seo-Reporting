@@ -14,7 +14,7 @@ import {
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { createDatasource, attachDomain, attachGoogleAnalyticsProperty, attachSemrushDomain } from "@/lib/actions/datasources"
+import { createDatasource, attachDomain, attachGoogleAnalyticsProperty, attachSemrushDomain, attachGoogleSearchConsoleSite } from "@/lib/actions/datasources"
 import { Plus, Loader2, Search, AlertCircle, CheckCircle2 } from "lucide-react"
 import type { Datasource, MangoolsApiDomain, GoogleAnalyticsApiProperty } from "@/lib/supabase/types"
 
@@ -34,10 +34,16 @@ interface PropertyOption extends GoogleAnalyticsApiProperty {
   attachedInfo?: string
 }
 
+interface SiteOption {
+  siteUrl: string
+  isAttached: boolean
+  attachedInfo?: string
+}
+
 export function CreateDatasourceDialog({ projectId, existingTypes, onDatasourceAdded }: CreateDatasourceDialogProps) {
   const [open, setOpen] = useState(false)
   const [loading, setLoading] = useState(false)
-  const [selectedType, setSelectedType] = useState<"mangools" | "semrush" | "google_analytics" | "">("")
+  const [selectedType, setSelectedType] = useState<"mangools" | "semrush" | "google_analytics" | "google_search_console" | "">("")
   
   // Mangools-specific state
   const [fetchingDomains, setFetchingDomains] = useState(false)
@@ -50,6 +56,12 @@ export function CreateDatasourceDialog({ projectId, existingTypes, onDatasourceA
   const [properties, setProperties] = useState<PropertyOption[]>([])
   const [propertySearchQuery, setPropertySearchQuery] = useState("")
   const [selectedProperty, setSelectedProperty] = useState<string>("")
+  
+  // Google Search Console-specific state
+  const [fetchingSites, setFetchingSites] = useState(false)
+  const [sites, setSites] = useState<SiteOption[]>([])
+  const [siteSearchQuery, setSiteSearchQuery] = useState("")
+  const [selectedSite, setSelectedSite] = useState<string>("")
   
   // Semrush-specific state
   const [semrushDomain, setSemrushDomain] = useState("")
@@ -72,6 +84,9 @@ export function CreateDatasourceDialog({ projectId, existingTypes, onDatasourceA
       setProperties([])
       setPropertySearchQuery("")
       setSelectedProperty("")
+      setSites([])
+      setSiteSearchQuery("")
+      setSelectedSite("")
       setSemrushDomain("")
       setVerifyingDomain(false)
       setDomainVerificationState({ verified: false, result: null, showResult: false })
@@ -173,6 +188,53 @@ export function CreateDatasourceDialog({ projectId, existingTypes, onDatasourceA
     fetchProperties()
   }, [selectedType])
 
+  // Fetch Google Search Console sites when Google Search Console is selected
+  useEffect(() => {
+    async function fetchSites() {
+      if (selectedType !== "google_search_console") return
+      
+      setFetchingSites(true)
+      setError(null)
+      
+      try {
+        // Fetch available sites from Google Search Console
+        const sitesResponse = await fetch("/api/google-search-console/sites")
+        if (!sitesResponse.ok) {
+          throw new Error("Failed to fetch sites from Google Search Console")
+        }
+        const gscSites: { siteUrl: string }[] = await sitesResponse.json()
+        
+        // Fetch all attached sites to check which ones are already used
+        const attachedResponse = await fetch("/api/google-search-console/attached")
+        if (!attachedResponse.ok) {
+          throw new Error("Failed to fetch attached sites")
+        }
+        const attachedSites: { site_url: string }[] = await attachedResponse.json()
+        const attachedSiteSet = new Set(attachedSites.map(s => s.site_url))
+        
+        // Mark sites as attached or available
+        const siteOptions: SiteOption[] = gscSites.map(site => ({
+          ...site,
+          isAttached: attachedSiteSet.has(site.siteUrl),
+          attachedInfo: attachedSiteSet.has(site.siteUrl) ? "Already attached to another project" : undefined
+        }))
+        
+        setSites(siteOptions)
+        
+        if (siteOptions.length === 0) {
+          setError("No sites found in your Google Search Console account")
+        }
+      } catch (err) {
+        console.error("Error fetching sites:", err)
+        setError(err instanceof Error ? err.message : "Failed to fetch sites")
+      } finally {
+        setFetchingSites(false)
+      }
+    }
+    
+    fetchSites()
+  }, [selectedType])
+
   // Handle Semrush domain verification
   async function handleVerifyDomain() {
     if (!semrushDomain.trim()) {
@@ -257,6 +319,16 @@ export function CreateDatasourceDialog({ projectId, existingTypes, onDatasourceA
     )
   }, [properties, propertySearchQuery])
 
+  // Filter sites based on search query
+  const filteredSites = useMemo(() => {
+    if (!siteSearchQuery.trim()) return sites
+    
+    const query = siteSearchQuery.toLowerCase()
+    return sites.filter(site => 
+      site.siteUrl.toLowerCase().includes(query)
+    )
+  }, [sites, siteSearchQuery])
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     
@@ -331,6 +403,15 @@ export function CreateDatasourceDialog({ projectId, existingTypes, onDatasourceA
         )
       }
 
+      // If Google Search Console, attach the selected site
+      if (selectedType === "google_search_console" && selectedSite) {
+        await attachGoogleSearchConsoleSite(
+          datasource.id,
+          selectedSite,
+          projectId
+        )
+      }
+
       setOpen(false)
       onDatasourceAdded?.(datasource)
     } catch (error) {
@@ -344,12 +425,14 @@ export function CreateDatasourceDialog({ projectId, existingTypes, onDatasourceA
   const availableTypes = [
     { value: "mangools", label: "Mangools", disabled: existingTypes.includes("mangools") },
     { value: "google_analytics", label: "Google Analytics", disabled: existingTypes.includes("google_analytics") },
+    { value: "google_search_console", label: "Google Search Console", disabled: existingTypes.includes("google_search_console") },
     { value: "semrush", label: "Semrush", disabled: existingTypes.includes("semrush") },
   ]
 
   const canSubmit = selectedType && 
     (selectedType !== "mangools" || selectedDomain) &&
     (selectedType !== "google_analytics" || selectedProperty) &&
+    (selectedType !== "google_search_console" || selectedSite) &&
     (selectedType !== "semrush" || (semrushDomain && domainVerificationState.verified))
 
   return (
@@ -369,6 +452,8 @@ export function CreateDatasourceDialog({ projectId, existingTypes, onDatasourceA
                 ? "Select a domain from your Mangools account. Note: Each domain can only be attached once, and each project can have only one Mangools data source."
                 : selectedType === "google_analytics"
                 ? "Select a property from your Google Analytics account. Note: Each property can only be attached once, and each project can have only one Google Analytics data source."
+                : selectedType === "google_search_console"
+                ? "Select a site from your Google Search Console account. Note: Each site can only be attached once, and each project can have only one Google Search Console data source."
                 : selectedType === "semrush"
                 ? "Enter a domain to track with Semrush. We'll verify the domain before adding it. Note: Each domain can only be attached once, and each project can have only one Semrush data source."
                 : "Add a new data source to this project. Each type can only be added once per project."
@@ -382,8 +467,8 @@ export function CreateDatasourceDialog({ projectId, existingTypes, onDatasourceA
               <Label htmlFor="type" className="text-xs sm:text-sm">Data Source Type *</Label>
               <Select
                 value={selectedType}
-                onValueChange={(value) => setSelectedType(value as "mangools" | "semrush" | "google_analytics")}
-                disabled={loading || fetchingDomains || fetchingProperties}
+                onValueChange={(value) => setSelectedType(value as "mangools" | "semrush" | "google_analytics" | "google_search_console")}
+                disabled={loading || fetchingDomains || fetchingProperties || fetchingSites}
               >
                 <SelectTrigger id="type" className="cursor-pointer h-9 text-sm">
                   <SelectValue placeholder="Select a data source type" />
@@ -574,6 +659,90 @@ export function CreateDatasourceDialog({ projectId, existingTypes, onDatasourceA
                                   {property.isAttached && (
                                     <p className="text-[11px] sm:text-xs text-yellow-600 mt-1">
                                       {property.attachedInfo}
+                                    </p>
+                                  )}
+                                </div>
+                              </label>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </>
+                )}
+              </>
+            )}
+
+            {/* Google Search Console Site Selection */}
+            {selectedType === "google_search_console" && (
+              <>
+                {fetchingSites ? (
+                  <div className="flex flex-col sm:flex-row items-center justify-center py-6 sm:py-8 gap-2 sm:gap-3">
+                    <Loader2 className="h-6 w-6 sm:h-8 sm:w-8 animate-spin text-muted-foreground" />
+                    <span className="text-xs sm:text-sm text-muted-foreground text-center">
+                      Loading sites from Google Search Console...
+                    </span>
+                  </div>
+                ) : (
+                  <>
+                    {/* Search */}
+                    <div className="grid gap-1.5">
+                      <Label htmlFor="site-search" className="text-xs sm:text-sm">Search Sites</Label>
+                      <div className="relative">
+                        <Search className="absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground pointer-events-none" />
+                        <Input
+                          id="site-search"
+                          type="text"
+                          placeholder="Search by site URL..."
+                          value={siteSearchQuery}
+                          onChange={(e) => setSiteSearchQuery(e.target.value)}
+                          className="pl-8 h-9 text-sm"
+                          disabled={loading}
+                        />
+                      </div>
+                    </div>
+
+                    {/* Site List */}
+                    <div className="grid gap-1.5">
+                      <Label className="text-xs sm:text-sm">Available Sites ({filteredSites.length})</Label>
+                      <div className="border rounded-lg max-h-[250px] sm:max-h-[300px] overflow-y-auto">
+                        {filteredSites.length === 0 ? (
+                          <div className="p-6 sm:p-8 text-center text-xs sm:text-sm text-muted-foreground">
+                            {siteSearchQuery ? "No sites match your search" : "No sites available"}
+                          </div>
+                        ) : (
+                          <div className="divide-y">
+                            {filteredSites.map((site) => (
+                              <label
+                                key={site.siteUrl}
+                                className={`flex items-start gap-2 sm:gap-3 p-3 cursor-pointer hover:bg-muted/50 transition-colors ${
+                                  site.isAttached ? "opacity-50 cursor-not-allowed" : ""
+                                } ${selectedSite === site.siteUrl ? "bg-muted" : ""}`}
+                              >
+                                <input
+                                  type="radio"
+                                  name="site"
+                                  value={site.siteUrl}
+                                  checked={selectedSite === site.siteUrl}
+                                  onChange={(e) => setSelectedSite(e.target.value)}
+                                  disabled={site.isAttached || loading}
+                                  className="mt-1 flex-shrink-0"
+                                />
+                                <div className="flex-1 min-w-0">
+                                  <div className="flex items-center gap-2">
+                                    <p className="font-medium text-xs sm:text-sm truncate">
+                                      {site.siteUrl}
+                                    </p>
+                                    {site.isAttached && (
+                                      <AlertCircle className="h-4 w-4 text-yellow-600 flex-shrink-0" />
+                                    )}
+                                    {selectedSite === site.siteUrl && !site.isAttached && (
+                                      <CheckCircle2 className="h-4 w-4 text-green-600 flex-shrink-0" />
+                                    )}
+                                  </div>
+                                  {site.isAttached && (
+                                    <p className="text-[11px] sm:text-xs text-yellow-600 mt-1">
+                                      {site.attachedInfo}
                                     </p>
                                   )}
                                 </div>
