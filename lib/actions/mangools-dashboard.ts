@@ -17,11 +17,20 @@ import {
 } from "@/lib/mangools/dashboard-utils"
 import { getCachedDashboardData, saveDashboardCache } from "@/lib/cache/dashboard-cache"
 
+/**
+ * KPI Card Data for Mangools metrics
+ */
+export interface MangoolsKPICardData {
+  totalKeywords: number
+  topWinnersCount: number
+  newRankingsCount: number
+  controlledLosersCount: number
+}
+
 export interface MangoolsDashboardData {
   domain: string
   trackingId: string
   location: string
-  totalKeywords: number
   dateRanges: {
     monthAStart: string
     monthAEnd: string
@@ -30,10 +39,11 @@ export interface MangoolsDashboardData {
     monthAName: string // e.g., "Oct Year"
     monthBName: string // e.g., "Nov Year"
   }
-  topKeywords: TopKeyword[]           // Already sorted, no re-sorting needed in UI
-  topWinners: RankChangeKeyword[]
-  newRankings: NewRanking[]
-  controlledLosers: RankChangeKeyword[]
+  kpiCards: MangoolsKPICardData
+  topKeywords: TopKeyword[]           // All keywords
+  topWinners: RankChangeKeyword[]     // Top 5 only
+  newRankings: NewRanking[]           // Top 5 only
+  controlledLosers: RankChangeKeyword[] // Top 5 only
 }
 
 /**
@@ -85,12 +95,10 @@ export async function fetchMangoolsDashboardData(
     // Check cache first
     const cachedData = await getCachedDashboardData(datasourceId, trackingId, fromA, toB)
     if (cachedData) {
-      console.log("✓ Returning cached Mangools dashboard data")
       return cachedData as MangoolsDashboardData
     }
     
     // Cache miss - fetch from API
-    console.log("⟳ Fetching fresh Mangools dashboard data from API")
     
     // Calculate individual month end dates
     const toA = formatDate(monthAEnd)
@@ -114,11 +122,24 @@ export async function fetchMangoolsDashboardData(
     // Compare monthly data
     const comparisons = compareMonthlyKeywords(monthA, monthB, keywordsData)
     
-    // Generate all tables
-    const topKeywords = getTopKeywords(comparisons)
-    const topWinners = getTopWinners(comparisons)
-    const controlledLosers = getControlledLosers(comparisons)
-    const newRankings = getNewRankings(comparisons)
+    // Generate all tables - compute full lists first
+    const topKeywords = getTopKeywords(comparisons) // All keywords
+    const allTopWinners = getTopWinners(comparisons) // All winners
+    const allControlledLosers = getControlledLosers(comparisons) // All losers
+    const allNewRankings = getNewRankings(comparisons) // All new rankings
+    
+    // Calculate KPI card data (counts)
+    const kpiCards: MangoolsKPICardData = {
+      totalKeywords: trackingDetail.keywords.length,
+      topWinnersCount: allTopWinners.length,
+      newRankingsCount: allNewRankings.length,
+      controlledLosersCount: allControlledLosers.length
+    }
+    
+    // Store only top 5 for winners, losers, and new rankings
+    const topWinners = allTopWinners.slice(0, 5)
+    const controlledLosers = allControlledLosers.slice(0, 5)
+    const newRankings = allNewRankings.slice(0, 5)
     
     // Format month names for display
     const formatMonthName = (date: Date) => {
@@ -133,7 +154,6 @@ export async function fetchMangoolsDashboardData(
       domain: trackingDetail.tracking.domain,
       trackingId: trackingId,
       location: trackingDetail.tracking.location.label,
-      totalKeywords: trackingDetail.keywords.length,
       dateRanges: {
         monthAStart: fromA,
         monthAEnd: toA,
@@ -142,10 +162,11 @@ export async function fetchMangoolsDashboardData(
         monthAName,
         monthBName,
       },
-      topKeywords,
-      topWinners,
-      newRankings,
-      controlledLosers,
+      kpiCards,
+      topKeywords,      // All keywords
+      topWinners,       // Top 5 only
+      newRankings,      // Top 5 only
+      controlledLosers, // Top 5 only
     }
     
     // Save to cache (fire and forget - don't wait)

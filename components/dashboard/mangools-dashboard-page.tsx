@@ -65,9 +65,10 @@ export function MangoolsDashboardPage({ datasourceId }: MangoolsDashboardPagePro
     )
   }
 
-  const topWinnersCount = data.topWinners.length
-  const newRankingsCount = data.newRankings.length
-  const totalKeywordsCount = data.totalKeywords
+  const topWinnersCount = data.kpiCards.topWinnersCount
+  const newRankingsCount = data.kpiCards.newRankingsCount
+  const controlledLosersCount = data.kpiCards.controlledLosersCount
+  const totalKeywordsCount = data.kpiCards.totalKeywords
 
   // Build array of KPI cards with their values (only include non-zero values)
   const kpiCards = []
@@ -92,12 +93,20 @@ export function MangoolsDashboardPage({ datasourceId }: MangoolsDashboardPagePro
       color: "blue"
     })
   }
+  if (controlledLosersCount > 0) {
+    kpiCards.push({
+      label: "Controlled Losers",
+      value: controlledLosersCount,
+      color: "yellow"
+    })
+  }
 
   // Determine grid classes based on number of visible cards
   const getDesktopGridClasses = () => {
     if (kpiCards.length === 1) return "grid-cols-1"
     if (kpiCards.length === 2) return "grid-cols-2"
-    return "grid-cols-3"
+    if (kpiCards.length === 3) return "grid-cols-3"
+    return "grid-cols-4"
   }
 
   return (
@@ -132,6 +141,7 @@ export function MangoolsDashboardPage({ datasourceId }: MangoolsDashboardPagePro
                 <div className={`text-xl sm:text-2xl font-bold mt-1 ${
                   card.color === "green" ? "text-green-600" : 
                   card.color === "blue" ? "text-blue-600" : 
+                  card.color === "yellow" ? "text-yellow-600" :
                   ""
                 }`}>
                   {card.value}
@@ -148,6 +158,7 @@ export function MangoolsDashboardPage({ datasourceId }: MangoolsDashboardPagePro
                 <div className={`text-xl font-bold mt-1 ${
                   card.color === "green" ? "text-green-600" : 
                   card.color === "blue" ? "text-blue-600" : 
+                  card.color === "yellow" ? "text-yellow-600" :
                   ""
                 }`}>
                   {card.value}

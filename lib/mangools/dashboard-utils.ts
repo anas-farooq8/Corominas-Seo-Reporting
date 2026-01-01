@@ -128,8 +128,8 @@ export function getTopKeywords(comparisons: KeywordComparison[]): TopKeyword[] {
  * Note: Negative monthlyRankChange = improvement (rank got better/lower number)
  * Example: rankA=20, rankB=9 → monthlyRankChange=-11 (improved by 11 positions)
  */
-export function getTopWinners(comparisons: KeywordComparison[], limit?: number): RankChangeKeyword[] {
-  const filtered = [...comparisons]
+export function getTopWinners(comparisons: KeywordComparison[]): RankChangeKeyword[] {
+  return [...comparisons]
     .filter(kw => {
       const isNew = (kw.rankA === null || kw.rankA > 100) && kw.rankB !== null && kw.rankB <= 100
       const rankChange = kw.monthlyRankChange
@@ -147,8 +147,6 @@ export function getTopWinners(comparisons: KeywordComparison[], limit?: number):
       rankB: kw.rankB,
       monthlyRankChange: kw.monthlyRankChange,
     }))
-  
-  return limit ? filtered.slice(0, limit) : filtered
 }
 
 /**
@@ -175,8 +173,8 @@ export function getNewRankings(comparisons: KeywordComparison[]): NewRanking[] {
  * Note: Positive monthlyRankChange = decline (rank got worse/higher number)
  * Example: rankA=5, rankB=8 → monthlyRankChange=+3 (declined by 3 positions)
  */
-export function getControlledLosers(comparisons: KeywordComparison[], limit?: number): RankChangeKeyword[] {
-  const filtered = [...comparisons]
+export function getControlledLosers(comparisons: KeywordComparison[]): RankChangeKeyword[] {
+  return [...comparisons]
     .filter(kw => {
       const isNew = (kw.rankA === null || kw.rankA > 100) && kw.rankB !== null && kw.rankB <= 100
       const rankChange = kw.monthlyRankChange
@@ -194,8 +192,6 @@ export function getControlledLosers(comparisons: KeywordComparison[], limit?: nu
       rankB: kw.rankB,
       monthlyRankChange: kw.monthlyRankChange,
     }))
-  
-  return limit ? filtered.slice(0, limit) : filtered
 }
 
 /**
