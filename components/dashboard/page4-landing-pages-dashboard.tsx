@@ -128,14 +128,16 @@ export function Page4LandingPagesDashboard({
     }))
   }, [data])
 
-  // Use totals from API (all landing pages, not just top 10)
+  // Compute totals dynamically from topLandingPages (all landing pages, not just top 10)
+  // This matches how we compute conversionRate - derived, not stored
   const totals = useMemo(() => {
     if (!data) return { sessions: 0, conversions: 0 }
     
-    return {
-      sessions: data.totalSessions,
-      conversions: data.totalConversions
-    }
+    // Sum up all landing pages (not just the displayed ones)
+    const sessions = data.topLandingPages.reduce((sum, lp) => sum + lp.sessions, 0)
+    const conversions = data.topLandingPages.reduce((sum, lp) => sum + lp.conversions, 0)
+    
+    return { sessions, conversions }
   }, [data])
 
   // Sort landing pages based on selected column
@@ -314,7 +316,39 @@ export function Page4LandingPagesDashboard({
         <CardContent className="px-2 sm:px-4 md:px-6 pb-2">
           {/* Chart */}
           <div className="mb-4">
-            <ResponsiveContainer width="100%" height={450}>
+            {/* Mobile Chart */}
+            <ResponsiveContainer width="100%" height={300} className="sm:hidden">
+              <LineChart data={chartData} margin={{ top: 2, right: 5, left: -5, bottom: 0 }}>
+                <CartesianGrid strokeDasharray="3 3" className="stroke-muted" opacity={0.3} />
+                <XAxis
+                  dataKey="date"
+                  tick={{ fontSize: 9 }}
+                  angle={-45}
+                  textAnchor="end"
+                  height={40}
+                  interval={Math.floor(chartData.length / 6)}
+                />
+                <YAxis tick={{ fontSize: 10 }} width={35} />
+                <Tooltip content={<CustomTooltip />} />
+                {landingPagesWithColors.map((lp) => (
+                  selectedPages.has(lp.landingPage) && (
+                    <Line
+                      key={lp.landingPage}
+                      type="monotone"
+                      dataKey={lp.landingPage}
+                      stroke={lp.color}
+                      strokeWidth={2}
+                      name={lp.landingPage}
+                      dot={false}
+                      activeDot={{ r: 4 }}
+                      animationDuration={300}
+                    />
+                  )
+                ))}
+              </LineChart>
+            </ResponsiveContainer>
+            {/* Desktop Chart */}
+            <ResponsiveContainer width="100%" height={450} className="hidden sm:block">
               <LineChart data={chartData} margin={{ top: 5, right: 10, left: 0, bottom: 15 }}>
                 <CartesianGrid strokeDasharray="3 3" className="stroke-muted" opacity={0.3} />
                 <XAxis
@@ -360,9 +394,9 @@ export function Page4LandingPagesDashboard({
                       />
                     </div>
                   </th>
-                  <th className="pb-3 pt-2 px-2 font-semibold text-primary">Landing Page</th>
+                  <th className="pb-3 pt-2 px-2 font-semibold text-primary min-w-[150px] sm:min-w-[200px] text-xs sm:text-sm">Landing Page</th>
                   <th 
-                    className="pb-3 pt-2 px-2 font-semibold text-primary text-right cursor-pointer hover:bg-primary/20 transition-colors"
+                    className="pb-3 pt-2 px-2 font-semibold text-primary text-right cursor-pointer hover:bg-primary/20 transition-colors text-xs sm:text-sm"
                     onClick={() => handleSort('sessions')}
                   >
                     <div className="flex flex-col items-end gap-0.5">
@@ -370,13 +404,13 @@ export function Page4LandingPagesDashboard({
                         <span>Organic Sessions</span>
                         <SortIcon column="sessions" />
                       </div>
-                      <div className="text-xs font-normal text-muted-foreground">
+                      <div className="text-[10px] sm:text-xs font-normal text-muted-foreground">
                         {formatNumber(totals.sessions)} total
                       </div>
                     </div>
                   </th>
                   <th 
-                    className="pb-3 pt-2 px-2 font-semibold text-primary text-right cursor-pointer hover:bg-primary/20 transition-colors"
+                    className="pb-3 pt-2 px-2 font-semibold text-primary text-right cursor-pointer hover:bg-primary/20 transition-colors text-xs sm:text-sm"
                     onClick={() => handleSort('conversions')}
                   >
                     <div className="flex flex-col items-end gap-0.5">
@@ -384,13 +418,13 @@ export function Page4LandingPagesDashboard({
                         <span>Organic Conversions</span>
                         <SortIcon column="conversions" />
                       </div>
-                      <div className="text-xs font-normal text-muted-foreground">
+                      <div className="text-[10px] sm:text-xs font-normal text-muted-foreground">
                         {formatNumber(totals.conversions)} total
                       </div>
                     </div>
                   </th>
                   <th 
-                    className="pb-3 pt-2 px-2 font-semibold text-primary text-right cursor-pointer hover:bg-primary/20 transition-colors"
+                    className="pb-3 pt-2 px-2 font-semibold text-primary text-right cursor-pointer hover:bg-primary/20 transition-colors text-xs sm:text-sm"
                     onClick={() => handleSort('conversionRate')}
                   >
                     <div className="flex flex-col items-end gap-0.5">
@@ -398,7 +432,7 @@ export function Page4LandingPagesDashboard({
                         <span>Conversion Rate</span>
                         <SortIcon column="conversionRate" />
                       </div>
-                      <div className="text-xs font-normal text-muted-foreground">
+                      <div className="text-[10px] sm:text-xs font-normal text-muted-foreground">
                         100% of total
                       </div>
                     </div>
@@ -412,7 +446,7 @@ export function Page4LandingPagesDashboard({
                   
                   return (
                     <tr key={lp.landingPage} className="border-b hover:bg-muted/30 transition-colors">
-                      <td className="py-3 px-2">
+                      <td className="py-1.5 sm:py-3 px-2">
                         <div className="flex items-center gap-2">
                           <Checkbox
                             checked={selectedPages.has(lp.landingPage)}
@@ -425,20 +459,20 @@ export function Page4LandingPagesDashboard({
                           />
                         </div>
                       </td>
-                      <td className="py-3 px-2 max-w-md">
-                        <div className="truncate text-xs sm:text-sm" title={lp.landingPage}>
+                      <td className="py-1.5 sm:py-3 px-2 max-w-md">
+                        <div className="truncate text-[10px] sm:text-sm" title={lp.landingPage}>
                           {lp.landingPage}
                         </div>
                       </td>
-                      <td className="py-3 px-2 text-right font-medium">
+                      <td className="py-1.5 sm:py-3 px-2 text-right font-medium text-[10px] sm:text-sm">
                         {formatNumber(lp.sessions)}{' '}
                         <span className="text-muted-foreground font-normal">({sessionPercentage}%)</span>
                       </td>
-                      <td className="py-3 px-2 text-right font-medium">
+                      <td className="py-1.5 sm:py-3 px-2 text-right font-medium text-[10px] sm:text-sm">
                         {formatNumber(lp.conversions)}{' '}
                         <span className="text-muted-foreground font-normal">({conversionPercentage}%)</span>
                       </td>
-                      <td className="py-3 px-2 text-right font-medium">
+                      <td className="py-1.5 sm:py-3 px-2 text-right font-medium text-[10px] sm:text-sm">
                         {(lp.conversionRate * 100).toFixed(2)}%
                       </td>
                     </tr>
