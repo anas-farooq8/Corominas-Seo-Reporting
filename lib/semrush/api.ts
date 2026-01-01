@@ -30,7 +30,8 @@ export interface SEMrushParsedDailyData {
   top51to100: number
   aiOverviews: number
   serpFunctions: number
-  totalKeywords: number
+  // totalKeywords is computed, not stored: top3 + top4to10 + top11to20 + top21to50 + top51to100 + aiOverviews + serpFunctions
+  get totalKeywords(): number
 }
 
 // ============================================
@@ -83,8 +84,6 @@ export async function fetchSEMrushOverviewTrend(
   }
 
   try {
-    console.log(`[SEMrush API] Fetching data for domain: ${searchItem}`)
-    
     const response = await fetch(SEMRUSH_API_URL, {
       method: "POST",
       headers: HEADERS,
@@ -104,8 +103,6 @@ export async function fetchSEMrushOverviewTrend(
     if (!data.result || !Array.isArray(data.result)) {
       throw new Error("Invalid response format from SEMrush API")
     }
-
-    console.log(`[SEMrush API] Received ${data.result.length} data points`)
     
     return data.result as SEMrushOverviewTrendItem[]
   } catch (error) {
@@ -125,17 +122,10 @@ export function filterByDateRange(
   startDate: string,
   endDate: string
 ): SEMrushOverviewTrendItem[] {
-  const filtered = data.filter(row => {
+  return data.filter(row => {
     const rowDate = row.date
     return rowDate >= startDate && rowDate <= endDate
   })
-
-  console.log(`[SEMrush Filter] Filtered from ${data.length} to ${filtered.length} rows`)
-  if (filtered.length > 0) {
-    console.log(`[SEMrush Filter] Date range: ${filtered[0].date} → ${filtered[filtered.length - 1].date}`)
-  }
-
-  return filtered
 }
 
 /**
@@ -162,9 +152,7 @@ export function parseSEMrushData(
     const aiOverviews = row.aiOverviewPositions || 0
     const serpFunctions = row.serpFeaturesPositionsWithoutAiOverview || 0
     
-    // Calculate total keywords
-    const totalKeywords = top3 + top4to10 + top11to20 + top21to50 + top51to100 + aiOverviews + serpFunctions
-
+    // Return object with getter for totalKeywords
     return {
       date: row.date,
       top3,
@@ -174,7 +162,10 @@ export function parseSEMrushData(
       top51to100,
       aiOverviews,
       serpFunctions,
-      totalKeywords
+      // Computed property: totalKeywords
+      get totalKeywords() {
+        return this.top3 + this.top4to10 + this.top11to20 + this.top21to50 + this.top51to100 + this.aiOverviews + this.serpFunctions
+      }
     }
   })
 }
@@ -182,9 +173,34 @@ export function parseSEMrushData(
 /**
  * Fetch and process SEMrush data
  * This is the main function to use for fetching dashboard data
+ * @param domain - The domain to fetch data for
+ * @param startDate - Start date in YYYY-MM-DD format (optional, will calculate if not provided)
+ * @param endDate - End date in YYYY-MM-DD format (optional, will calculate if not provided)
+ * @param database - The database to search in (default: "us")
  */
-export async function fetchSEMrushDashboardData(domain: string, database: string = "us") {
-  const dateRanges = calculateDashboardDateRanges()
+export async function fetchSEMrushDashboardData(
+  domain: string, 
+  startDate?: string,
+  endDate?: string,
+  database: string = "us"
+) {
+  // Use provided dates or calculate them
+  const dateRanges = startDate && endDate 
+    ? {
+        startDate,
+        endDate,
+        startDateAPI: startDate.replace(/-/g, ''),
+        endDateAPI: endDate.replace(/-/g, ''),
+        lastMonth: {
+          startAPI: calculateLastMonthStart(endDate),
+          endAPI: endDate.replace(/-/g, '')
+        },
+        previousMonth: {
+          startAPI: calculatePreviousMonthStart(endDate),
+          endAPI: calculateLastMonthEnd(endDate)
+        }
+      }
+    : calculateDashboardDateRanges()
   
   // Fetch raw data from SEMrush
   const rawData = await fetchSEMrushOverviewTrend(domain, database)
@@ -195,14 +211,8 @@ export async function fetchSEMrushDashboardData(domain: string, database: string
   // Parse the data
   const parsedData = parseSEMrushData(filteredData)
   
-  // Calculate monthly totals for comparison
-  const lastMonthTotal = calculateMonthlyTotal(parsedData, dateRanges.lastMonth.startAPI, dateRanges.lastMonth.endAPI)
-  const previousMonthTotal = calculateMonthlyTotal(parsedData, dateRanges.previousMonth.startAPI, dateRanges.previousMonth.endAPI)
-  
   return {
     dailyData: parsedData,
-    lastMonthTotal,
-    previousMonthTotal,
     dateRanges: {
       startDate: dateRanges.startDate,
       endDate: dateRanges.endDate
@@ -211,19 +221,39 @@ export async function fetchSEMrushDashboardData(domain: string, database: string
 }
 
 /**
- * Calculate total keywords for a specific month
+ * Helper to calculate last month start date (YYYYMMDD) from end date (YYYY-MM-DD)
  */
-function calculateMonthlyTotal(
-  data: SEMrushParsedDailyData[],
-  startDate: string,
-  endDate: string
-): number {
-  const monthData = data.filter(day => day.date >= startDate && day.date <= endDate)
-  
-  if (monthData.length === 0) return 0
-  
-  // Use the last day of the month for the total
-  const lastDay = monthData[monthData.length - 1]
-  return lastDay.totalKeywords
+function calculateLastMonthStart(endDateStr: string): string {
+  const endDate = new Date(endDateStr)
+  const year = endDate.getFullYear()
+  const month = endDate.getMonth() // 0-11
+  return `${year}${String(month + 1).padStart(2, '0')}01`
+}
+
+/**
+ * Helper to calculate previous month start date (YYYYMMDD) from end date (YYYY-MM-DD)
+ */
+function calculatePreviousMonthStart(endDateStr: string): string {
+  const endDate = new Date(endDateStr)
+  const year = endDate.getFullYear()
+  const month = endDate.getMonth() // 0-11
+  const prevMonth = month - 1
+  const prevYear = prevMonth < 0 ? year - 1 : year
+  const normalizedMonth = prevMonth < 0 ? 11 : prevMonth
+  return `${prevYear}${String(normalizedMonth + 1).padStart(2, '0')}01`
+}
+
+/**
+ * Helper to calculate last month end date (YYYYMMDD) from end date (YYYY-MM-DD)
+ */
+function calculateLastMonthEnd(endDateStr: string): string {
+  const endDate = new Date(endDateStr)
+  const year = endDate.getFullYear()
+  const month = endDate.getMonth() // 0-11
+  const prevMonth = month - 1
+  const prevYear = prevMonth < 0 ? year - 1 : year
+  const normalizedMonth = prevMonth < 0 ? 11 : prevMonth
+  const lastDay = new Date(prevYear, normalizedMonth + 1, 0).getDate()
+  return `${prevYear}${String(normalizedMonth + 1).padStart(2, '0')}${String(lastDay).padStart(2, '0')}`
 }
 

@@ -11,6 +11,7 @@ interface SEMrushChartProps {
   dailyData: SEMrushParsedDailyData[]
   visibleLayers: Record<LayerKey, boolean>
   onToggleLayer: (layer: LayerKey) => void
+  periodLabel?: string // Dynamic period label for chart title
 }
 
 // Define layer configuration in a stable order (bottom to top visually)
@@ -27,7 +28,8 @@ const LAYER_ORDER = [
 export const SEMrushChart = memo(function SEMrushChart({ 
   dailyData, 
   visibleLayers, 
-  onToggleLayer 
+  onToggleLayer,
+  periodLabel = 'Past 12 Months' // Default fallback
 }: SEMrushChartProps) {
   const chartData = useMemo(() => 
     dailyData.map(day => ({
@@ -53,7 +55,7 @@ export const SEMrushChart = memo(function SEMrushChart({
       <CardHeader className="px-4 sm:px-6 py-2 sm:py-3">
         <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
           <div className="flex-1">
-            <CardTitle className="text-base sm:text-lg md:text-xl">Total Ranking Keywords (Past 12 Months)</CardTitle>
+            <CardTitle className="text-base sm:text-lg md:text-xl">Total Ranking Keywords ({periodLabel})</CardTitle>
             <CardDescription className="text-xs sm:text-sm">
               This chart shows how many search terms (keywords) your website appears for in Google results, grouped by how high they rank. Keywords in the <strong>Top 3</strong> positions get the most clicks, while those ranking <strong>4-10</strong> still get good visibility. Lower positions (11-100) mean fewer people see your site. The colored layers show how your keywords are distributed across these positions over time. More keywords moving into the top positions means better visibility and more potential visitors finding your website.
             </CardDescription>

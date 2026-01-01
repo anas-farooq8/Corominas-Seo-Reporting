@@ -6,11 +6,8 @@ import { ErrorDisplay } from "@/components/ui/error-display"
 import { Calendar, TrendingUp, MousePointerClick, Key } from "lucide-react"
 import type { GADashboardData } from "@/lib/actions/google-analytics-dashboard"
 import type { SEMrushDashboardData } from "@/lib/actions/semrush-dashboard"
-import { 
-  calculatePercentageChange, 
+import {  
   formatDateRange,
-  getMonthYear,
-  getPreviousMonthYear,
   selectBestComparisonWindow
 } from "@/lib/utils/dashboard-helpers"
 import { KPICard } from "./kpi-card"
@@ -90,26 +87,22 @@ export function CombinedPage1Dashboard({ googleAnalyticsId, semrushId }: Combine
     }
   }, [googleAnalyticsId, semrushId])
 
-  // Memoize KPI calculations - using best comparison window
+  // Memoize KPI calculations - using kpiCards from backend (follows Page 4 GSC pattern)
   const semrushKPI = useMemo(() => {
-    if (!semrushData) return null
+    if (!semrushData || !semrushData.kpiCards) return null
     
-    const bestWindow = selectBestComparisonWindow(
-      semrushData.dailyData,
-      (item) => item.totalKeywords,
-      semrushData.dateRanges.endDate
-    )
+    const kpi = semrushData.kpiCards.totalRankingKeywords
     
     return {
       change: {
-        change: bestWindow.change,
-        isIncrease: bestWindow.isIncrease
+        change: kpi.change,
+        isIncrease: kpi.isIncrease
       },
-      currentValue: Math.round(bestWindow.current),
-      previousValue: Math.round(bestWindow.previous),
-      currentLabel: `Last ${bestWindow.periodType === '1-month' ? 'Month' : bestWindow.periodType.replace('-month', ' Months')}`,
-      previousLabel: `Previous ${bestWindow.periodType === '1-month' ? 'Month' : bestWindow.periodType.replace('-month', ' Months')}`,
-      comparisonLabel: bestWindow.periodLabel
+      currentValue: Math.round(kpi.current),
+      previousValue: Math.round(kpi.previous),
+      currentLabel: `Last ${kpi.periodType === '1-month' ? 'Month' : kpi.periodType.replace('-month', ' Months')}`,
+      previousLabel: `Previous ${kpi.periodType === '1-month' ? 'Month' : kpi.periodType.replace('-month', ' Months')}`,
+      comparisonLabel: kpi.periodLabel
     }
   }, [semrushData])
 
@@ -283,6 +276,9 @@ export function CombinedPage1Dashboard({ googleAnalyticsId, semrushId }: Combine
           dailyData={semrushData.dailyData}
           visibleLayers={visibleLayers}
           onToggleLayer={toggleLayer}
+          periodLabel={semrushData.kpiCards?.totalRankingKeywords.periodType ? 
+            `Past ${semrushData.kpiCards.totalRankingKeywords.periodType === '1-month' ? 'Month' : semrushData.kpiCards.totalRankingKeywords.periodType.replace('-month', ' Months')}` 
+            : 'Past 12 Months'}
         />
       )}
 

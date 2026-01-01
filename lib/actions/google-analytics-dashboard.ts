@@ -21,6 +21,119 @@ export interface GADashboardData {
 }
 
 /**
+ * Calculate and log KPI comparisons (similar to Page 4 GSC pattern)
+ */
+function calculateAndLogKPIComparisons(
+  dailyData: GADailyTrafficData[],
+  endDate: string
+) {
+  console.log('\n=== Google Analytics KPI Calculations ===')
+  
+  const windows: Array<{ months: number, label: '1-month' | '3-month' | '6-month' }> = [
+    { months: 1, label: '1-month' },
+    { months: 3, label: '3-month' },
+    { months: 6, label: '6-month' },
+  ]
+  
+  // Calculate for Organic Sessions
+  console.log('\n[GA Organic Sessions] Comparison Windows:')
+  windows.forEach(({ months, label }) => {
+    const { current, previous, dates } = getWindowComparison(dailyData, endDate, months, (d) => d.organicSessions)
+    const change = previous > 0 ? ((current - previous) / previous) * 100 : 0
+    console.log(`  ${label}:`)
+    console.log(`    Current:  ${dates.currentStart} to ${dates.currentEnd} = ${current.toFixed(2)}`)
+    console.log(`    Previous: ${dates.previousStart} to ${dates.previousEnd} = ${previous.toFixed(2)}`)
+    console.log(`    Change: ${change >= 0 ? '+' : ''}${change.toFixed(2)}%`)
+  })
+  
+  // Calculate for Organic Conversions
+  console.log('\n[GA Organic Conversions] Comparison Windows:')
+  windows.forEach(({ months, label }) => {
+    const { current, previous, dates } = getWindowComparison(dailyData, endDate, months, (d) => d.organicConversions)
+    const change = previous > 0 ? ((current - previous) / previous) * 100 : 0
+    console.log(`  ${label}:`)
+    console.log(`    Current:  ${dates.currentStart} to ${dates.currentEnd} = ${current.toFixed(2)}`)
+    console.log(`    Previous: ${dates.previousStart} to ${dates.previousEnd} = ${previous.toFixed(2)}`)
+    console.log(`    Change: ${change >= 0 ? '+' : ''}${change.toFixed(2)}%`)
+  })
+  
+  console.log('\n=== End GA KPI Calculations ===\n')
+}
+
+/**
+ * Get window comparison data with dates
+ */
+function getWindowComparison(
+  dailyData: GADailyTrafficData[],
+  endDate: string,
+  windowMonths: number,
+  valueExtractor: (item: GADailyTrafficData) => number
+): { current: number, previous: number, dates: { currentStart: string, currentEnd: string, previousStart: string, previousEnd: string } } {
+  const dataEnd = new Date(endDate)
+  const lastMonth = dataEnd.getMonth()
+  const lastYear = dataEnd.getFullYear()
+  
+  // Current window
+  const currentEndMonth = lastMonth
+  const currentEndYear = lastYear
+  const currentEndDate = new Date(currentEndYear, currentEndMonth + 1, 0)
+  const currentStartDate = new Date(currentEndYear, currentEndMonth - windowMonths + 1, 1)
+  
+  // Previous window
+  const previousEndMonth = currentEndMonth - windowMonths
+  const previousEndYear = currentEndYear + Math.floor(previousEndMonth / 12)
+  const normalizedPrevEndMonth = ((previousEndMonth % 12) + 12) % 12
+  const previousEndDate = new Date(previousEndYear, normalizedPrevEndMonth + 1, 0)
+  const previousStartDate = new Date(previousEndYear, normalizedPrevEndMonth - windowMonths + 1, 1)
+  
+  const formatDate = (date: Date) => {
+    const y = date.getFullYear()
+    const m = String(date.getMonth() + 1).padStart(2, '0')
+    const d = String(date.getDate()).padStart(2, '0')
+    return `${y}-${m}-${d}`
+  }
+  
+  const formatDateYYYYMMDD = (date: Date) => {
+    const y = date.getFullYear()
+    const m = String(date.getMonth() + 1).padStart(2, '0')
+    const d = String(date.getDate()).padStart(2, '0')
+    return parseInt(`${y}${m}${d}`)
+  }
+  
+  const currentStartYYYYMMDD = formatDateYYYYMMDD(currentStartDate)
+  const currentEndYYYYMMDD = formatDateYYYYMMDD(currentEndDate)
+  const previousStartYYYYMMDD = formatDateYYYYMMDD(previousStartDate)
+  const previousEndYYYYMMDD = formatDateYYYYMMDD(previousEndDate)
+  
+  const currentData = dailyData.filter(d => {
+    const dateNum = parseInt(d.date)
+    return dateNum >= currentStartYYYYMMDD && dateNum <= currentEndYYYYMMDD
+  })
+  
+  const previousData = dailyData.filter(d => {
+    const dateNum = parseInt(d.date)
+    return dateNum >= previousStartYYYYMMDD && dateNum <= previousEndYYYYMMDD
+  })
+  
+  const currentSum = currentData.reduce((sum, d) => sum + valueExtractor(d), 0)
+  const previousSum = previousData.reduce((sum, d) => sum + valueExtractor(d), 0)
+  
+  const currentAvg = currentData.length > 0 ? currentSum / windowMonths : 0
+  const previousAvg = previousData.length > 0 ? previousSum / windowMonths : 0
+  
+  return {
+    current: currentAvg,
+    previous: previousAvg,
+    dates: {
+      currentStart: formatDate(currentStartDate),
+      currentEnd: formatDate(currentEndDate),
+      previousStart: formatDate(previousStartDate),
+      previousEnd: formatDate(previousEndDate)
+    }
+  }
+}
+
+/**
  * Fetch Google Analytics dashboard data
  * Uses cache when available to reduce API calls
  * @param datasourceId - The datasource ID
@@ -91,6 +204,9 @@ export async function fetchGADashboardData(
       previousMonthOrganicConversions: trafficData.previousMonthOrganicConversions,
       dateRanges: trafficData.dateRanges
     }
+    
+    // Calculate and log KPI comparisons
+    calculateAndLogKPIComparisons(trafficData.dailyData, endDateStr)
     
     // Save to cache (fire and forget - don't wait)
     saveDashboardCache(datasourceId, propertyName, startDateStr, endDateStr, dashboardData)

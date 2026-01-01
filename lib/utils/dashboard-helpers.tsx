@@ -389,4 +389,3 @@ export const createSEMrushTooltip = (formatNumberFn: (num: number) => string) =>
   
   return CustomTooltip
 }
-
