@@ -27,7 +27,6 @@ export interface GAKPICardData {
 }
 
 export interface GADashboardData {
-  propertyName: string
   displayName: string
   timeZone: string
   currencyCode: string
@@ -330,7 +329,6 @@ export async function fetchGADashboardData(
     })
     
     const dashboardData: GADashboardData = {
-      propertyName: propertyName,
       displayName: property.display_name,
       timeZone: property.time_zone,
       currencyCode: property.currency_code,

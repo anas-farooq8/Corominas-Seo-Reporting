@@ -5,7 +5,6 @@ import { fetchGALandingPagesData, type GALandingPagesResponse, type GALandingPag
 import { getCachedDashboardData, saveDashboardCache } from "@/lib/cache/dashboard-cache"
 
 export interface GALandingPagesDashboardData {
-  propertyName: string
   displayName: string
   timeZone: string
   currencyCode: string
@@ -76,7 +75,6 @@ export async function fetchGALandingPagesDashboard(
     const landingPagesData = await fetchGALandingPagesData(propertyId)
 
     const dashboardData: GALandingPagesDashboardData = {
-      propertyName: propertyName,
       displayName: property.display_name,
       timeZone: property.time_zone,
       currencyCode: property.currency_code,
