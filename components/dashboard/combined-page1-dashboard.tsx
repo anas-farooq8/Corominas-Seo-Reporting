@@ -145,6 +145,7 @@ export function CombinedPage1Dashboard({ googleAnalyticsId, semrushId }: Combine
     
     return {
       title: gaData ? gaData.displayName : semrushData?.domain,
+      subtitle: gaData && semrushData ? semrushData.domain : undefined, // Show domain when both exist
       timeZone: gaData?.timeZone,
       currencyCode: gaData?.currencyCode
     }
@@ -191,6 +192,11 @@ export function CombinedPage1Dashboard({ googleAnalyticsId, semrushId }: Combine
           <h2 className="text-lg sm:text-xl md:text-2xl font-bold text-foreground">
             {metadata.title}
           </h2>
+          {metadata.subtitle && (
+            <p className="text-sm text-muted-foreground mt-1">
+              {metadata.subtitle}
+            </p>
+          )}
           <div className="flex flex-col gap-1 mt-1.5 sm:mt-2">
             {metadata.timeZone && (
               <div className="flex items-center gap-2 text-xs sm:text-sm text-muted-foreground">

@@ -295,6 +295,10 @@ export function Page4LandingPagesDashboard({
               <span className="font-medium">Time Zone:</span>
               <span className="truncate">{data.timeZone}</span>
             </div>
+            <div className="flex items-center gap-2 text-xs sm:text-sm text-muted-foreground">
+              <span className="font-medium">Currency:</span>
+              <span className="truncate">{data.currencyCode}</span>
+            </div>
           </div>
         </div>
       )}

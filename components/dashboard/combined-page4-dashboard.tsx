@@ -146,6 +146,7 @@ export function CombinedPage4Dashboard({ googleAnalyticsId, searchConsoleId }: C
     if (gaData) {
       return {
         title: gaData.displayName,
+        subtitle: gaData && gscData ? gscData.siteUrl : undefined, // Show siteUrl when both exist
         timeZone: gaData.timeZone,
         currencyCode: gaData.currencyCode
       }
@@ -196,6 +197,11 @@ export function CombinedPage4Dashboard({ googleAnalyticsId, searchConsoleId }: C
           <h2 className="text-lg sm:text-xl md:text-2xl font-bold text-foreground">
             {metadata.title}
           </h2>
+          {metadata.subtitle && (
+            <p className="text-sm text-muted-foreground mt-1">
+              {metadata.subtitle}
+            </p>
+          )}
           <div className="flex flex-col gap-1 mt-1.5 sm:mt-2">
             {metadata.timeZone && (
               <div className="flex items-center gap-2 text-xs sm:text-sm text-muted-foreground">
