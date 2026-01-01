@@ -24,18 +24,18 @@ interface Page4LandingPagesDashboardProps {
 type SortColumn = 'sessions' | 'conversions' | 'conversionRate'
 type SortDirection = 'asc' | 'desc'
 
-// Color palette for the chart lines
+// Color palette for the chart lines - optimized for distinct visibility
 const CHART_COLORS = [
-  '#ef4444', // red
+  '#3b82f6', // blue - distinct from others
+  '#22c55e', // green - distinct from others
+  '#ef4444', // red - distinct from others
+  '#8b5cf6', // violet/purple
   '#f97316', // orange
-  '#f59e0b', // amber
-  '#3b82f6', // blue
   '#06b6d4', // cyan
-  '#8b5cf6', // violet
-  '#22c55e', // green
-  '#ec4899', // pink
-  '#eab308', // yellow
-  '#14b8a6', // teal
+  '#d946ef', // fuchsia
+  '#f59e0b', // amber
+  '#6366f1', // indigo
+  '#84cc16', // lime
 ]
 
 export function Page4LandingPagesDashboard({ 
