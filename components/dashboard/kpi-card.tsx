@@ -18,6 +18,7 @@ interface KPICardProps {
     isIncrease: boolean
   }
   comparisonLabel?: string // e.g., "3-month comparison"
+  formatValue?: (value: number) => string // Optional custom formatter
 }
 
 const colorClasses = {
@@ -48,8 +49,13 @@ export const KPICard = memo(function KPICard({
   colorScheme,
   percentageChange,
   comparisonLabel,
+  formatValue,
 }: KPICardProps) {
   const colors = colorClasses[colorScheme]
+  
+  // Use custom formatter if provided, otherwise use default formatNumber
+  const displayValue = formatValue ? formatValue(currentValue) : formatNumber(currentValue)
+  const displayPrevious = formatValue ? formatValue(previousValue) : formatNumber(previousValue)
 
   return (
     <Card className={`border-2 ${colors.border} ${colors.bg}`}>
@@ -62,7 +68,7 @@ export const KPICard = memo(function KPICard({
       <CardContent className="pb-0.5 sm:pb-1 px-3 sm:px-4 pt-0.5">
         <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-0.5 sm:gap-1.5">
           <div className={`text-lg sm:text-2xl md:text-3xl font-bold ${colors.text}`}>
-            {formatNumber(currentValue)}
+            {displayValue}
           </div>
           <div className="flex flex-col items-end gap-0">
             <div
@@ -85,7 +91,7 @@ export const KPICard = memo(function KPICard({
           </div>
         </div>
         <p className="text-[10px] sm:text-xs text-muted-foreground mt-0.5 sm:mt-1 leading-tight">
-          <span className="font-medium">{currentLabel}:</span> {formatNumber(currentValue)} • <span className="font-medium">{previousLabel}:</span> {formatNumber(previousValue)}
+          <span className="font-medium">{currentLabel}:</span> {displayValue} • <span className="font-medium">{previousLabel}:</span> {displayPrevious}
         </p>
       </CardContent>
     </Card>

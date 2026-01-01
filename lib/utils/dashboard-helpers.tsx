@@ -178,9 +178,10 @@ export interface ComparisonWindow {
 
 /**
  * Calculate average for a time window from daily data
+ * Fixed: Proper month-based windows without date rollover issues
  * @param dailyData - Array of daily data with date field (YYYYMMDD format)
  * @param valueExtractor - Function to extract the value from each daily data point
- * @param endDate - End date string (YYYY-MM-DD)
+ * @param endDate - End date string (YYYY-MM-DD) - the last day of the data period
  * @param monthsBack - Number of months to go back from endDate
  * @param windowMonths - Number of months in the window
  */
@@ -191,27 +192,37 @@ export const calculateWindowAverage = <T extends { date: string }>(
   monthsBack: number,
   windowMonths: number
 ): number => {
-  // Calculate start and end dates for the window
-  const end = new Date(endDate)
-  end.setDate(1) // First day of the end month
-  end.setMonth(end.getMonth() - monthsBack) // Go back monthsBack months
+  // endDate is the last day of the data period (e.g., 2025-12-31)
+  const dataEnd = new Date(endDate)
   
-  const start = new Date(end)
-  start.setMonth(start.getMonth() - windowMonths) // Go back windowMonths more
+  // Get the month and year of the last complete month
+  const lastMonth = dataEnd.getMonth() // 11 for December
+  const lastYear = dataEnd.getFullYear() // 2025
   
-  // Convert to YYYYMMDD format for comparison
+  // Calculate which month we want (going back monthsBack months from the last month)
+  const targetMonth = lastMonth - monthsBack
+  const targetYear = lastYear + Math.floor(targetMonth / 12)
+  const normalizedMonth = ((targetMonth % 12) + 12) % 12
+  
+  // Get the last day of the target month (end of window)
+  const windowEndLastDay = new Date(targetYear, normalizedMonth + 1, 0)
+  
+  // Calculate the start of the window (go back windowMonths-1 from target month)
+  const startMonth = normalizedMonth - windowMonths + 1
+  const startYear = targetYear + Math.floor(startMonth / 12)
+  const normalizedStartMonth = ((startMonth % 12) + 12) % 12
+  const windowStart = new Date(startYear, normalizedStartMonth, 1)
+  
   const startYYYYMMDD = parseInt(
-    start.getFullYear() + 
-    String(start.getMonth() + 1).padStart(2, '0') + 
-    '01'
+    windowStart.getFullYear() + 
+    String(windowStart.getMonth() + 1).padStart(2, '0') + 
+    String(windowStart.getDate()).padStart(2, '0')
   )
   
-  // Get last day of the end month
-  const endLastDay = new Date(end.getFullYear(), end.getMonth() + 1, 0)
   const endYYYYMMDD = parseInt(
-    endLastDay.getFullYear() + 
-    String(endLastDay.getMonth() + 1).padStart(2, '0') + 
-    String(endLastDay.getDate()).padStart(2, '0')
+    windowEndLastDay.getFullYear() + 
+    String(windowEndLastDay.getMonth() + 1).padStart(2, '0') + 
+    String(windowEndLastDay.getDate()).padStart(2, '0')
   )
   
   // Filter data within the window and calculate sum

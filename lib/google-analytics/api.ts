@@ -10,13 +10,16 @@ const SCOPES = ["https://www.googleapis.com/auth/analytics.readonly"]
 
 /**
  * Calculate date ranges for GA reports (12 months of data)
- * Similar to Mangools: last completed month going back 12 months
+ * Returns the last 12 completed months (ending with the previous month)
  */
 export function calculateGADateRanges() {
   const today = new Date()
   
-  // Last completed month end date (last day of previous month)
-  const endDate = new Date(today.getFullYear(), today.getMonth(), 0)
+  // Get the first day of the current month
+  const currentMonthStart = new Date(today.getFullYear(), today.getMonth(), 1)
+  
+  // Go back one day to get to the last day of the previous month
+  const endDate = new Date(currentMonthStart.getTime() - 1)
   
   // Start date: 12 months before the end date (first day of that month)
   const startDate = new Date(endDate.getFullYear(), endDate.getMonth() - 11, 1)

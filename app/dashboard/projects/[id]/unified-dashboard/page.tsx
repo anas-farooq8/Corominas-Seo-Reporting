@@ -8,9 +8,9 @@ import { ErrorDisplay } from "@/components/ui/error-display"
 import { ArrowLeft } from "lucide-react"
 import type { getDataSourcesWithRespectiveData } from "@/lib/supabase/types"
 import { CombinedPage1Dashboard } from "@/components/dashboard/combined-page1-dashboard"
+import { CombinedPage4Dashboard } from "@/components/dashboard/combined-page4-dashboard"
 import { MangoolsDashboardPage } from "@/components/dashboard/mangools-dashboard-page"
 import { Page3Dashboard } from "@/components/dashboard/page3-dashboard"
-import { Page4LandingPagesDashboard } from "@/components/dashboard/page4-landing-pages-dashboard"
 
 interface PageConfig {
   id: string
@@ -77,13 +77,14 @@ export default function UnifiedDashboardPage({ params }: { params: Promise<{ id:
         datasourceId: ""
       })
       
-      // Page 4: Google Analytics Landing Pages
-      if (googleAnalyticsDatasource) {
+      // Page 4: Google Analytics Landing Pages + Search Console
+      const searchConsoleDatasource = data.datasources?.find((ds: any) => ds.type === "google_search_console")
+      if (googleAnalyticsDatasource || searchConsoleDatasource) {
         connectedPages.push({
           id: "page-4",
           label: "Page 4",
-          datasourceType: "google_analytics_landing_pages",
-          datasourceId: googleAnalyticsDatasource.id
+          datasourceType: "combined_page4",
+          datasourceId: googleAnalyticsDatasource?.id || searchConsoleDatasource?.id || ""
         })
       }
       
@@ -182,9 +183,17 @@ export default function UnifiedDashboardPage({ params }: { params: Promise<{ id:
             {activePageConfig?.datasourceType === "page3" && (
               <Page3Dashboard />
             )}
-            {activePageConfig?.datasourceType === "google_analytics_landing_pages" && (
-              <Page4LandingPagesDashboard datasourceId={activePageConfig.datasourceId} />
-            )}
+            {activePageConfig?.datasourceType === "combined_page4" && (() => {
+              const googleAnalyticsDs = datasources.find((ds: any) => ds.type === "google_analytics")
+              const searchConsoleDs = datasources.find((ds: any) => ds.type === "google_search_console")
+              
+              return (
+                <CombinedPage4Dashboard 
+                  googleAnalyticsId={googleAnalyticsDs?.id}
+                  searchConsoleId={searchConsoleDs?.id}
+                />
+              )
+            })()}
           </>
         )}
       </div>
