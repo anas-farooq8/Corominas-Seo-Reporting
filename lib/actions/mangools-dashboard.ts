@@ -28,7 +28,6 @@ export interface MangoolsKPICardData {
 
 export interface MangoolsDashboardData {
   domain: string
-  trackingId: string
   location: string
   dateRanges: {
     monthAStart: string
@@ -150,7 +149,6 @@ export async function fetchMangoolsDashboardData(
 
     const dashboardData: MangoolsDashboardData = {
       domain: trackingDetail.tracking.domain,
-      trackingId: trackingId,
       location: trackingDetail.tracking.location.label,
       dateRanges: {
         monthAStart: fromA,
