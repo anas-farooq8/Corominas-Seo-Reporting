@@ -24,7 +24,6 @@ export interface MangoolsKPICardData {
   totalKeywords: number
   topWinnersCount: number
   newRankingsCount: number
-  controlledLosersCount: number
 }
 
 export interface MangoolsDashboardData {
@@ -132,8 +131,7 @@ export async function fetchMangoolsDashboardData(
     const kpiCards: MangoolsKPICardData = {
       totalKeywords: trackingDetail.keywords.length,
       topWinnersCount: allTopWinners.length,
-      newRankingsCount: allNewRankings.length,
-      controlledLosersCount: allControlledLosers.length
+      newRankingsCount: allNewRankings.length
     }
     
     // Store only top 5 for winners, losers, and new rankings
