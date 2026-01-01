@@ -65,6 +65,41 @@ export function MangoolsDashboardPage({ datasourceId }: MangoolsDashboardPagePro
     )
   }
 
+  const topWinnersCount = data.topWinners.length
+  const newRankingsCount = data.newRankings.length
+  const totalKeywordsCount = data.totalKeywords
+
+  // Build array of KPI cards with their values (only include non-zero values)
+  const kpiCards = []
+  if (totalKeywordsCount > 0) {
+    kpiCards.push({
+      label: "Total Keywords in Tracking",
+      value: totalKeywordsCount,
+      color: "default"
+    })
+  }
+  if (topWinnersCount > 0) {
+    kpiCards.push({
+      label: "Top Winners",
+      value: topWinnersCount,
+      color: "green"
+    })
+  }
+  if (newRankingsCount > 0) {
+    kpiCards.push({
+      label: "New Rankings",
+      value: newRankingsCount,
+      color: "blue"
+    })
+  }
+
+  // Determine grid classes based on number of visible cards
+  const getDesktopGridClasses = () => {
+    if (kpiCards.length === 1) return "grid-cols-1"
+    if (kpiCards.length === 2) return "grid-cols-2"
+    return "grid-cols-3"
+  }
+
   return (
     <div className="space-y-4 sm:space-y-6 p-3 sm:p-4 md:p-6 lg:p-8">
       {/* Domain Info */}
@@ -86,37 +121,42 @@ export function MangoolsDashboardPage({ datasourceId }: MangoolsDashboardPagePro
         </div>
       </div>
 
-      {/* Summary Stats */}
-      <div className="space-y-3">
-        {/* First row - Total Keywords (full width on mobile) */}
-        <div className="grid gap-3 sm:gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
-          <div className="p-3 sm:p-4 border rounded-lg bg-card sm:col-span-2 lg:col-span-1">
-            <div className="text-xs sm:text-sm text-muted-foreground">Total Keywords in Tracking</div>
-            <div className="text-xl sm:text-2xl font-bold mt-1">{data.totalKeywords}</div>
+      {/* Summary Stats - Only render if there are cards to show */}
+      {kpiCards.length > 0 && (
+        <div className="space-y-3">
+          {/* Desktop view - Single row grid */}
+          <div className={`hidden sm:grid gap-3 sm:gap-4 ${getDesktopGridClasses()}`}>
+            {kpiCards.map((card, index) => (
+              <div key={index} className="p-3 sm:p-4 border rounded-lg bg-card">
+                <div className="text-xs sm:text-sm text-muted-foreground">{card.label}</div>
+                <div className={`text-xl sm:text-2xl font-bold mt-1 ${
+                  card.color === "green" ? "text-green-600" : 
+                  card.color === "blue" ? "text-blue-600" : 
+                  ""
+                }`}>
+                  {card.value}
+                </div>
+              </div>
+            ))}
           </div>
-          {/* Show other cards on desktop */}
-          <div className="hidden sm:block p-3 sm:p-4 border rounded-lg bg-card">
-            <div className="text-xs sm:text-sm text-muted-foreground">Top Winners</div>
-            <div className="text-xl sm:text-2xl font-bold text-green-600 mt-1">{data.topWinners.length}</div>
-          </div>
-          <div className="hidden sm:block p-3 sm:p-4 border rounded-lg bg-card">
-            <div className="text-xs sm:text-sm text-muted-foreground">New Rankings</div>
-            <div className="text-xl sm:text-2xl font-bold text-blue-600 mt-1">{data.newRankings.length}</div>
+
+          {/* Mobile view - 2 columns if 2+ cards, 1 column if only 1 card */}
+          <div className={`grid gap-3 sm:hidden ${kpiCards.length === 1 ? "grid-cols-1" : "grid-cols-2"}`}>
+            {kpiCards.map((card, index) => (
+              <div key={index} className="p-3 border rounded-lg bg-card">
+                <div className="text-xs text-muted-foreground">{card.label}</div>
+                <div className={`text-xl font-bold mt-1 ${
+                  card.color === "green" ? "text-green-600" : 
+                  card.color === "blue" ? "text-blue-600" : 
+                  ""
+                }`}>
+                  {card.value}
+                </div>
+              </div>
+            ))}
           </div>
         </div>
-        
-        {/* Second row - Other cards side by side (mobile only) */}
-        <div className="grid gap-3 grid-cols-2 sm:hidden">
-          <div className="p-3 border rounded-lg bg-card">
-            <div className="text-xs text-muted-foreground">Top Winners</div>
-            <div className="text-xl font-bold text-green-600 mt-1">{data.topWinners.length}</div>
-          </div>
-          <div className="p-3 border rounded-lg bg-card">
-            <div className="text-xs text-muted-foreground">New Rankings</div>
-            <div className="text-xl font-bold text-blue-600 mt-1">{data.newRankings.length}</div>
-          </div>
-        </div>
-      </div>
+      )}
 
       {/* Top Keywords and Top Winners side by side */}
       <div className="grid gap-4 sm:gap-6 grid-cols-1 lg:grid-cols-2">
