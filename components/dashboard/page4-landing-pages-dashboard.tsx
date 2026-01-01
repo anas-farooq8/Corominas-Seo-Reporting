@@ -128,16 +128,14 @@ export function Page4LandingPagesDashboard({
     }))
   }, [data])
 
-  // Compute totals dynamically from topLandingPages (all landing pages, not just top 10)
-  // This matches how we compute conversionRate - derived, not stored
+  // Use totals from API (computed from ALL landing pages, not just top 10)
   const totals = useMemo(() => {
     if (!data) return { sessions: 0, conversions: 0 }
     
-    // Sum up all landing pages (not just the displayed ones)
-    const sessions = data.topLandingPages.reduce((sum, lp) => sum + lp.sessions, 0)
-    const conversions = data.topLandingPages.reduce((sum, lp) => sum + lp.conversions, 0)
-    
-    return { sessions, conversions }
+    return { 
+      sessions: data.totalSessions, 
+      conversions: data.totalConversions 
+    }
   }, [data])
 
   // Sort landing pages based on selected column

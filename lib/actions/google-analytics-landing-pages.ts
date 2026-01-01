@@ -10,6 +10,8 @@ export interface GALandingPagesDashboardData {
   currencyCode: string
   dailyData: GADailyLandingPageData[]
   topLandingPages: GALandingPageData[]
+  totalSessions: number
+  totalConversions: number
 }
 
 /**
@@ -77,7 +79,9 @@ export async function fetchGALandingPagesDashboard(
       timeZone: property.time_zone,
       currencyCode: property.currency_code,
       dailyData: landingPagesData.dailyData,
-      topLandingPages: landingPagesData.topLandingPages
+      topLandingPages: landingPagesData.topLandingPages,
+      totalSessions: landingPagesData.totalSessions,
+      totalConversions: landingPagesData.totalConversions
     }
     
     // Save to cache (fire and forget - don't wait)
