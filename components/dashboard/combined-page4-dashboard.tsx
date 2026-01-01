@@ -140,14 +140,20 @@ export function CombinedPage4Dashboard({ googleAnalyticsId, searchConsoleId }: C
 
   // Determine metadata display
   const metadata = useMemo(() => {
-    const displayMetadata = gaData || gscData
-    if (!displayMetadata) return null
+    if (!gaData && !gscData) return null
     
+    // If GA data is present, use GA metadata (has displayName, timeZone, currencyCode)
+    if (gaData) {
+      return {
+        title: gaData.displayName,
+        timeZone: gaData.timeZone,
+        currencyCode: gaData.currencyCode
+      }
+    }
+    
+    // If only GSC data is present, use siteUrl (no timeZone or currency for GSC)
     return {
-      title: gaData ? gaData.displayName : gscData?.siteUrl,
-      timeZone: gaData?.timeZone,
-      startDate: gaData ? gaData.dateRanges.startDate : gscData?.dateRanges.startDate,
-      endDate: gaData ? gaData.dateRanges.endDate : gscData?.dateRanges.endDate
+      title: gscData?.siteUrl || ''
     }
   }, [gaData, gscData])
 
@@ -197,12 +203,10 @@ export function CombinedPage4Dashboard({ googleAnalyticsId, searchConsoleId }: C
                 <span className="truncate">{metadata.timeZone}</span>
               </div>
             )}
-            {metadata.startDate && metadata.endDate && (
+            {metadata.currencyCode && (
               <div className="flex items-center gap-2 text-xs sm:text-sm text-muted-foreground">
-                <Calendar className="h-3.5 w-3.5 sm:h-4 sm:w-4 flex-shrink-0" />
-                <span className="text-[11px] sm:text-xs md:text-sm">
-                  {formatDateRange(metadata.startDate)} - {formatDateRange(metadata.endDate)}
-                </span>
+                <span className="font-medium">Currency:</span>
+                <span className="truncate">{metadata.currencyCode}</span>
               </div>
             )}
           </div>

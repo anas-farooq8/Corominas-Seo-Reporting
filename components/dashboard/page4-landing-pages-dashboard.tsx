@@ -295,12 +295,6 @@ export function Page4LandingPagesDashboard({
               <span className="font-medium">Time Zone:</span>
               <span className="truncate">{data.timeZone}</span>
             </div>
-            <div className="flex items-center gap-2 text-xs sm:text-sm text-muted-foreground">
-              <Calendar className="h-3.5 w-3.5 sm:h-4 sm:w-4 flex-shrink-0" />
-              <span className="text-[11px] sm:text-xs md:text-sm">
-                {formatDateRange(data.dateRanges.startDate)} - {formatDateRange(data.dateRanges.endDate)}
-              </span>
-            </div>
           </div>
         </div>
       )}

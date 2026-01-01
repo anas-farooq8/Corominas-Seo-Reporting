@@ -46,10 +46,6 @@ export interface GSCKPICardData {
 export interface GSCDashboardData {
   siteUrl: string
   kpiCards: GSCKPICardData
-  dateRanges: {
-    startDate: string
-    endDate: string
-  }
 }
 
 /**
@@ -413,8 +409,7 @@ export async function fetchGSCDashboardData(
     
     const dashboardData: GSCDashboardData = {
       siteUrl: siteUrl,
-      kpiCards: kpiCards,
-      dateRanges: gscData.dateRanges
+      kpiCards: kpiCards
     }
     
     // Save to cache (fire and forget - don't wait)

@@ -13,10 +13,6 @@ export interface GALandingPagesDashboardData {
   topLandingPages: GALandingPageData[]
   totalSessions: number
   totalConversions: number
-  dateRanges: {
-    startDate: string
-    endDate: string
-  }
 }
 
 /**
@@ -87,8 +83,7 @@ export async function fetchGALandingPagesDashboard(
       dailyData: landingPagesData.dailyData,
       topLandingPages: landingPagesData.topLandingPages,
       totalSessions: landingPagesData.totalSessions,
-      totalConversions: landingPagesData.totalConversions,
-      dateRanges: landingPagesData.dateRanges
+      totalConversions: landingPagesData.totalConversions
     }
     
     // Save to cache (fire and forget - don't wait)

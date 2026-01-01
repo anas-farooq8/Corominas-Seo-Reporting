@@ -140,20 +140,67 @@ export function MangoolsDashboardPage({ datasourceId }: MangoolsDashboardPagePro
             ))}
           </div>
 
-          {/* Mobile view - 2 columns if 2+ cards, 1 column if only 1 card */}
-          <div className={`grid gap-3 sm:hidden ${kpiCards.length === 1 ? "grid-cols-1" : "grid-cols-2"}`}>
-            {kpiCards.map((card, index) => (
-              <div key={index} className="p-3 border rounded-lg bg-card">
-                <div className="text-xs text-muted-foreground">{card.label}</div>
-                <div className={`text-xl font-bold mt-1 ${
-                  card.color === "green" ? "text-green-600" : 
-                  card.color === "blue" ? "text-blue-600" : 
-                  ""
-                }`}>
-                  {card.value}
-                </div>
+          {/* Mobile view */}
+          <div className="grid gap-3 sm:hidden">
+            {kpiCards.length === 2 ? (
+              // If only 2 cards, show them side by side
+              <div className="grid gap-3 grid-cols-2">
+                {kpiCards.map((card, index) => (
+                  <div key={index} className="p-3 border rounded-lg bg-card">
+                    <div className="text-xs text-muted-foreground">{card.label}</div>
+                    <div className={`text-xl font-bold mt-1 ${
+                      card.color === "green" ? "text-green-600" : 
+                      card.color === "blue" ? "text-blue-600" : 
+                      ""
+                    }`}>
+                      {card.value}
+                    </div>
+                  </div>
+                ))}
               </div>
-            ))}
+            ) : kpiCards.length === 3 ? (
+              // If 3 cards, first card full width, other 2 in second row side by side
+              <>
+                <div className="p-3 border rounded-lg bg-card">
+                  <div className="text-xs text-muted-foreground">{kpiCards[0].label}</div>
+                  <div className={`text-xl font-bold mt-1 ${
+                    kpiCards[0].color === "green" ? "text-green-600" : 
+                    kpiCards[0].color === "blue" ? "text-blue-600" : 
+                    ""
+                  }`}>
+                    {kpiCards[0].value}
+                  </div>
+                </div>
+                <div className="grid gap-3 grid-cols-2">
+                  {kpiCards.slice(1).map((card, index) => (
+                    <div key={index + 1} className="p-3 border rounded-lg bg-card">
+                      <div className="text-xs text-muted-foreground">{card.label}</div>
+                      <div className={`text-xl font-bold mt-1 ${
+                        card.color === "green" ? "text-green-600" : 
+                        card.color === "blue" ? "text-blue-600" : 
+                        ""
+                      }`}>
+                        {card.value}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </>
+            ) : (
+              // If only 1 card, show it full width
+              kpiCards.map((card, index) => (
+                <div key={index} className="p-3 border rounded-lg bg-card">
+                  <div className="text-xs text-muted-foreground">{card.label}</div>
+                  <div className={`text-xl font-bold mt-1 ${
+                    card.color === "green" ? "text-green-600" : 
+                    card.color === "blue" ? "text-blue-600" : 
+                    ""
+                  }`}>
+                    {card.value}
+                  </div>
+                </div>
+              ))
+            )}
           </div>
         </div>
       )}
