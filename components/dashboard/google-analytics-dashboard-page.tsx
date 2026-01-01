@@ -4,20 +4,15 @@ import { useState, useEffect, useMemo, useCallback } from "react"
 import { LoadingSpinner } from "@/components/ui/loading-spinner"
 import { ErrorDisplay } from "@/components/ui/error-display"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Calendar, TrendingUp, MousePointerClick } from "lucide-react"
+import { TrendingUp, MousePointerClick } from "lucide-react"
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from "recharts"
 import type { GADashboardData } from "@/lib/actions/google-analytics-dashboard"
 import {
   formatNumber,
-  calculatePercentageChange,
-  getMonthYear,
-  getPreviousMonthYear,
   formatDateForDisplay,
   formatFullDate,
-  formatDateRange,
   CustomGATrafficLegend,
-  CustomGASessionsLegend,
-  selectBestComparisonWindow
+  CustomGASessionsLegend
 } from "@/lib/utils/dashboard-helpers"
 import { KPICard } from "./kpi-card"
 
@@ -80,7 +75,7 @@ export function GoogleAnalyticsDashboardPage({
     }
   }, [datasourceId, externalData])
 
-  // Memoize chart data
+  // Memoize chart data - full data (larger period) for Sessions vs Conversions chart
   const chartData = useMemo(() => {
     if (!data) return []
     return data.dailyData.map(day => ({
@@ -92,49 +87,112 @@ export function GoogleAnalyticsDashboardPage({
       organicConversions: day.organicConversions
     }))
   }, [data])
-
-  // Memoize KPI calculations - using best comparison window
-  const sessionsKPI = useMemo(() => {
-    if (!data) return null
+  
+  // Create filtered chart data for Total Traffic vs Organic Traffic (uses sessions period)
+  const trafficChartData = useMemo(() => {
+    if (!data || !data.kpiCards || !data.chartPeriods) return chartData
     
-    const bestWindow = selectBestComparisonWindow(
-      data.dailyData,
-      (item) => item.organicSessions,
-      data.dateRanges.endDate
-    )
+    const sessionsPeriod = data.kpiCards.organicSessions.periodType
+    const conversionsPeriod = data.kpiCards.organicConversions.periodType
+    
+    // If both periods are the same, use all data
+    if (sessionsPeriod === conversionsPeriod) return chartData
+    
+    // If sessions period is smaller, filter to show only sessions period
+    const monthsMap: Record<'1-month' | '3-month' | '6-month', number> = { 
+      '1-month': 1, 
+      '3-month': 3, 
+      '6-month': 6 
+    }
+    const sessionsMonths = monthsMap[sessionsPeriod]
+    const conversionsMonths = monthsMap[conversionsPeriod]
+    
+    if (sessionsMonths >= conversionsMonths) return chartData
+    
+    // Calculate sessions period start date from the end of the data
+    // Use the last date in dailyData as the end date
+    if (data.dailyData.length === 0) return chartData
+    
+    const lastDataPoint = data.dailyData[data.dailyData.length - 1]
+    const endDateStr = lastDataPoint.date
+    
+    const endYear = parseInt(endDateStr.substring(0, 4))
+    const endMonth = parseInt(endDateStr.substring(4, 6)) - 1
+    const endDay = parseInt(endDateStr.substring(6, 8))
+    const endDate = new Date(endYear, endMonth, endDay)
+    
+    const startDate = new Date(endDate.getFullYear(), endDate.getMonth() - sessionsMonths + 1, 1)
+    
+    const formatDateYYYYMMDD = (date: Date) => {
+      const y = date.getFullYear()
+      const m = String(date.getMonth() + 1).padStart(2, '0')
+      const d = String(date.getDate()).padStart(2, '0')
+      return parseInt(`${y}${m}${d}`)
+    }
+    
+    const startYYYYMMDD = formatDateYYYYMMDD(startDate)
+    const endYYYYMMDD = parseInt(endDateStr)
+    
+    // Filter to only show sessions period
+    return chartData.filter(d => {
+      const dateNum = parseInt(d.dateKey)
+      return dateNum >= startYYYYMMDD && dateNum <= endYYYYMMDD
+    })
+  }, [data, chartData])
+
+  // Memoize KPI calculations - using kpiCards from backend
+  const sessionsKPI = useMemo(() => {
+    if (!data || !data.kpiCards) return null
+    
+    const kpi = data.kpiCards.organicSessions
     
     return {
       change: {
-        change: bestWindow.change,
-        isIncrease: bestWindow.isIncrease
+        change: kpi.change,
+        isIncrease: kpi.isIncrease
       },
-      currentValue: Math.round(bestWindow.current),
-      previousValue: Math.round(bestWindow.previous),
-      currentLabel: `Last ${bestWindow.periodType === '1-month' ? 'Month' : bestWindow.periodType.replace('-month', ' Months')}`,
-      previousLabel: `Previous ${bestWindow.periodType === '1-month' ? 'Month' : bestWindow.periodType.replace('-month', ' Months')}`,
-      comparisonLabel: bestWindow.periodLabel
+      currentValue: Math.round(kpi.current),
+      previousValue: Math.round(kpi.previous),
+      currentLabel: `Last ${kpi.periodType === '1-month' ? 'Month' : kpi.periodType.replace('-month', ' Months')}`,
+      previousLabel: `Previous ${kpi.periodType === '1-month' ? 'Month' : kpi.periodType.replace('-month', ' Months')}`,
+      comparisonLabel: kpi.periodLabel
     }
   }, [data])
 
   const conversionsKPI = useMemo(() => {
-    if (!data) return null
+    if (!data || !data.kpiCards) return null
     
-    const bestWindow = selectBestComparisonWindow(
-      data.dailyData,
-      (item) => item.organicConversions,
-      data.dateRanges.endDate
-    )
+    const kpi = data.kpiCards.organicConversions
     
     return {
       change: {
-        change: bestWindow.change,
-        isIncrease: bestWindow.isIncrease
+        change: kpi.change,
+        isIncrease: kpi.isIncrease
       },
-      currentValue: Math.round(bestWindow.current),
-      previousValue: Math.round(bestWindow.previous),
-      currentLabel: `Last ${bestWindow.periodType === '1-month' ? 'Month' : bestWindow.periodType.replace('-month', ' Months')}`,
-      previousLabel: `Previous ${bestWindow.periodType === '1-month' ? 'Month' : bestWindow.periodType.replace('-month', ' Months')}`,
-      comparisonLabel: bestWindow.periodLabel
+      currentValue: Math.round(kpi.current),
+      previousValue: Math.round(kpi.previous),
+      currentLabel: `Last ${kpi.periodType === '1-month' ? 'Month' : kpi.periodType.replace('-month', ' Months')}`,
+      previousLabel: `Previous ${kpi.periodType === '1-month' ? 'Month' : kpi.periodType.replace('-month', ' Months')}`,
+      comparisonLabel: kpi.periodLabel
+    }
+  }, [data])
+  
+  // Compute period labels for charts
+  const chartLabels = useMemo(() => {
+    if (!data || !data.chartPeriods) return {
+      trafficChart: 'Past 12 Months',
+      sessionsConversionsChart: 'Past 12 Months'
+    }
+    
+    const formatPeriod = (period: '1-month' | '3-month' | '6-month') => {
+      if (period === '1-month') return 'Past Month'
+      if (period === '3-month') return 'Past 3 Months'
+      return 'Past 6 Months'
+    }
+    
+    return {
+      trafficChart: formatPeriod(data.chartPeriods.trafficChart),
+      sessionsConversionsChart: formatPeriod(data.chartPeriods.sessionsConversionsChart)
     }
   }, [data])
 
@@ -170,10 +228,8 @@ export function GoogleAnalyticsDashboardPage({
               <span className="truncate">{data.timeZone}</span>
             </div>
             <div className="flex items-center gap-2 text-xs sm:text-sm text-muted-foreground">
-              <Calendar className="h-3.5 w-3.5 sm:h-4 sm:w-4 flex-shrink-0" />
-              <span className="text-[11px] sm:text-xs md:text-sm">
-                {formatDateRange(data.dateRanges.startDate)} - {formatDateRange(data.dateRanges.endDate)}
-              </span>
+              <span className="font-medium">Currency:</span>
+              <span className="truncate">{data.currencyCode}</span>
             </div>
           </div>
         </div>
@@ -211,7 +267,7 @@ export function GoogleAnalyticsDashboardPage({
       {/* Traffic Chart - Total vs Organic */}
       <Card>
         <CardHeader className="px-4 sm:px-6 py-2 sm:py-3">
-          <CardTitle className="text-base sm:text-lg md:text-xl">Total Traffic vs Organic Traffic (Past 12 Months)</CardTitle>
+          <CardTitle className="text-base sm:text-lg md:text-xl">Total Traffic vs Organic Traffic ({chartLabels.trafficChart})</CardTitle>
           <CardDescription className="text-xs sm:text-sm">
             This chart shows how many visitors come to your website each day. <strong>Total Traffic</strong> includes everyone who visits from any source (social media, ads, direct links, etc.). <strong>Organic Traffic</strong> shows visitors who found you through Google or other search engines by typing in keywords. The gap between these lines shows how much of your traffic comes from free search results versus paid or other sources. When organic traffic grows, it means more people are finding you naturally through search.
           </CardDescription>
@@ -219,7 +275,7 @@ export function GoogleAnalyticsDashboardPage({
         <CardContent className="px-2 sm:px-4 md:px-6 pb-0.5 sm:pb-0">
           {/* Mobile Chart */}
           <ResponsiveContainer width="100%" height={300} className="sm:hidden">
-            <LineChart data={chartData} margin={{ top: 2, right: 5, left: -5, bottom: 0 }}>
+            <LineChart data={trafficChartData} margin={{ top: 2, right: 5, left: -5, bottom: 0 }}>
               <CartesianGrid strokeDasharray="3 3" className="stroke-muted" opacity={0.3} />
               <XAxis
                 dataKey="date"
@@ -227,7 +283,7 @@ export function GoogleAnalyticsDashboardPage({
                 angle={-45}
                 textAnchor="end"
                 height={50}
-                interval={Math.floor(chartData.length / 6)}
+                interval={Math.floor(trafficChartData.length / 6)}
               />
               <YAxis tick={{ fontSize: 10 }} width={35} />
               <Tooltip
@@ -273,7 +329,7 @@ export function GoogleAnalyticsDashboardPage({
           </ResponsiveContainer>
           {/* Desktop Chart */}
           <ResponsiveContainer width="100%" height={450} className="hidden sm:block">
-            <LineChart data={chartData} margin={{ top: 2, right: 10, left: 0, bottom: 15 }}>
+            <LineChart data={trafficChartData} margin={{ top: 2, right: 10, left: 0, bottom: 15 }}>
               <CartesianGrid strokeDasharray="3 3" className="stroke-muted" opacity={0.3} />
               <XAxis
                 dataKey="date"
@@ -281,7 +337,7 @@ export function GoogleAnalyticsDashboardPage({
                 angle={-45}
                 textAnchor="end"
                 height={55}
-                interval={Math.floor(chartData.length / 12)}
+                interval={Math.floor(trafficChartData.length / 12)}
               />
               <YAxis tick={{ fontSize: 12 }} width={60} />
               <Tooltip
@@ -330,7 +386,7 @@ export function GoogleAnalyticsDashboardPage({
       {/* Organic Sessions vs Conversions Chart */}
       <Card>
         <CardHeader className="px-4 sm:px-6 py-2 sm:py-3">
-          <CardTitle className="text-base sm:text-lg md:text-xl">Organic Sessions vs Organic Conversions (Past 12 Months)</CardTitle>
+          <CardTitle className="text-base sm:text-lg md:text-xl">Organic Sessions vs Organic Conversions ({chartLabels.sessionsConversionsChart})</CardTitle>
           <CardDescription className="text-xs sm:text-sm">
             This chart tracks how well your website converts visitors into customers. <strong>Organic Sessions</strong> are visits from people who found you through Google search. <strong>Organic Conversions</strong> are when those visitors take a desired action (like making a purchase, filling out a form, or signing up). When conversions grow faster than sessions, it means your website is getting better at turning visitors into customers. If conversions stay flat while sessions grow, you may need to improve your website&apos;s ability to convert visitors.
           </CardDescription>

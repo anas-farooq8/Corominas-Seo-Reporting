@@ -35,13 +35,6 @@ export function calculateGADateRanges() {
   const startDateStr = formatDate(startDate)
   const endDateStr = formatDate(endDate)
   
-  console.log('[GA Date Ranges]', {
-    today: formatDate(today),
-    startDate: startDateStr,
-    endDate: endDateStr,
-    monthsIncluded: 12
-  })
-  
   return {
     startDate: startDateStr,
     endDate: endDateStr,
@@ -174,10 +167,6 @@ export interface GADailyTrafficData {
 
 export interface GATrafficResponse {
   dailyData: GADailyTrafficData[]
-  lastMonthOrganicSessions: number
-  lastMonthOrganicConversions: number
-  previousMonthOrganicSessions: number
-  previousMonthOrganicConversions: number
   dateRanges: {
     startDate: string
     endDate: string
@@ -277,52 +266,8 @@ export async function fetchGATrafficData(propertyId: string): Promise<GATrafficR
       // Convert to array and sort by date
       const dailyData = filledDailyTotals
       
-      // Calculate last month totals (last completed month)
-      const lastMonthStart = new Date(endDateObj.getFullYear(), endDateObj.getMonth(), 1)
-      const lastMonthEnd = endDateObj
-      
-      const lastMonthStartKey = formatDateKey(lastMonthStart)
-      const lastMonthEndKey = formatDateKey(lastMonthEnd)
-      
-      // Calculate previous month totals (month before last month)
-      const previousMonthStart = new Date(endDateObj.getFullYear(), endDateObj.getMonth() - 1, 1)
-      const previousMonthEnd = new Date(endDateObj.getFullYear(), endDateObj.getMonth(), 0) // Last day of previous month
-      
-      const previousMonthStartKey = formatDateKey(previousMonthStart)
-      const previousMonthEndKey = formatDateKey(previousMonthEnd)
-      
-      let lastMonthOrganicSessions = 0
-      let lastMonthOrganicConversions = 0
-      let previousMonthOrganicSessions = 0
-      let previousMonthOrganicConversions = 0
-      
-      dailyData.forEach(day => {
-        // Last month
-        if (day.date >= lastMonthStartKey && day.date <= lastMonthEndKey) {
-          lastMonthOrganicSessions += day.organicSessions
-          lastMonthOrganicConversions += day.organicConversions
-        }
-        // Previous month
-        if (day.date >= previousMonthStartKey && day.date <= previousMonthEndKey) {
-          previousMonthOrganicSessions += day.organicSessions
-          previousMonthOrganicConversions += day.organicConversions
-        }
-      })
-      
-      console.log('[GA Traffic] Last month organic sessions:', lastMonthOrganicSessions)
-      console.log('[GA Traffic] Last month organic conversions:', lastMonthOrganicConversions)
-      console.log('[GA Traffic] Previous month organic sessions:', previousMonthOrganicSessions)
-      console.log('[GA Traffic] Previous month organic conversions:', previousMonthOrganicConversions)
-      console.log('[GA Traffic] Total days of data:', dailyData.length)
-      console.log('[GA Traffic] Days with actual traffic:', Object.keys(dailyTotals).length)
-      console.log('[GA Traffic] Days filled with zeros:', dailyData.length - Object.keys(dailyTotals).length)
-      
       return {
         dailyData,
-        lastMonthOrganicSessions,
-        lastMonthOrganicConversions,
-        previousMonthOrganicSessions,
-        previousMonthOrganicConversions,
         dateRanges: {
           startDate,
           endDate
@@ -492,9 +437,6 @@ export async function fetchGALandingPagesData(propertyId: string): Promise<GALan
           landingPages
         })
       }
-      
-      // Log summary for monitoring
-      console.log('[GA Landing Pages] Fetched', topLandingPages.length, 'landing pages with', totalSessions, 'total sessions')
       
       return {
         dailyData,

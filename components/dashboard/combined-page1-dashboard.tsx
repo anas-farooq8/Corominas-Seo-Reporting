@@ -3,13 +3,9 @@
 import { useState, useEffect, useMemo, useCallback } from "react"
 import { LoadingSpinner } from "@/components/ui/loading-spinner"
 import { ErrorDisplay } from "@/components/ui/error-display"
-import { Calendar, TrendingUp, MousePointerClick, Key } from "lucide-react"
+import { TrendingUp, MousePointerClick, Key } from "lucide-react"
 import type { GADashboardData } from "@/lib/actions/google-analytics-dashboard"
 import type { SEMrushDashboardData } from "@/lib/actions/semrush-dashboard"
-import {  
-  formatDateRange,
-  selectBestComparisonWindow
-} from "@/lib/utils/dashboard-helpers"
 import { KPICard } from "./kpi-card"
 import { SEMrushChart } from "./semrush-chart"
 import { GoogleAnalyticsDashboardPage } from "./google-analytics-dashboard-page"
@@ -107,50 +103,42 @@ export function CombinedPage1Dashboard({ googleAnalyticsId, semrushId }: Combine
   }, [semrushData])
 
   const gaSessionsKPI = useMemo(() => {
-    if (!gaData) return null
+    if (!gaData || !gaData.kpiCards) return null
     
-    const bestWindow = selectBestComparisonWindow(
-      gaData.dailyData,
-      (item) => item.organicSessions,
-      gaData.dateRanges.endDate
-    )
+    const kpi = gaData.kpiCards.organicSessions
     
     return {
       change: {
-        change: bestWindow.change,
-        isIncrease: bestWindow.isIncrease
+        change: kpi.change,
+        isIncrease: kpi.isIncrease
       },
-      currentValue: Math.round(bestWindow.current),
-      previousValue: Math.round(bestWindow.previous),
-      currentLabel: `Last ${bestWindow.periodType === '1-month' ? 'Month' : bestWindow.periodType.replace('-month', ' Months')}`,
-      previousLabel: `Previous ${bestWindow.periodType === '1-month' ? 'Month' : bestWindow.periodType.replace('-month', ' Months')}`,
-      comparisonLabel: bestWindow.periodLabel
+      currentValue: Math.round(kpi.current),
+      previousValue: Math.round(kpi.previous),
+      currentLabel: `Last ${kpi.periodType === '1-month' ? 'Month' : kpi.periodType.replace('-month', ' Months')}`,
+      previousLabel: `Previous ${kpi.periodType === '1-month' ? 'Month' : kpi.periodType.replace('-month', ' Months')}`,
+      comparisonLabel: kpi.periodLabel
     }
   }, [gaData])
 
   const gaConversionsKPI = useMemo(() => {
-    if (!gaData) return null
+    if (!gaData || !gaData.kpiCards) return null
     
-    const bestWindow = selectBestComparisonWindow(
-      gaData.dailyData,
-      (item) => item.organicConversions,
-      gaData.dateRanges.endDate
-    )
+    const kpi = gaData.kpiCards.organicConversions
     
     return {
       change: {
-        change: bestWindow.change,
-        isIncrease: bestWindow.isIncrease
+        change: kpi.change,
+        isIncrease: kpi.isIncrease
       },
-      currentValue: Math.round(bestWindow.current),
-      previousValue: Math.round(bestWindow.previous),
-      currentLabel: `Last ${bestWindow.periodType === '1-month' ? 'Month' : bestWindow.periodType.replace('-month', ' Months')}`,
-      previousLabel: `Previous ${bestWindow.periodType === '1-month' ? 'Month' : bestWindow.periodType.replace('-month', ' Months')}`,
-      comparisonLabel: bestWindow.periodLabel
+      currentValue: Math.round(kpi.current),
+      previousValue: Math.round(kpi.previous),
+      currentLabel: `Last ${kpi.periodType === '1-month' ? 'Month' : kpi.periodType.replace('-month', ' Months')}`,
+      previousLabel: `Previous ${kpi.periodType === '1-month' ? 'Month' : kpi.periodType.replace('-month', ' Months')}`,
+      comparisonLabel: kpi.periodLabel
     }
   }, [gaData])
 
-  // Determine metadata display
+  // Determine metadata display (title, timezone, and currency)
   const metadata = useMemo(() => {
     const displayMetadata = gaData || semrushData
     if (!displayMetadata) return null
@@ -158,8 +146,7 @@ export function CombinedPage1Dashboard({ googleAnalyticsId, semrushId }: Combine
     return {
       title: gaData ? gaData.displayName : semrushData?.domain,
       timeZone: gaData?.timeZone,
-      startDate: gaData ? gaData.dateRanges.startDate : semrushData?.dateRanges.startDate,
-      endDate: gaData ? gaData.dateRanges.endDate : semrushData?.dateRanges.endDate
+      currencyCode: gaData?.currencyCode
     }
   }, [gaData, semrushData])
 
@@ -211,12 +198,10 @@ export function CombinedPage1Dashboard({ googleAnalyticsId, semrushId }: Combine
                 <span className="truncate">{metadata.timeZone}</span>
               </div>
             )}
-            {metadata.startDate && metadata.endDate && (
+            {metadata.currencyCode && (
               <div className="flex items-center gap-2 text-xs sm:text-sm text-muted-foreground">
-                <Calendar className="h-3.5 w-3.5 sm:h-4 sm:w-4 flex-shrink-0" />
-                <span className="text-[11px] sm:text-xs md:text-sm">
-                  {formatDateRange(metadata.startDate)} - {formatDateRange(metadata.endDate)}
-                </span>
+                <span className="font-medium">Currency:</span>
+                <span className="truncate">{metadata.currencyCode}</span>
               </div>
             )}
           </div>

@@ -5,13 +5,6 @@ import { LoadingSpinner } from "@/components/ui/loading-spinner"
 import { ErrorDisplay } from "@/components/ui/error-display"
 import { Key } from "lucide-react"
 import type { SEMrushDashboardData } from "@/lib/actions/semrush-dashboard"
-import { 
-  calculatePercentageChange,
-  getMonthYear,
-  getPreviousMonthYear,
-  formatDateRange,
-  selectBestComparisonWindow
-} from "@/lib/utils/dashboard-helpers"
 import { KPICard } from "./kpi-card"
 import { SEMrushChart } from "./semrush-chart"
 import type { LayerKey } from "./chart-layer-filters"
@@ -81,26 +74,22 @@ export function SEMrushDashboardPage({ datasourceId, data: externalData, showMet
     }
   }, [datasourceId, externalData])
 
-  // Memoize calculations to prevent unnecessary re-renders - using best comparison window
+  // Memoize calculations to prevent unnecessary re-renders - using kpiCards from backend
   const keywordsKPI = useMemo(() => {
-    if (!data) return null
+    if (!data || !data.kpiCards) return null
     
-    const bestWindow = selectBestComparisonWindow(
-      data.dailyData,
-      (item) => item.totalKeywords,
-      data.dateRanges.endDate
-    )
+    const kpi = data.kpiCards.totalRankingKeywords
     
     return {
       change: {
-        change: bestWindow.change,
-        isIncrease: bestWindow.isIncrease
+        change: kpi.change,
+        isIncrease: kpi.isIncrease
       },
-      currentValue: Math.round(bestWindow.current),
-      previousValue: Math.round(bestWindow.previous),
-      currentLabel: `Last ${bestWindow.periodType === '1-month' ? 'Month' : bestWindow.periodType.replace('-month', ' Months')}`,
-      previousLabel: `Previous ${bestWindow.periodType === '1-month' ? 'Month' : bestWindow.periodType.replace('-month', ' Months')}`,
-      comparisonLabel: bestWindow.periodLabel
+      currentValue: Math.round(kpi.current),
+      previousValue: Math.round(kpi.previous),
+      currentLabel: `Last ${kpi.periodType === '1-month' ? 'Month' : kpi.periodType.replace('-month', ' Months')}`,
+      previousLabel: `Previous ${kpi.periodType === '1-month' ? 'Month' : kpi.periodType.replace('-month', ' Months')}`,
+      comparisonLabel: kpi.periodLabel
     }
   }, [data])
 
@@ -130,14 +119,6 @@ export function SEMrushDashboardPage({ datasourceId, data: externalData, showMet
           <h2 className="text-lg sm:text-xl md:text-2xl font-bold text-foreground">
             {data.domain}
           </h2>
-          <div className="flex flex-col gap-1 mt-1.5 sm:mt-2">
-            <div className="flex items-center gap-2 text-xs sm:text-sm text-muted-foreground">
-              <span className="font-medium">Date Range:</span>
-              <span className="text-[11px] sm:text-xs md:text-sm">
-                {formatDateRange(data.dateRanges.startDate)} - {formatDateRange(data.dateRanges.endDate)}
-              </span>
-            </div>
-          </div>
         </div>
       )}
 

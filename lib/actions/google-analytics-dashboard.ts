@@ -4,60 +4,164 @@ import { createClient } from "@/lib/supabase/server"
 import { fetchGATrafficData, type GATrafficResponse, type GADailyTrafficData } from "@/lib/google-analytics/api"
 import { getCachedDashboardData, saveDashboardCache } from "@/lib/cache/dashboard-cache"
 
+/**
+ * KPI Card Data for Google Analytics metrics
+ */
+export interface GAKPICardData {
+  organicSessions: {
+    current: number
+    previous: number
+    change: number
+    isIncrease: boolean
+    periodType: '1-month' | '3-month' | '6-month'
+    periodLabel: string
+  }
+  organicConversions: {
+    current: number
+    previous: number
+    change: number
+    isIncrease: boolean
+    periodType: '1-month' | '3-month' | '6-month'
+    periodLabel: string
+  }
+}
+
 export interface GADashboardData {
   propertyName: string
   displayName: string
   timeZone: string
   currencyCode: string
   dailyData: GADailyTrafficData[]
-  lastMonthOrganicSessions: number
-  lastMonthOrganicConversions: number
-  previousMonthOrganicSessions: number
-  previousMonthOrganicConversions: number
-  dateRanges: {
-    startDate: string
-    endDate: string
+  kpiCards: GAKPICardData
+  chartPeriods: {
+    trafficChart: '1-month' | '3-month' | '6-month'
+    sessionsConversionsChart: '1-month' | '3-month' | '6-month'
   }
 }
 
 /**
- * Calculate and log KPI comparisons (similar to Page 4 GSC pattern)
+ * Calculate best comparison window and return its details
  */
-function calculateAndLogKPIComparisons(
+function calculateBestWindow(
   dailyData: GADailyTrafficData[],
-  endDate: string
-) {
-  console.log('\n=== Google Analytics KPI Calculations ===')
-  
+  endDate: string,
+  valueExtractor: (item: GADailyTrafficData) => number
+): {
+  type: '1-month' | '3-month' | '6-month'
+  currentPeriodStart: string
+  currentPeriodEnd: string
+  previousPeriodStart: string
+  previousPeriodEnd: string
+  currentValue: number
+  previousValue: number
+  change: number
+  isIncrease: boolean
+  currentStartYYYYMMDD: number
+  currentEndYYYYMMDD: number
+} {
   const windows: Array<{ months: number, label: '1-month' | '3-month' | '6-month' }> = [
     { months: 1, label: '1-month' },
     { months: 3, label: '3-month' },
     { months: 6, label: '6-month' },
   ]
   
-  // Calculate for Organic Sessions
-  console.log('\n[GA Organic Sessions] Comparison Windows:')
-  windows.forEach(({ months, label }) => {
-    const { current, previous, dates } = getWindowComparison(dailyData, endDate, months, (d) => d.organicSessions)
+  const comparisons = windows.map(({ months, label }) => {
+    const { current, previous, dates, currentStartYYYYMMDD, currentEndYYYYMMDD } = getWindowComparison(
+      dailyData, 
+      endDate, 
+      months, 
+      valueExtractor
+    )
     const change = previous > 0 ? ((current - previous) / previous) * 100 : 0
-    console.log(`  ${label}:`)
-    console.log(`    Current:  ${dates.currentStart} to ${dates.currentEnd} = ${current.toFixed(2)}`)
-    console.log(`    Previous: ${dates.previousStart} to ${dates.previousEnd} = ${previous.toFixed(2)}`)
-    console.log(`    Change: ${change >= 0 ? '+' : ''}${change.toFixed(2)}%`)
+    
+    return {
+      type: label,
+      currentPeriodStart: dates.currentStart,
+      currentPeriodEnd: dates.currentEnd,
+      previousPeriodStart: dates.previousStart,
+      previousPeriodEnd: dates.previousEnd,
+      currentValue: current,
+      previousValue: previous,
+      change: Math.abs(change),
+      isIncrease: change >= 0,
+      currentStartYYYYMMDD,
+      currentEndYYYYMMDD
+    }
   })
   
-  // Calculate for Organic Conversions
-  console.log('\n[GA Organic Conversions] Comparison Windows:')
-  windows.forEach(({ months, label }) => {
-    const { current, previous, dates } = getWindowComparison(dailyData, endDate, months, (d) => d.organicConversions)
-    const change = previous > 0 ? ((current - previous) / previous) * 100 : 0
-    console.log(`  ${label}:`)
-    console.log(`    Current:  ${dates.currentStart} to ${dates.currentEnd} = ${current.toFixed(2)}`)
-    console.log(`    Previous: ${dates.previousStart} to ${dates.previousEnd} = ${previous.toFixed(2)}`)
-    console.log(`    Change: ${change >= 0 ? '+' : ''}${change.toFixed(2)}%`)
-  })
+  // Find best window (highest positive change, or least negative if all negative)
+  const positiveComparisons = comparisons.filter(c => c.isIncrease)
   
-  console.log('\n=== End GA KPI Calculations ===\n')
+  if (positiveComparisons.length > 0) {
+    return positiveComparisons.reduce((best, current) => 
+      current.change > best.change ? current : best
+    )
+  } else {
+    return comparisons.reduce((best, current) => 
+      current.change < best.change ? current : best
+    )
+  }
+}
+
+type WindowResult = {
+  type: '1-month' | '3-month' | '6-month'
+  currentPeriodStart: string
+  currentPeriodEnd: string
+  previousPeriodStart: string
+  previousPeriodEnd: string
+  currentValue: number
+  previousValue: number
+  change: number
+  isIncrease: boolean
+  currentStartYYYYMMDD: number
+  currentEndYYYYMMDD: number
+}
+
+/**
+ * Calculate KPI cards from daily data - returns best period for each metric
+ */
+function calculateKPICards(
+  dailyData: GADailyTrafficData[],
+  endDate: string
+): { 
+  kpiCards: GAKPICardData
+  sessionsWindow: WindowResult
+  conversionsWindow: WindowResult
+} {
+  
+  const sessionsWindow = calculateBestWindow(
+    dailyData, 
+    endDate, 
+    (d) => d.organicSessions
+  )
+  
+  const conversionsWindow = calculateBestWindow(
+    dailyData, 
+    endDate, 
+    (d) => d.organicConversions
+  )
+  
+  // Build KPI cards
+  const kpiCards: GAKPICardData = {
+    organicSessions: {
+      current: sessionsWindow.currentValue,
+      previous: sessionsWindow.previousValue,
+      change: sessionsWindow.change,
+      isIncrease: sessionsWindow.isIncrease,
+      periodType: sessionsWindow.type,
+      periodLabel: `${sessionsWindow.type} comparison`
+    },
+    organicConversions: {
+      current: conversionsWindow.currentValue,
+      previous: conversionsWindow.previousValue,
+      change: conversionsWindow.change,
+      isIncrease: conversionsWindow.isIncrease,
+      periodType: conversionsWindow.type,
+      periodLabel: `${conversionsWindow.type} comparison`
+    }
+  }
+  
+  return { kpiCards, sessionsWindow, conversionsWindow }
 }
 
 /**
@@ -68,7 +172,18 @@ function getWindowComparison(
   endDate: string,
   windowMonths: number,
   valueExtractor: (item: GADailyTrafficData) => number
-): { current: number, previous: number, dates: { currentStart: string, currentEnd: string, previousStart: string, previousEnd: string } } {
+): { 
+  current: number
+  previous: number
+  dates: { 
+    currentStart: string
+    currentEnd: string
+    previousStart: string
+    previousEnd: string 
+  }
+  currentStartYYYYMMDD: number
+  currentEndYYYYMMDD: number
+} {
   const dataEnd = new Date(endDate)
   const lastMonth = dataEnd.getMonth()
   const lastYear = dataEnd.getFullYear()
@@ -129,7 +244,9 @@ function getWindowComparison(
       currentEnd: formatDate(currentEndDate),
       previousStart: formatDate(previousStartDate),
       previousEnd: formatDate(previousEndDate)
-    }
+    },
+    currentStartYYYYMMDD,
+    currentEndYYYYMMDD
   }
 }
 
@@ -175,12 +292,10 @@ export async function fetchGADashboardData(
     // Check cache first
     const cachedData = await getCachedDashboardData(datasourceId, propertyName, startDateStr, endDateStr)
     if (cachedData) {
-      console.log("✓ Returning cached GA dashboard data")
       return cachedData as GADashboardData
     }
     
     // Cache miss - fetch from API
-    console.log("⟳ Fetching fresh GA dashboard data from API")
     
     // Extract property ID from name (e.g., "properties/469744307" -> "469744307")
     const propertyId = propertyName.split('/')[1]
@@ -192,21 +307,40 @@ export async function fetchGADashboardData(
     // Fetch traffic data from Google Analytics API
     const trafficData = await fetchGATrafficData(propertyId)
 
+    // Calculate KPI cards and get best windows
+    const { kpiCards, sessionsWindow, conversionsWindow } = calculateKPICards(
+      trafficData.dailyData, 
+      endDateStr
+    )
+    
+    // Determine which window is larger (more months)
+    const monthsMap: Record<'1-month' | '3-month' | '6-month', number> = { 
+      '1-month': 1, 
+      '3-month': 3, 
+      '6-month': 6 
+    }
+    const sessionsMonths = monthsMap[sessionsWindow.type]
+    const conversionsMonths = monthsMap[conversionsWindow.type]
+    const largerWindow = sessionsMonths >= conversionsMonths ? sessionsWindow : conversionsWindow
+    
+    // Filter dailyData to only include the larger period's current window
+    const filteredDailyData = trafficData.dailyData.filter(d => {
+      const dateNum = parseInt(d.date)
+      return dateNum >= largerWindow.currentStartYYYYMMDD && dateNum <= largerWindow.currentEndYYYYMMDD
+    })
+    
     const dashboardData: GADashboardData = {
       propertyName: propertyName,
       displayName: property.display_name,
       timeZone: property.time_zone,
       currencyCode: property.currency_code,
-      dailyData: trafficData.dailyData,
-      lastMonthOrganicSessions: trafficData.lastMonthOrganicSessions,
-      lastMonthOrganicConversions: trafficData.lastMonthOrganicConversions,
-      previousMonthOrganicSessions: trafficData.previousMonthOrganicSessions,
-      previousMonthOrganicConversions: trafficData.previousMonthOrganicConversions,
-      dateRanges: trafficData.dateRanges
+      dailyData: filteredDailyData, // Only the larger period
+      kpiCards: kpiCards, // Both metrics' KPI data
+      chartPeriods: {
+        trafficChart: sessionsWindow.type, // Total vs Organic Traffic uses sessions period
+        sessionsConversionsChart: conversionsWindow.type // Sessions vs Conversions uses conversions period
+      }
     }
-    
-    // Calculate and log KPI comparisons
-    calculateAndLogKPIComparisons(trafficData.dailyData, endDateStr)
     
     // Save to cache (fire and forget - don't wait)
     saveDashboardCache(datasourceId, propertyName, startDateStr, endDateStr, dashboardData)

@@ -38,10 +38,6 @@ export interface SEMrushKPICardData {
 export interface SEMrushDashboardData {
   domain: string
   dailyData: SEMrushParsedDailyData[]
-  dateRanges: {
-    startDate: string
-    endDate: string
-  }
   kpiCards: SEMrushKPICardData
 }
 
@@ -290,10 +286,6 @@ export async function fetchSEMrushDashboard(
     const dashboardData: SEMrushDashboardData = {
       domain: domain,
       dailyData: filteredDailyData, // Original data with getter for runtime use
-      dateRanges: {
-        startDate: bestWindow.currentPeriodStart, // Actual displayed range
-        endDate: bestWindow.currentPeriodEnd
-      },
       kpiCards: kpiCards // Best period KPI data
     }
     
@@ -301,7 +293,6 @@ export async function fetchSEMrushDashboard(
     const cacheData = {
       domain: domain,
       dailyData: dailyDataForCache, // Without totalKeywords
-      dateRanges: dashboardData.dateRanges,
       kpiCards: kpiCards
     }
     
