@@ -3,10 +3,11 @@
 import { useRouter } from "next/navigation"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
+import { Button } from "@/components/ui/button"
 import { EditProjectDialog } from "./edit-project-dialog"
 import { DeleteProjectButton } from "./delete-project-button"
 import type { ProjectWithDatasources } from "@/lib/supabase/types"
-import { FolderOpen } from "lucide-react"
+import { FolderOpen, BarChart3 } from "lucide-react"
 
 interface ProjectsListProps {
   projects: ProjectWithDatasources[]
@@ -53,10 +54,24 @@ export function ProjectsList({ projects, onProjectUpdated, onProjectDeleted }: P
             </div>
           </CardHeader>
           <CardContent className="px-3 pt-0 pb-2.5">
-            <div className="flex items-center justify-between text-xs">
+            <div className="flex items-center justify-between text-xs mb-2">
               <span className="text-muted-foreground">Data Sources</span>
               <Badge variant="secondary" className="text-[11px]">{project.datasource_count || 0}</Badge>
             </div>
+            {(project.datasource_count || 0) > 0 && (
+              <Button
+                variant="outline"
+                size="sm"
+                className="w-full h-7 text-xs"
+                onClick={(e) => {
+                  e.stopPropagation()
+                  router.push(`/dashboard/projects/${project.id}/unified-dashboard`)
+                }}
+              >
+                <BarChart3 className="mr-1.5 h-3 w-3" />
+                View Dashboard
+              </Button>
+            )}
           </CardContent>
         </Card>
       ))}
