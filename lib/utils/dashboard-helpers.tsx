@@ -55,6 +55,10 @@ export const getPreviousMonthYear = (dateStr: string): string => {
   return date.toLocaleDateString('en-US', { month: 'short', year: 'numeric' })
 }
 
+// ============================================
+// Chart Legend Components
+// ============================================
+
 // Custom SEMrush Legend Component
 export const CustomSEMrushLegend = () => {
   const legendItems = [
@@ -164,168 +168,8 @@ export const CustomGASessionsLegend = () => {
 }
 
 // ============================================
-// Multi-Window Comparison Helpers
+// Chart Tooltip Factory
 // ============================================
-
-export interface ComparisonWindow {
-  current: number
-  previous: number
-  change: number
-  isIncrease: boolean
-  periodType: '1-month' | '3-month' | '6-month'
-  periodLabel: string
-}
-
-/**
- * Calculate average for a time window from daily data
- * Fixed: Proper month-based windows without date rollover issues
- * @param dailyData - Array of daily data with date field (YYYYMMDD format)
- * @param valueExtractor - Function to extract the value from each daily data point
- * @param endDate - End date string (YYYY-MM-DD) - the last day of the data period
- * @param monthsBack - Number of months to go back from endDate
- * @param windowMonths - Number of months in the window
- */
-export const calculateWindowAverage = <T extends { date: string }>(
-  dailyData: T[],
-  valueExtractor: (item: T) => number,
-  endDate: string,
-  monthsBack: number,
-  windowMonths: number
-): number => {
-  // endDate is the last day of the data period (e.g., 2025-12-31)
-  const dataEnd = new Date(endDate)
-  
-  // Get the month and year of the last complete month
-  const lastMonth = dataEnd.getMonth() // 11 for December
-  const lastYear = dataEnd.getFullYear() // 2025
-  
-  // Calculate which month we want (going back monthsBack months from the last month)
-  const targetMonth = lastMonth - monthsBack
-  const targetYear = lastYear + Math.floor(targetMonth / 12)
-  const normalizedMonth = ((targetMonth % 12) + 12) % 12
-  
-  // Get the last day of the target month (end of window)
-  const windowEndLastDay = new Date(targetYear, normalizedMonth + 1, 0)
-  
-  // Calculate the start of the window (go back windowMonths-1 from target month)
-  const startMonth = normalizedMonth - windowMonths + 1
-  const startYear = targetYear + Math.floor(startMonth / 12)
-  const normalizedStartMonth = ((startMonth % 12) + 12) % 12
-  const windowStart = new Date(startYear, normalizedStartMonth, 1)
-  
-  const startYYYYMMDD = parseInt(
-    windowStart.getFullYear() + 
-    String(windowStart.getMonth() + 1).padStart(2, '0') + 
-    String(windowStart.getDate()).padStart(2, '0')
-  )
-  
-  const endYYYYMMDD = parseInt(
-    windowEndLastDay.getFullYear() + 
-    String(windowEndLastDay.getMonth() + 1).padStart(2, '0') + 
-    String(windowEndLastDay.getDate()).padStart(2, '0')
-  )
-  
-  // Filter data within the window and calculate sum
-  const windowData = dailyData.filter(item => {
-    const itemDate = parseInt(item.date)
-    return itemDate >= startYYYYMMDD && itemDate <= endYYYYMMDD
-  })
-  
-  if (windowData.length === 0) return 0
-  
-  const sum = windowData.reduce((acc, item) => acc + valueExtractor(item), 0)
-  return sum / windowMonths // Return monthly average
-}
-
-/**
- * Select the best comparison window for a metric based on which shows the most positive trend
- * @param dailyData - Array of daily data
- * @param valueExtractor - Function to extract the value from each data point
- * @param endDate - End date string (YYYY-MM-DD)
- * @returns The best comparison window with all details
- */
-export const selectBestComparisonWindow = <T extends { date: string }>(
-  dailyData: T[],
-  valueExtractor: (item: T) => number,
-  endDate: string
-): ComparisonWindow => {
-  const comparisons: ComparisonWindow[] = []
-  
-  // 1-month comparison (last month vs previous month)
-  const last1Month = calculateWindowAverage(dailyData, valueExtractor, endDate, 0, 1)
-  const prev1Month = calculateWindowAverage(dailyData, valueExtractor, endDate, 1, 1)
-  
-  if (prev1Month > 0) {
-    const change1M = ((last1Month - prev1Month) / prev1Month) * 100
-    comparisons.push({
-      current: last1Month,
-      previous: prev1Month,
-      change: Math.abs(change1M),
-      isIncrease: change1M >= 0,
-      periodType: '1-month',
-      periodLabel: '1-month comparison'
-    })
-  }
-  
-  // 3-month comparison (last 3 months vs previous 3 months)
-  const last3Months = calculateWindowAverage(dailyData, valueExtractor, endDate, 0, 3)
-  const prev3Months = calculateWindowAverage(dailyData, valueExtractor, endDate, 3, 3)
-  
-  if (prev3Months > 0) {
-    const change3M = ((last3Months - prev3Months) / prev3Months) * 100
-    comparisons.push({
-      current: last3Months,
-      previous: prev3Months,
-      change: Math.abs(change3M),
-      isIncrease: change3M >= 0,
-      periodType: '3-month',
-      periodLabel: '3-month comparison'
-    })
-  }
-  
-  // 6-month comparison (last 6 months vs previous 6 months)
-  const last6Months = calculateWindowAverage(dailyData, valueExtractor, endDate, 0, 6)
-  const prev6Months = calculateWindowAverage(dailyData, valueExtractor, endDate, 6, 6)
-  
-  if (prev6Months > 0) {
-    const change6M = ((last6Months - prev6Months) / prev6Months) * 100
-    comparisons.push({
-      current: last6Months,
-      previous: prev6Months,
-      change: Math.abs(change6M),
-      isIncrease: change6M >= 0,
-      periodType: '6-month',
-      periodLabel: '6-month comparison'
-    })
-  }
-  
-  // If no valid comparisons, return default
-  if (comparisons.length === 0) {
-    return {
-      current: last1Month,
-      previous: prev1Month,
-      change: 0,
-      isIncrease: true,
-      periodType: '1-month',
-      periodLabel: '1-month comparison'
-    }
-  }
-  
-  // Find the most positive comparison
-  const positiveComparisons = comparisons.filter(c => c.isIncrease)
-  
-  if (positiveComparisons.length > 0) {
-    // Return the one with highest positive change
-    return positiveComparisons.reduce((best, current) => 
-      current.change > best.change ? current : best
-    )
-  } else {
-    // All are negative, return the most neutral (lowest negative change)
-    return comparisons.reduce((best, current) => 
-      current.change < best.change ? current : best
-    )
-  }
-}
 
 // Custom SEMrush Tooltip Factory
 export const createSEMrushTooltip = (formatNumberFn: (num: number) => string) => {

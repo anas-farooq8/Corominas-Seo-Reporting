@@ -3,6 +3,7 @@
 import { createClient } from "@/lib/supabase/server"
 import { fetchGATrafficData, type GATrafficResponse, type GADailyTrafficData } from "@/lib/google-analytics/api"
 import { getCachedDashboardData, saveDashboardCache } from "@/lib/cache/dashboard-cache"
+import { selectBestComparisonWindow, type WindowResult } from "@/lib/utils/comparison-helpers"
 
 /**
  * KPI Card Data for Google Analytics metrics
@@ -39,84 +40,6 @@ export interface GADashboardData {
 }
 
 /**
- * Calculate best comparison window and return its details
- */
-function calculateBestWindow(
-  dailyData: GADailyTrafficData[],
-  endDate: string,
-  valueExtractor: (item: GADailyTrafficData) => number
-): {
-  type: '1-month' | '3-month' | '6-month'
-  currentPeriodStart: string
-  currentPeriodEnd: string
-  previousPeriodStart: string
-  previousPeriodEnd: string
-  currentValue: number
-  previousValue: number
-  change: number
-  isIncrease: boolean
-  currentStartYYYYMMDD: number
-  currentEndYYYYMMDD: number
-} {
-  const windows: Array<{ months: number, label: '1-month' | '3-month' | '6-month' }> = [
-    { months: 1, label: '1-month' },
-    { months: 3, label: '3-month' },
-    { months: 6, label: '6-month' },
-  ]
-  
-  const comparisons = windows.map(({ months, label }) => {
-    const { current, previous, dates, currentStartYYYYMMDD, currentEndYYYYMMDD } = getWindowComparison(
-      dailyData, 
-      endDate, 
-      months, 
-      valueExtractor
-    )
-    const change = previous > 0 ? ((current - previous) / previous) * 100 : 0
-    
-    return {
-      type: label,
-      currentPeriodStart: dates.currentStart,
-      currentPeriodEnd: dates.currentEnd,
-      previousPeriodStart: dates.previousStart,
-      previousPeriodEnd: dates.previousEnd,
-      currentValue: current,
-      previousValue: previous,
-      change: Math.abs(change),
-      isIncrease: change >= 0,
-      currentStartYYYYMMDD,
-      currentEndYYYYMMDD
-    }
-  })
-  
-  // Find best window (highest positive change, or least negative if all negative)
-  const positiveComparisons = comparisons.filter(c => c.isIncrease)
-  
-  if (positiveComparisons.length > 0) {
-    return positiveComparisons.reduce((best, current) => 
-      current.change > best.change ? current : best
-    )
-  } else {
-    return comparisons.reduce((best, current) => 
-      current.change < best.change ? current : best
-    )
-  }
-}
-
-type WindowResult = {
-  type: '1-month' | '3-month' | '6-month'
-  currentPeriodStart: string
-  currentPeriodEnd: string
-  previousPeriodStart: string
-  previousPeriodEnd: string
-  currentValue: number
-  previousValue: number
-  change: number
-  isIncrease: boolean
-  currentStartYYYYMMDD: number
-  currentEndYYYYMMDD: number
-}
-
-/**
  * Calculate KPI cards from daily data - returns best period for each metric
  */
 function calculateKPICards(
@@ -127,14 +50,13 @@ function calculateKPICards(
   sessionsWindow: WindowResult
   conversionsWindow: WindowResult
 } {
-  
-  const sessionsWindow = calculateBestWindow(
+  const sessionsWindow = selectBestComparisonWindow(
     dailyData, 
     endDate, 
     (d) => d.organicSessions
   )
   
-  const conversionsWindow = calculateBestWindow(
+  const conversionsWindow = selectBestComparisonWindow(
     dailyData, 
     endDate, 
     (d) => d.organicConversions
@@ -161,92 +83,6 @@ function calculateKPICards(
   }
   
   return { kpiCards, sessionsWindow, conversionsWindow }
-}
-
-/**
- * Get window comparison data with dates
- */
-function getWindowComparison(
-  dailyData: GADailyTrafficData[],
-  endDate: string,
-  windowMonths: number,
-  valueExtractor: (item: GADailyTrafficData) => number
-): { 
-  current: number
-  previous: number
-  dates: { 
-    currentStart: string
-    currentEnd: string
-    previousStart: string
-    previousEnd: string 
-  }
-  currentStartYYYYMMDD: number
-  currentEndYYYYMMDD: number
-} {
-  const dataEnd = new Date(endDate)
-  const lastMonth = dataEnd.getMonth()
-  const lastYear = dataEnd.getFullYear()
-  
-  // Current window
-  const currentEndMonth = lastMonth
-  const currentEndYear = lastYear
-  const currentEndDate = new Date(currentEndYear, currentEndMonth + 1, 0)
-  const currentStartDate = new Date(currentEndYear, currentEndMonth - windowMonths + 1, 1)
-  
-  // Previous window
-  const previousEndMonth = currentEndMonth - windowMonths
-  const previousEndYear = currentEndYear + Math.floor(previousEndMonth / 12)
-  const normalizedPrevEndMonth = ((previousEndMonth % 12) + 12) % 12
-  const previousEndDate = new Date(previousEndYear, normalizedPrevEndMonth + 1, 0)
-  const previousStartDate = new Date(previousEndYear, normalizedPrevEndMonth - windowMonths + 1, 1)
-  
-  const formatDate = (date: Date) => {
-    const y = date.getFullYear()
-    const m = String(date.getMonth() + 1).padStart(2, '0')
-    const d = String(date.getDate()).padStart(2, '0')
-    return `${y}-${m}-${d}`
-  }
-  
-  const formatDateYYYYMMDD = (date: Date) => {
-    const y = date.getFullYear()
-    const m = String(date.getMonth() + 1).padStart(2, '0')
-    const d = String(date.getDate()).padStart(2, '0')
-    return parseInt(`${y}${m}${d}`)
-  }
-  
-  const currentStartYYYYMMDD = formatDateYYYYMMDD(currentStartDate)
-  const currentEndYYYYMMDD = formatDateYYYYMMDD(currentEndDate)
-  const previousStartYYYYMMDD = formatDateYYYYMMDD(previousStartDate)
-  const previousEndYYYYMMDD = formatDateYYYYMMDD(previousEndDate)
-  
-  const currentData = dailyData.filter(d => {
-    const dateNum = parseInt(d.date)
-    return dateNum >= currentStartYYYYMMDD && dateNum <= currentEndYYYYMMDD
-  })
-  
-  const previousData = dailyData.filter(d => {
-    const dateNum = parseInt(d.date)
-    return dateNum >= previousStartYYYYMMDD && dateNum <= previousEndYYYYMMDD
-  })
-  
-  const currentSum = currentData.reduce((sum, d) => sum + valueExtractor(d), 0)
-  const previousSum = previousData.reduce((sum, d) => sum + valueExtractor(d), 0)
-  
-  const currentAvg = currentData.length > 0 ? currentSum / windowMonths : 0
-  const previousAvg = previousData.length > 0 ? previousSum / windowMonths : 0
-  
-  return {
-    current: currentAvg,
-    previous: previousAvg,
-    dates: {
-      currentStart: formatDate(currentStartDate),
-      currentEnd: formatDate(currentEndDate),
-      previousStart: formatDate(previousStartDate),
-      previousEnd: formatDate(previousEndDate)
-    },
-    currentStartYYYYMMDD,
-    currentEndYYYYMMDD
-  }
 }
 
 /**
