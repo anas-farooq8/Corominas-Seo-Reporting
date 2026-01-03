@@ -49,11 +49,19 @@ function calculateKPICards(
   dailyData: SEMrushParsedDailyData[],
   endDate: string
 ): { kpiCards: SEMrushKPICardData, bestWindow: WindowResult } {
+  console.log('\n=== SEMRUSH KPI CALCULATIONS ===')
+  
   const bestWindow = selectBestComparisonWindow(
     dailyData, 
     endDate,
-    (d) => d.totalKeywords
+    (d) => d.totalKeywords,
+    'SEMrush Total Keywords'
   )
+  
+  console.log('=== BEST WINDOW SELECTED ===')
+  console.log(`Period: ${bestWindow.type}`)
+  console.log(`  Current: ${bestWindow.currentValue.toFixed(0)}, Previous: ${bestWindow.previousValue.toFixed(0)}, Change: ${bestWindow.isIncrease ? '+' : '-'}${bestWindow.change.toFixed(2)}%`)
+  console.log('================================\n')
   
   // Build KPI cards
   const kpiCards: SEMrushKPICardData = {

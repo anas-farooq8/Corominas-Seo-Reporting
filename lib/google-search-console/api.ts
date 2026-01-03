@@ -151,9 +151,6 @@ export async function fetchSearchConsoleData(siteUrl: string): Promise<GSCDashbo
 
       const dailyData: GSCDailyData[] = []
 
-      // Process the data
-      console.log('[GSC API] Response rows count:', response.data.rows?.length || 0)
-      
       response.data.rows?.forEach((row: any, index: number) => {
         const date = row.keys[0] // Date from API (could be YYYY-MM-DD or YYYYMMDD)
         const clicks = row.clicks || 0
@@ -161,18 +158,6 @@ export async function fetchSearchConsoleData(siteUrl: string): Promise<GSCDashbo
         const ctr = row.ctr || 0
         const position = row.position || 0
 
-        // Debug first row to see the format
-        if (index === 0) {
-          console.log('[GSC API] First row raw data:', { 
-            dateFromAPI: date, 
-            dateType: typeof date,
-            clicks, 
-            impressions, 
-            ctr, 
-            position 
-          })
-        }
-        
         // Convert date to YYYYMMDD format if it's in YYYY-MM-DD format
         const dateYYYYMMDD = date.replace(/-/g, '')
 
@@ -184,13 +169,6 @@ export async function fetchSearchConsoleData(siteUrl: string): Promise<GSCDashbo
           position,
         })
       })
-      
-      console.log('[GSC API] First 3 raw rows from API:')
-      if (dailyData.length > 0) {
-        console.log('  Raw row 1:', dailyData[0])
-        console.log('  Raw row 2:', dailyData[1])
-        console.log('  Raw row 3:', dailyData[2])
-      }
 
       // Fill in missing dates with zero values to ensure complete dataset
       const filledDailyData: GSCDailyData[] = []
@@ -219,22 +197,9 @@ export async function fetchSearchConsoleData(siteUrl: string): Promise<GSCDashbo
         }
       }
 
-      console.log('[GSC Data] Total days of data:', filledDailyData.length)
-      console.log('[GSC Data] Days with actual data:', dailyData.length)
-      console.log('[GSC Data] Days filled with zeros:', filledDailyData.length - dailyData.length)
-      console.log('[GSC Data] First 3 days of data:')
-      console.log('  Day 1:', filledDailyData[0])
-      console.log('  Day 2:', filledDailyData[1])
-      console.log('  Day 3:', filledDailyData[2])
-      
       const totalClicks = filledDailyData.reduce((sum, d) => sum + d.clicks, 0)
       const totalImpressions = filledDailyData.reduce((sum, d) => sum + d.impressions, 0)
       
-      console.log('[GSC Data] TOTALS across all data:')
-      console.log(`  Total Clicks: ${totalClicks}`)
-      console.log(`  Total Impressions: ${totalImpressions}`)
-      console.log(`  Average CTR: ${totalImpressions > 0 ? ((totalClicks / totalImpressions) * 100).toFixed(2) : 0}%`)
-
       return {
         dailyData: filledDailyData,
         dateRanges: {

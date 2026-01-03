@@ -50,17 +50,28 @@ function calculateKPICards(
   sessionsWindow: WindowResult
   conversionsWindow: WindowResult
 } {
+  console.log('\n=== GOOGLE ANALYTICS KPI CALCULATIONS ===')
+  
   const sessionsWindow = selectBestComparisonWindow(
     dailyData, 
     endDate, 
-    (d) => d.organicSessions
+    (d) => d.organicSessions,
+    'GA Organic Sessions'
   )
   
   const conversionsWindow = selectBestComparisonWindow(
     dailyData, 
     endDate, 
-    (d) => d.organicConversions
+    (d) => d.organicConversions,
+    'GA Organic Conversions'
   )
+  
+  console.log('=== BEST WINDOWS SELECTED ===')
+  console.log(`Sessions: ${sessionsWindow.type}`)
+  console.log(`  Current: ${sessionsWindow.currentValue.toFixed(0)}, Previous: ${sessionsWindow.previousValue.toFixed(0)}, Change: ${sessionsWindow.isIncrease ? '+' : '-'}${sessionsWindow.change.toFixed(2)}%`)
+  console.log(`Conversions: ${conversionsWindow.type}`)
+  console.log(`  Current: ${conversionsWindow.currentValue.toFixed(0)}, Previous: ${conversionsWindow.previousValue.toFixed(0)}, Change: ${conversionsWindow.isIncrease ? '+' : '-'}${conversionsWindow.change.toFixed(2)}%`)
+  console.log('=========================================\n')
   
   // Build KPI cards
   const kpiCards: GAKPICardData = {

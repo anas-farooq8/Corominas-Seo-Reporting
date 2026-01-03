@@ -164,12 +164,14 @@ export function calculateWindowComparison<T extends { date: string }>(
  * @param dailyData - Array of daily data
  * @param endDate - End date string (YYYY-MM-DD)
  * @param valueExtractor - Function to extract value from each data point
+ * @param metricName - Optional name for debug logging (e.g., "Organic Sessions")
  * @returns Best comparison window with all details
  */
 export function selectBestComparisonWindow<T extends { date: string }>(
   dailyData: T[],
   endDate: string,
-  valueExtractor: (item: T) => number
+  valueExtractor: (item: T) => number,
+  metricName?: string
 ): WindowResult {
   const windows: Array<{ months: number, label: PeriodType }> = [
     { months: 1, label: '1-month' },
@@ -201,8 +203,31 @@ export function selectBestComparisonWindow<T extends { date: string }>(
       currentEndYYYYMMDD
     }
     
+    // Calculate days in each period for display
+    const currentDays = dailyData.filter(d => {
+      const dateNum = parseInt(d.date)
+      return dateNum >= currentStartYYYYMMDD && dateNum <= currentEndYYYYMMDD
+    }).length
+    
+    const previousDates = calculateWindowDates(endDate, months, months)
+    const previousDays = dailyData.filter(d => {
+      const dateNum = parseInt(d.date)
+      return dateNum >= previousDates.startYYYYMMDD && dateNum <= previousDates.endYYYYMMDD
+    }).length
+    
+    // Debug logging with detailed format
+    if (metricName) {
+      console.log(`[${metricName}] ${label}:`)
+      console.log(`  Current:  ${dates.currentStart} to ${dates.currentEnd} (${currentDays} days) = ${current.toFixed(2)}`)
+      console.log(`  Previous: ${dates.previousStart} to ${dates.previousEnd} (${previousDays} days) = ${previous.toFixed(2)}`)
+      console.log(`  Change: ${change >= 0 ? '+' : ''}${change.toFixed(2)}%`)
+    }
+    
     // Return first positive comparison
     if (isIncrease) {
+      if (metricName) {
+        console.log(`  ✓ Selected ${label} (positive)\n`)
+      }
       return result
     }
     
@@ -211,8 +236,15 @@ export function selectBestComparisonWindow<T extends { date: string }>(
       mostNeutralNegative = result
     }
     
+    if (metricName) {
+      console.log(`  ✗ Negative, trying next window\n`)
+    }
+    
     // If this is the last window, return most neutral negative
     if (label === '6-month') {
+      if (metricName && mostNeutralNegative) {
+        console.log(`  ✓ Selected ${mostNeutralNegative.type} (most neutral negative)\n`)
+      }
       return mostNeutralNegative!
     }
   }

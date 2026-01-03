@@ -57,7 +57,6 @@ function calculateKPICards(dailyData: GSCDailyData[], endDate: string): GSCKPICa
   console.log('\n=== SEARCH CONSOLE KPI CALCULATIONS ===')
   console.log(`Total daily data points: ${dailyData.length}`)
   console.log(`First date: ${dailyData[0]?.date}, Last date: ${dailyData[dailyData.length - 1]?.date}`)
-  console.log(`End date for calculations: ${endDate}`)
   
   // Calculate window totals (same logic as test script)
   const clicksComparison = calculateMetricComparison(dailyData, endDate, 'clicks')
@@ -167,7 +166,7 @@ function calculateMetricComparison(dailyData: GSCDailyData[], endDate: string, m
       }
       
       if (isIncrease) {
-        console.log(`  ✓ Selected ${label} (positive: +${result.change.toFixed(2)}%)\n`)
+        console.log(`  ✓ Selected ${label} (positive)\n`)
         return result
       }
       
@@ -175,10 +174,10 @@ function calculateMetricComparison(dailyData: GSCDailyData[], endDate: string, m
         mostNeutralNegative = result
       }
       
-      console.log(`  ✗ Negative: -${result.change.toFixed(2)}%`)
+      console.log(`  ✗ Negative, trying next window\n`)
       
       if (label === '6-month') {
-        console.log(`  ✓ Selected ${mostNeutralNegative!.periodType} (most neutral: -${mostNeutralNegative!.change.toFixed(2)}%)\n`)
+        console.log(`  ✓ Selected ${mostNeutralNegative!.periodType} (most neutral negative)\n`)
         return mostNeutralNegative!
       }
     }
@@ -243,7 +242,7 @@ function calculateCTRComparison(dailyData: GSCDailyData[], endDate: string): Com
       }
       
       if (isIncrease) {
-        console.log(`  ✓ Selected ${label} (positive: +${result.change.toFixed(2)}%)\n`)
+        console.log(`  ✓ Selected ${label} (positive)\n`)
         return result
       }
       
@@ -251,10 +250,10 @@ function calculateCTRComparison(dailyData: GSCDailyData[], endDate: string): Com
         mostNeutralNegative = result
       }
       
-      console.log(`  ✗ Negative: -${result.change.toFixed(2)}%`)
+      console.log(`  ✗ Negative, trying next window\n`)
       
       if (label === '6-month') {
-        console.log(`  ✓ Selected ${mostNeutralNegative!.periodType} (most neutral: -${mostNeutralNegative!.change.toFixed(2)}%)\n`)
+        console.log(`  ✓ Selected ${mostNeutralNegative!.periodType} (most neutral negative)\n`)
         return mostNeutralNegative!
       }
     }
@@ -320,7 +319,7 @@ function calculatePositionComparison(dailyData: GSCDailyData[], endDate: string)
       }
       
       if (isIncrease) {
-        console.log(`  ✓ Selected ${label} (improved: -${result.change.toFixed(2)}%)\n`)
+        console.log(`  ✓ Selected ${label} (improved position)\n`)
         return result
       }
       
@@ -328,10 +327,10 @@ function calculatePositionComparison(dailyData: GSCDailyData[], endDate: string)
         mostNeutralNegative = result
       }
       
-      console.log(`  ✗ Worsened: +${result.change.toFixed(2)}%`)
+      console.log(`  ✗ Worsened, trying next window\n`)
       
       if (label === '6-month') {
-        console.log(`  ✓ Selected ${mostNeutralNegative!.periodType} (most neutral: +${mostNeutralNegative!.change.toFixed(2)}%)\n`)
+        console.log(`  ✓ Selected ${mostNeutralNegative!.periodType} (most neutral negative)\n`)
         return mostNeutralNegative!
       }
     }
