@@ -31,11 +31,20 @@ export interface GADashboardData {
   displayName: string
   timeZone: string
   currencyCode: string
-  dailyData: GADailyTrafficData[]
+  dailyData: GADailyTrafficData[] // Contains both current and previous period data
   kpiCards: GAKPICardData
   chartPeriods: {
     trafficChart: '1-month' | '3-month' | '6-month'
     sessionsConversionsChart: '1-month' | '3-month' | '6-month'
+  }
+  // Date ranges for filtering current/previous periods on frontend
+  currentPeriod: {
+    startYYYYMMDD: number
+    endYYYYMMDD: number
+  }
+  previousPeriod: {
+    startYYYYMMDD: number
+    endYYYYMMDD: number
   }
 }
 
@@ -169,21 +178,45 @@ export async function fetchGADashboardData(
     const conversionsMonths = monthsMap[conversionsWindow.type]
     const largerWindow = sessionsMonths >= conversionsMonths ? sessionsWindow : conversionsWindow
     
-    // Filter dailyData to only include the larger period's current window
+    // Calculate previous period dates for the larger window
+    const largerPeriodMonths = Math.max(sessionsMonths, conversionsMonths)
+    const { calculateWindowDates } = await import('@/lib/utils/comparison-helpers')
+    const previousPeriodDates = calculateWindowDates(endDateStr, largerPeriodMonths, largerPeriodMonths)
+    
+    // Filter dailyData to include BOTH current and previous periods for the larger window
     const filteredDailyData = trafficData.dailyData.filter(d => {
       const dateNum = parseInt(d.date)
-      return dateNum >= largerWindow.currentStartYYYYMMDD && dateNum <= largerWindow.currentEndYYYYMMDD
+      return (
+        // Current period
+        (dateNum >= largerWindow.currentStartYYYYMMDD && dateNum <= largerWindow.currentEndYYYYMMDD) ||
+        // Previous period
+        (dateNum >= previousPeriodDates.startYYYYMMDD && dateNum <= previousPeriodDates.endYYYYMMDD)
+      )
     })
+    
+    console.log('=== DATA PERIODS ===')
+    console.log(`Current Period: ${largerWindow.currentStartYYYYMMDD} to ${largerWindow.currentEndYYYYMMDD}`)
+    console.log(`Previous Period: ${previousPeriodDates.startYYYYMMDD} to ${previousPeriodDates.endYYYYMMDD}`)
+    console.log(`Total days stored: ${filteredDailyData.length}`)
+    console.log('===================\n')
     
     const dashboardData: GADashboardData = {
       displayName: property.display_name,
       timeZone: property.time_zone,
       currencyCode: property.currency_code,
-      dailyData: filteredDailyData, // Only the larger period
+      dailyData: filteredDailyData, // Both current and previous periods
       kpiCards: kpiCards, // Both metrics' KPI data
       chartPeriods: {
         trafficChart: sessionsWindow.type, // Total vs Organic Traffic uses sessions period
         sessionsConversionsChart: conversionsWindow.type // Sessions vs Conversions uses conversions period
+      },
+      currentPeriod: {
+        startYYYYMMDD: largerWindow.currentStartYYYYMMDD,
+        endYYYYMMDD: largerWindow.currentEndYYYYMMDD
+      },
+      previousPeriod: {
+        startYYYYMMDD: previousPeriodDates.startYYYYMMDD,
+        endYYYYMMDD: previousPeriodDates.endYYYYMMDD
       }
     }
     

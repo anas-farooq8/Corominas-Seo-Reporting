@@ -75,10 +75,24 @@ export function GoogleAnalyticsDashboardPage({
     }
   }, [datasourceId, externalData])
 
-  // Memoize chart data - full data (larger period) for Sessions vs Conversions chart
+  // Memoize chart data - process both current and previous periods with numeric x-axis
   const chartData = useMemo(() => {
-    if (!data) return []
-    return data.dailyData.map(day => ({
+    if (!data || !data.currentPeriod || !data.previousPeriod) return { current: [], previous: [] }
+    
+    // Separate current and previous period data
+    const currentData = data.dailyData.filter(day => {
+      const dateNum = parseInt(day.date)
+      return dateNum >= data.currentPeriod.startYYYYMMDD && dateNum <= data.currentPeriod.endYYYYMMDD
+    })
+    
+    const previousData = data.dailyData.filter(day => {
+      const dateNum = parseInt(day.date)
+      return dateNum >= data.previousPeriod.startYYYYMMDD && dateNum <= data.previousPeriod.endYYYYMMDD
+    })
+    
+    // Create arrays with numeric day index (1, 2, 3, ...)
+    const current = currentData.map((day, index) => ({
+      dayIndex: index + 1, // Numeric x-axis starting from 1
       date: formatDateForDisplay(day.date),
       dateKey: day.date,
       fullDate: formatFullDate(day.date),
@@ -86,19 +100,28 @@ export function GoogleAnalyticsDashboardPage({
       organicTraffic: day.organicSessions,
       organicConversions: day.organicConversions
     }))
+    
+    const previous = previousData.map((day, index) => ({
+      dayIndex: index + 1, // Numeric x-axis starting from 1
+      date: formatDateForDisplay(day.date),
+      dateKey: day.date,
+      fullDate: formatFullDate(day.date),
+      totalTraffic: day.totalSessions,
+      organicTraffic: day.organicSessions,
+      organicConversions: day.organicConversions
+    }))
+    
+    return { current, previous }
   }, [data])
   
   // Create filtered chart data for Total Traffic vs Organic Traffic (uses sessions period)
   const trafficChartData = useMemo(() => {
-    if (!data || !data.kpiCards || !data.chartPeriods) return chartData
+    if (!data || !data.kpiCards || !data.chartPeriods || !chartData.current.length) return []
     
     const sessionsPeriod = data.kpiCards.organicSessions.periodType
     const conversionsPeriod = data.kpiCards.organicConversions.periodType
     
-    // If both periods are the same, use all data
-    if (sessionsPeriod === conversionsPeriod) return chartData
-    
-    // If sessions period is smaller, filter to show only sessions period
+    // Determine which period to use for traffic chart (sessions period)
     const monthsMap: Record<'1-month' | '3-month' | '6-month', number> = { 
       '1-month': 1, 
       '3-month': 3, 
@@ -107,37 +130,150 @@ export function GoogleAnalyticsDashboardPage({
     const sessionsMonths = monthsMap[sessionsPeriod]
     const conversionsMonths = monthsMap[conversionsPeriod]
     
-    if (sessionsMonths >= conversionsMonths) return chartData
+    // If sessions period is smaller than conversions, filter the data
+    let currentFiltered = chartData.current
+    let previousFiltered = chartData.previous
     
-    // Calculate sessions period start date from the end of the data
-    // Use the last date in dailyData as the end date
-    if (data.dailyData.length === 0) return chartData
-    
-    const lastDataPoint = data.dailyData[data.dailyData.length - 1]
-    const endDateStr = lastDataPoint.date
-    
-    const endYear = parseInt(endDateStr.substring(0, 4))
-    const endMonth = parseInt(endDateStr.substring(4, 6)) - 1
-    const endDay = parseInt(endDateStr.substring(6, 8))
-    const endDate = new Date(endYear, endMonth, endDay)
-    
-    const startDate = new Date(endDate.getFullYear(), endDate.getMonth() - sessionsMonths + 1, 1)
-    
-    const formatDateYYYYMMDD = (date: Date) => {
-      const y = date.getFullYear()
-      const m = String(date.getMonth() + 1).padStart(2, '0')
-      const d = String(date.getDate()).padStart(2, '0')
-      return parseInt(`${y}${m}${d}`)
+    if (sessionsMonths < conversionsMonths) {
+      // Calculate how many days to keep from the end of current data
+      const currentEndDate = new Date(
+        parseInt(chartData.current[chartData.current.length - 1].dateKey.substring(0, 4)),
+        parseInt(chartData.current[chartData.current.length - 1].dateKey.substring(4, 6)) - 1,
+        parseInt(chartData.current[chartData.current.length - 1].dateKey.substring(6, 8))
+      )
+      
+      const startDate = new Date(currentEndDate.getFullYear(), currentEndDate.getMonth() - sessionsMonths + 1, 1)
+      const startYYYYMMDD = parseInt(
+        startDate.getFullYear() + 
+        String(startDate.getMonth() + 1).padStart(2, '0') + 
+        String(startDate.getDate()).padStart(2, '0')
+      )
+      
+      currentFiltered = chartData.current.filter(d => parseInt(d.dateKey) >= startYYYYMMDD)
+      
+      // Filter previous period as well to match the same number of months
+      const prevEndDate = new Date(
+        parseInt(chartData.previous[chartData.previous.length - 1].dateKey.substring(0, 4)),
+        parseInt(chartData.previous[chartData.previous.length - 1].dateKey.substring(4, 6)) - 1,
+        parseInt(chartData.previous[chartData.previous.length - 1].dateKey.substring(6, 8))
+      )
+      
+      const prevStartDate = new Date(prevEndDate.getFullYear(), prevEndDate.getMonth() - sessionsMonths + 1, 1)
+      const prevStartYYYYMMDD = parseInt(
+        prevStartDate.getFullYear() + 
+        String(prevStartDate.getMonth() + 1).padStart(2, '0') + 
+        String(prevStartDate.getDate()).padStart(2, '0')
+      )
+      
+      previousFiltered = chartData.previous.filter(d => parseInt(d.dateKey) >= prevStartYYYYMMDD)
     }
     
-    const startYYYYMMDD = formatDateYYYYMMDD(startDate)
-    const endYYYYMMDD = parseInt(endDateStr)
+    // Combine both periods into a single chart data array with aligned dayIndex
+    // Use the maximum length to handle unequal periods
+    const maxLength = Math.max(currentFiltered.length, previousFiltered.length)
+    const combinedData = []
     
-    // Filter to only show sessions period
-    return chartData.filter(d => {
-      const dateNum = parseInt(d.dateKey)
-      return dateNum >= startYYYYMMDD && dateNum <= endYYYYMMDD
-    })
+    for (let i = 0; i < maxLength; i++) {
+      const dayNum = i + 1
+      const current = currentFiltered[i]
+      const previous = previousFiltered[i]
+      
+      combinedData.push({
+        dayIndex: dayNum,
+        // Current period data (undefined if day doesn't exist)
+        currentTotalTraffic: current?.totalTraffic,
+        currentOrganicTraffic: current?.organicTraffic,
+        currentDate: current?.fullDate,
+        currentDateShort: current?.date,
+        // Previous period data (undefined if day doesn't exist)
+        previousTotalTraffic: previous?.totalTraffic,
+        previousOrganicTraffic: previous?.organicTraffic,
+        previousDate: previous?.fullDate,
+        previousDateShort: previous?.date,
+      })
+    }
+    
+    return combinedData
+  }, [data, chartData])
+  
+  // Create sessions/conversions chart data (uses conversions period)
+  const sessionsConversionsChartData = useMemo(() => {
+    if (!data || !data.kpiCards || !chartData.current.length) return []
+    
+    const sessionsPeriod = data.kpiCards.organicSessions.periodType
+    const conversionsPeriod = data.kpiCards.organicConversions.periodType
+    
+    // Determine which period to use (conversions period for this chart)
+    const monthsMap: Record<'1-month' | '3-month' | '6-month', number> = { 
+      '1-month': 1, 
+      '3-month': 3, 
+      '6-month': 6 
+    }
+    const sessionsMonths = monthsMap[sessionsPeriod]
+    const conversionsMonths = monthsMap[conversionsPeriod]
+    
+    // Use full data if conversions >= sessions, otherwise filter
+    let currentFiltered = chartData.current
+    let previousFiltered = chartData.previous
+    
+    // If conversions period is smaller (rare case), filter the data
+    if (conversionsMonths < Math.max(sessionsMonths, conversionsMonths)) {
+      const currentEndDate = new Date(
+        parseInt(chartData.current[chartData.current.length - 1].dateKey.substring(0, 4)),
+        parseInt(chartData.current[chartData.current.length - 1].dateKey.substring(4, 6)) - 1,
+        parseInt(chartData.current[chartData.current.length - 1].dateKey.substring(6, 8))
+      )
+      
+      const startDate = new Date(currentEndDate.getFullYear(), currentEndDate.getMonth() - conversionsMonths + 1, 1)
+      const startYYYYMMDD = parseInt(
+        startDate.getFullYear() + 
+        String(startDate.getMonth() + 1).padStart(2, '0') + 
+        String(startDate.getDate()).padStart(2, '0')
+      )
+      
+      currentFiltered = chartData.current.filter(d => parseInt(d.dateKey) >= startYYYYMMDD)
+      
+      const prevEndDate = new Date(
+        parseInt(chartData.previous[chartData.previous.length - 1].dateKey.substring(0, 4)),
+        parseInt(chartData.previous[chartData.previous.length - 1].dateKey.substring(4, 6)) - 1,
+        parseInt(chartData.previous[chartData.previous.length - 1].dateKey.substring(6, 8))
+      )
+      
+      const prevStartDate = new Date(prevEndDate.getFullYear(), prevEndDate.getMonth() - conversionsMonths + 1, 1)
+      const prevStartYYYYMMDD = parseInt(
+        prevStartDate.getFullYear() + 
+        String(prevStartDate.getMonth() + 1).padStart(2, '0') + 
+        String(prevStartDate.getDate()).padStart(2, '0')
+      )
+      
+      previousFiltered = chartData.previous.filter(d => parseInt(d.dateKey) >= prevStartYYYYMMDD)
+    }
+    
+    // Combine both periods
+    const maxLength = Math.max(currentFiltered.length, previousFiltered.length)
+    const combinedData = []
+    
+    for (let i = 0; i < maxLength; i++) {
+      const dayNum = i + 1
+      const current = currentFiltered[i]
+      const previous = previousFiltered[i]
+      
+      combinedData.push({
+        dayIndex: dayNum,
+        // Current period data
+        currentOrganicSessions: current?.organicTraffic,
+        currentOrganicConversions: current?.organicConversions,
+        currentDate: current?.fullDate,
+        currentDateShort: current?.date,
+        // Previous period data
+        previousOrganicSessions: previous?.organicTraffic,
+        previousOrganicConversions: previous?.organicConversions,
+        previousDate: previous?.fullDate,
+        previousDateShort: previous?.date,
+      })
+    }
+    
+    return combinedData
   }, [data, chartData])
 
   // Memoize KPI calculations - using kpiCards from backend
@@ -278,11 +414,10 @@ export function GoogleAnalyticsDashboardPage({
             <LineChart data={trafficChartData} margin={{ top: 2, right: 5, left: -5, bottom: 0 }}>
               <CartesianGrid strokeDasharray="3 3" className="stroke-muted" opacity={0.3} />
               <XAxis
-                dataKey="date"
+                dataKey="dayIndex"
                 tick={{ fontSize: 9 }}
-                angle={-45}
-                textAnchor="end"
-                height={50}
+                label={{ value: 'Day', position: 'insideBottom', offset: -5, fontSize: 9 }}
+                height={35}
                 interval={Math.floor(trafficChartData.length / 6)}
               />
               <YAxis tick={{ fontSize: 10 }} width={35} />
@@ -301,28 +436,76 @@ export function GoogleAnalyticsDashboardPage({
                   marginBottom: '6px',
                   fontSize: '11px'
                 }}
-                labelFormatter={(_, payload) => payload && payload[0] ? payload[0].payload.fullDate : ''}
-                formatter={(value, name) => [formatNumber(Number(value ?? 0)), String(name)]}
+                labelFormatter={(value) => `Day ${value}`}
+                formatter={(value: any, name: any, props: any) => {
+                  if (value === undefined || value === null) return [null, '']
+                  const payload = props.payload
+                  let label = String(name)
+                  let dateInfo = ''
+                  
+                  if (name === 'currentTotalTraffic') {
+                    label = 'Total Traffic (Last)'
+                    dateInfo = payload.currentDate ? ` - ${payload.currentDate}` : ''
+                  } else if (name === 'currentOrganicTraffic') {
+                    label = 'Organic Traffic (Last)'
+                    dateInfo = payload.currentDate ? ` - ${payload.currentDate}` : ''
+                  } else if (name === 'previousTotalTraffic') {
+                    label = 'Total Traffic (Previous)'
+                    dateInfo = payload.previousDate ? ` - ${payload.previousDate}` : ''
+                  } else if (name === 'previousOrganicTraffic') {
+                    label = 'Organic Traffic (Previous)'
+                    dateInfo = payload.previousDate ? ` - ${payload.previousDate}` : ''
+                  }
+                  
+                  return [formatNumber(Number(value)), label + dateInfo]
+                }}
               />
+              {/* Current Period - Solid Lines */}
               <Line
                 type="monotone"
-                dataKey="totalTraffic"
+                dataKey="currentTotalTraffic"
                 stroke="#8b5cf6"
                 strokeWidth={2}
-                name="Total Traffic"
+                name="Total Traffic (Last)"
                 dot={false}
                 activeDot={{ r: 4 }}
+                connectNulls={false}
                 animationDuration={300}
               />
               <Line
                 type="monotone"
-                dataKey="organicTraffic"
+                dataKey="currentOrganicTraffic"
                 stroke="#22c55e"
                 strokeWidth={2}
-                name="Organic Traffic"
+                name="Organic Traffic (Last)"
+                dot={false}
+                activeDot={{ r: 4 }}
+                connectNulls={false}
+                animationDuration={300}
+              />
+              {/* Previous Period - Dotted Lines */}
+              <Line
+                type="monotone"
+                dataKey="previousTotalTraffic"
+                stroke="#8b5cf6"
+                strokeWidth={2}
+                name="Total Traffic (Previous)"
                 dot={false}
                 activeDot={{ r: 4 }}
                 strokeDasharray="5 5"
+                connectNulls={false}
+                animationDuration={300}
+              />
+              <Line
+                type="monotone"
+                dataKey="previousOrganicTraffic"
+                stroke="#22c55e"
+                strokeWidth={2}
+                name="Organic Traffic (Previous)"
+                dot={false}
+                activeDot={{ r: 4 }}
+                strokeDasharray="5 5"
+                connectNulls={false}
                 animationDuration={300}
               />
             </LineChart>
@@ -332,11 +515,10 @@ export function GoogleAnalyticsDashboardPage({
             <LineChart data={trafficChartData} margin={{ top: 2, right: 10, left: 0, bottom: 15 }}>
               <CartesianGrid strokeDasharray="3 3" className="stroke-muted" opacity={0.3} />
               <XAxis
-                dataKey="date"
+                dataKey="dayIndex"
                 tick={{ fontSize: 11 }}
-                angle={-45}
-                textAnchor="end"
-                height={55}
+                label={{ value: 'Day', position: 'insideBottom', offset: -10, fontSize: 12 }}
+                height={50}
                 interval={Math.floor(trafficChartData.length / 12)}
               />
               <YAxis tick={{ fontSize: 12 }} width={60} />
@@ -353,29 +535,77 @@ export function GoogleAnalyticsDashboardPage({
                   fontWeight: 600,
                   marginBottom: '8px'
                 }}
-                labelFormatter={(_, payload) => payload && payload[0] ? payload[0].payload.fullDate : ''}
-                formatter={(value, name) => [formatNumber(Number(value ?? 0)), String(name)]}
+                labelFormatter={(value) => `Day ${value}`}
+                formatter={(value: any, name: any, props: any) => {
+                  if (value === undefined || value === null) return [null, '']
+                  const payload = props.payload
+                  let label = String(name)
+                  let dateInfo = ''
+                  
+                  if (name === 'currentTotalTraffic') {
+                    label = 'Total Traffic (Last)'
+                    dateInfo = payload.currentDate ? ` - ${payload.currentDate}` : ''
+                  } else if (name === 'currentOrganicTraffic') {
+                    label = 'Organic Traffic (Last)'
+                    dateInfo = payload.currentDate ? ` - ${payload.currentDate}` : ''
+                  } else if (name === 'previousTotalTraffic') {
+                    label = 'Total Traffic (Previous)'
+                    dateInfo = payload.previousDate ? ` - ${payload.previousDate}` : ''
+                  } else if (name === 'previousOrganicTraffic') {
+                    label = 'Organic Traffic (Previous)'
+                    dateInfo = payload.previousDate ? ` - ${payload.previousDate}` : ''
+                  }
+                  
+                  return [formatNumber(Number(value)), label + dateInfo]
+                }}
               />
               <Legend content={<CustomGATrafficLegend />} wrapperStyle={{ paddingTop: '5px' }} />
+              {/* Current Period - Solid Lines */}
               <Line
                 type="monotone"
-                dataKey="totalTraffic"
+                dataKey="currentTotalTraffic"
                 stroke="#8b5cf6"
                 strokeWidth={3}
-                name="Total Traffic"
+                name="Total Traffic (Last)"
                 dot={false}
                 activeDot={{ r: 6 }}
+                connectNulls={false}
                 animationDuration={300}
               />
               <Line
                 type="monotone"
-                dataKey="organicTraffic"
+                dataKey="currentOrganicTraffic"
                 stroke="#22c55e"
                 strokeWidth={2.5}
-                name="Organic Traffic"
+                name="Organic Traffic (Last)"
+                dot={false}
+                activeDot={{ r: 6 }}
+                connectNulls={false}
+                animationDuration={300}
+              />
+              {/* Previous Period - Dotted Lines */}
+              <Line
+                type="monotone"
+                dataKey="previousTotalTraffic"
+                stroke="#8b5cf6"
+                strokeWidth={3}
+                name="Total Traffic (Previous)"
                 dot={false}
                 activeDot={{ r: 6 }}
                 strokeDasharray="5 5"
+                connectNulls={false}
+                animationDuration={300}
+              />
+              <Line
+                type="monotone"
+                dataKey="previousOrganicTraffic"
+                stroke="#22c55e"
+                strokeWidth={2.5}
+                name="Organic Traffic (Previous)"
+                dot={false}
+                activeDot={{ r: 6 }}
+                strokeDasharray="5 5"
+                connectNulls={false}
                 animationDuration={300}
               />
             </LineChart>
@@ -394,15 +624,14 @@ export function GoogleAnalyticsDashboardPage({
         <CardContent className="px-2 sm:px-4 md:px-6 pb-0.5 sm:pb-0">
           {/* Mobile Chart */}
           <ResponsiveContainer width="100%" height={300} className="sm:hidden">
-            <LineChart data={chartData} margin={{ top: 2, right: 5, left: -5, bottom: 0 }}>
+            <LineChart data={sessionsConversionsChartData} margin={{ top: 2, right: 5, left: -5, bottom: 0 }}>
               <CartesianGrid strokeDasharray="3 3" className="stroke-muted" opacity={0.3} />
               <XAxis
-                dataKey="date"
+                dataKey="dayIndex"
                 tick={{ fontSize: 9 }}
-                angle={-45}
-                textAnchor="end"
-                height={40}
-                interval={Math.floor(chartData.length / 6)}
+                label={{ value: 'Day', position: 'insideBottom', offset: -5, fontSize: 9 }}
+                height={35}
+                interval={Math.floor(sessionsConversionsChartData.length / 6)}
               />
               <YAxis tick={{ fontSize: 10 }} width={35} />
               <Tooltip
@@ -420,42 +649,90 @@ export function GoogleAnalyticsDashboardPage({
                   marginBottom: '6px',
                   fontSize: '11px'
                 }}
-                labelFormatter={(_, payload) => payload && payload[0] ? payload[0].payload.fullDate : ''}
-                formatter={(value, name) => [formatNumber(Number(value ?? 0)), String(name)]}
+                labelFormatter={(value) => `Day ${value}`}
+                formatter={(value: any, name: any, props: any) => {
+                  if (value === undefined || value === null) return [null, '']
+                  const payload = props.payload
+                  let label = String(name)
+                  let dateInfo = ''
+                  
+                  if (name === 'currentOrganicSessions') {
+                    label = 'Organic Sessions (Last)'
+                    dateInfo = payload.currentDate ? ` - ${payload.currentDate}` : ''
+                  } else if (name === 'currentOrganicConversions') {
+                    label = 'Organic Conversions (Last)'
+                    dateInfo = payload.currentDate ? ` - ${payload.currentDate}` : ''
+                  } else if (name === 'previousOrganicSessions') {
+                    label = 'Organic Sessions (Previous)'
+                    dateInfo = payload.previousDate ? ` - ${payload.previousDate}` : ''
+                  } else if (name === 'previousOrganicConversions') {
+                    label = 'Organic Conversions (Previous)'
+                    dateInfo = payload.previousDate ? ` - ${payload.previousDate}` : ''
+                  }
+                  
+                  return [formatNumber(Number(value)), label + dateInfo]
+                }}
               />
+              {/* Current Period - Solid Lines */}
               <Line
                 type="monotone"
-                dataKey="organicTraffic"
+                dataKey="currentOrganicSessions"
                 stroke="#22c55e"
                 strokeWidth={2}
-                name="Organic Sessions"
+                name="Organic Sessions (Last)"
                 dot={false}
                 activeDot={{ r: 4 }}
+                connectNulls={false}
                 animationDuration={300}
               />
               <Line
                 type="monotone"
-                dataKey="organicConversions"
+                dataKey="currentOrganicConversions"
                 stroke="#3b82f6"
                 strokeWidth={2}
-                name="Organic Conversions"
+                name="Organic Conversions (Last)"
                 dot={false}
                 activeDot={{ r: 4 }}
+                connectNulls={false}
+                animationDuration={300}
+              />
+              {/* Previous Period - Dotted Lines */}
+              <Line
+                type="monotone"
+                dataKey="previousOrganicSessions"
+                stroke="#22c55e"
+                strokeWidth={2}
+                name="Organic Sessions (Previous)"
+                dot={false}
+                activeDot={{ r: 4 }}
+                strokeDasharray="5 5"
+                connectNulls={false}
+                animationDuration={300}
+              />
+              <Line
+                type="monotone"
+                dataKey="previousOrganicConversions"
+                stroke="#3b82f6"
+                strokeWidth={2}
+                name="Organic Conversions (Previous)"
+                dot={false}
+                activeDot={{ r: 4 }}
+                strokeDasharray="5 5"
+                connectNulls={false}
                 animationDuration={300}
               />
             </LineChart>
           </ResponsiveContainer>
           {/* Desktop Chart */}
           <ResponsiveContainer width="100%" height={450} className="hidden sm:block">
-            <LineChart data={chartData} margin={{ top: 2, right: 10, left: 0, bottom: 5 }}>
+            <LineChart data={sessionsConversionsChartData} margin={{ top: 2, right: 10, left: 0, bottom: 5 }}>
               <CartesianGrid strokeDasharray="3 3" className="stroke-muted" opacity={0.3} />
               <XAxis
-                dataKey="date"
+                dataKey="dayIndex"
                 tick={{ fontSize: 11 }}
-                angle={-45}
-                textAnchor="end"
+                label={{ value: 'Day', position: 'insideBottom', offset: 0, fontSize: 12 }}
                 height={45}
-                interval={Math.floor(chartData.length / 12)}
+                interval={Math.floor(sessionsConversionsChartData.length / 12)}
               />
               <YAxis tick={{ fontSize: 12 }} width={50} />
               <Tooltip
@@ -471,28 +748,77 @@ export function GoogleAnalyticsDashboardPage({
                   fontWeight: 600,
                   marginBottom: '8px'
                 }}
-                labelFormatter={(_, payload) => payload && payload[0] ? payload[0].payload.fullDate : ''}
-                formatter={(value, name) => [formatNumber(Number(value ?? 0)), String(name)]}
+                labelFormatter={(value) => `Day ${value}`}
+                formatter={(value: any, name: any, props: any) => {
+                  if (value === undefined || value === null) return [null, '']
+                  const payload = props.payload
+                  let label = String(name)
+                  let dateInfo = ''
+                  
+                  if (name === 'currentOrganicSessions') {
+                    label = 'Organic Sessions (Last)'
+                    dateInfo = payload.currentDate ? ` - ${payload.currentDate}` : ''
+                  } else if (name === 'currentOrganicConversions') {
+                    label = 'Organic Conversions (Last)'
+                    dateInfo = payload.currentDate ? ` - ${payload.currentDate}` : ''
+                  } else if (name === 'previousOrganicSessions') {
+                    label = 'Organic Sessions (Previous)'
+                    dateInfo = payload.previousDate ? ` - ${payload.previousDate}` : ''
+                  } else if (name === 'previousOrganicConversions') {
+                    label = 'Organic Conversions (Previous)'
+                    dateInfo = payload.previousDate ? ` - ${payload.previousDate}` : ''
+                  }
+                  
+                  return [formatNumber(Number(value)), label + dateInfo]
+                }}
               />
               <Legend content={<CustomGASessionsLegend />} wrapperStyle={{ paddingTop: '5px' }} />
+              {/* Current Period - Solid Lines */}
               <Line
                 type="monotone"
-                dataKey="organicTraffic"
+                dataKey="currentOrganicSessions"
                 stroke="#22c55e"
                 strokeWidth={2.5}
-                name="Organic Sessions"
+                name="Organic Sessions (Last)"
                 dot={false}
                 activeDot={{ r: 6 }}
+                connectNulls={false}
                 animationDuration={300}
               />
               <Line
                 type="monotone"
-                dataKey="organicConversions"
+                dataKey="currentOrganicConversions"
                 stroke="#3b82f6"
                 strokeWidth={2.5}
-                name="Organic Conversions"
+                name="Organic Conversions (Last)"
                 dot={false}
                 activeDot={{ r: 6 }}
+                connectNulls={false}
+                animationDuration={300}
+              />
+              {/* Previous Period - Dotted Lines */}
+              <Line
+                type="monotone"
+                dataKey="previousOrganicSessions"
+                stroke="#22c55e"
+                strokeWidth={2.5}
+                name="Organic Sessions (Previous)"
+                dot={false}
+                activeDot={{ r: 6 }}
+                strokeDasharray="5 5"
+                connectNulls={false}
+                animationDuration={300}
+              />
+              <Line
+                type="monotone"
+                dataKey="previousOrganicConversions"
+                stroke="#3b82f6"
+                strokeWidth={2.5}
+                name="Organic Conversions (Previous)"
+                dot={false}
+                activeDot={{ r: 6 }}
+                strokeDasharray="5 5"
+                connectNulls={false}
                 animationDuration={300}
               />
             </LineChart>

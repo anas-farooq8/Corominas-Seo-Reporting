@@ -98,8 +98,10 @@ export const CustomSEMrushLegend = () => {
 // Custom Google Analytics Traffic Legend (Total Traffic first, then Organic Traffic)
 export const CustomGATrafficLegend = () => {
   const legendItems = [
-    { value: 'Total Traffic', color: '#8b5cf6', strokeDasharray: '' },
-    { value: 'Organic Traffic', color: '#22c55e', strokeDasharray: '5 5' },
+    { value: 'Total Traffic (Last)', color: '#8b5cf6', strokeDasharray: '' },
+    { value: 'Organic Traffic (Last)', color: '#22c55e', strokeDasharray: '' },
+    { value: 'Total Traffic (Previous)', color: '#8b5cf6', strokeDasharray: '5 5' },
+    { value: 'Organic Traffic (Previous)', color: '#22c55e', strokeDasharray: '5 5' },
   ]
 
   return (
@@ -107,12 +109,12 @@ export const CustomGATrafficLegend = () => {
       display: 'flex', 
       justifyContent: 'center', 
       flexWrap: 'wrap', 
-      gap: '20px',
+      gap: '16px',
       paddingTop: '10px',
-      fontSize: '14px'
+      fontSize: '13px'
     }}>
       {legendItems.map((item) => (
-        <div key={item.value} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+        <div key={item.value} style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
           <svg width="18" height="2" style={{ overflow: 'visible' }}>
             <line 
               x1="0" 
@@ -134,8 +136,10 @@ export const CustomGATrafficLegend = () => {
 // Custom Google Analytics Sessions/Conversions Legend (Organic Sessions first)
 export const CustomGASessionsLegend = () => {
   const legendItems = [
-    { value: 'Organic Sessions', color: '#22c55e', strokeDasharray: '' },
-    { value: 'Organic Conversions', color: '#3b82f6', strokeDasharray: '' },
+    { value: 'Organic Sessions (Last)', color: '#22c55e', strokeDasharray: '' },
+    { value: 'Organic Conversions (Last)', color: '#3b82f6', strokeDasharray: '' },
+    { value: 'Organic Sessions (Previous)', color: '#22c55e', strokeDasharray: '5 5' },
+    { value: 'Organic Conversions (Previous)', color: '#3b82f6', strokeDasharray: '5 5' },
   ]
 
   return (
@@ -143,12 +147,12 @@ export const CustomGASessionsLegend = () => {
       display: 'flex', 
       justifyContent: 'center', 
       flexWrap: 'wrap', 
-      gap: '20px',
+      gap: '16px',
       paddingTop: '10px',
-      fontSize: '14px'
+      fontSize: '13px'
     }}>
       {legendItems.map((item) => (
-        <div key={item.value} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+        <div key={item.value} style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
           <svg width="18" height="2" style={{ overflow: 'visible' }}>
             <line 
               x1="0" 
