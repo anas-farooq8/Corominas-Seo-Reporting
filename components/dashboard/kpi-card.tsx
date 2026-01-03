@@ -72,7 +72,7 @@ export const KPICard = memo(function KPICard({
           </div>
           <div className="flex flex-col items-end gap-0">
             <div
-              className={`flex items-center gap-0.5 text-xs sm:text-sm font-bold flex-shrink-0 ${
+              className={`flex items-center gap-0.5 text-sm sm:text-lg font-bold flex-shrink-0 ${
                 percentageChange.isIncrease ? "text-green-600" : "text-red-600"
               }`}
             >
@@ -81,10 +81,10 @@ export const KPICard = memo(function KPICard({
               ) : (
                 <ArrowDown className="h-3 w-3 sm:h-4 sm:w-4" />
               )}
-              <span className="text-xs sm:text-sm">{percentageChange.change.toFixed(2)}%</span>
+              <span className="text-sm sm:text-lg">{percentageChange.change.toFixed(2)}%</span>
             </div>
             {comparisonLabel && (
-              <span className="text-[9px] sm:text-[10px] text-muted-foreground">
+              <span className="text-xs sm:text-sm text-muted-foreground">
                 ({comparisonLabel})
               </span>
             )}
