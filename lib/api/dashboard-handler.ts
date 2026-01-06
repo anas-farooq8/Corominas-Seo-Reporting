@@ -11,7 +11,7 @@ import { NextRequest, NextResponse } from "next/server"
  * @param fetchFn - Function that fetches dashboard data given a datasourceId
  * @param options - Optional configuration for error messages
  */
-export async function createDashboardHandler<T>(
+export function createDashboardHandler<T>(
   fetchFn: (datasourceId: string) => Promise<T | null>,
   options?: {
     resourceName?: string
