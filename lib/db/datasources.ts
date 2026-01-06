@@ -9,7 +9,8 @@ import type {
   MangoolsDomain,
   GoogleAnalyticsProperty,
   SemrushDomain,
-  GoogleSearchConsoleSite, 
+  GoogleSearchConsoleSite,
+  GoogleBusinessProfileLocation, 
   getDataSourcesWithRespectiveData 
 } from "@/lib/supabase/types"
 
@@ -33,6 +34,9 @@ export async function getDataSourcesWithRespectiveData(projectId: string): Promi
       ),
       google_search_console_sites (
         *
+      ),
+      google_business_profile_locations (
+        *
       )
     `)
     .eq("project_id", projectId)
@@ -42,7 +46,7 @@ export async function getDataSourcesWithRespectiveData(projectId: string): Promi
 
   return (data || []).map((datasource: any) => ({
     ...datasource,
-    domain_count: (datasource.mangools_domains?.length || 0) + (datasource.google_analytics_properties?.length || 0) + (datasource.semrush_domains?.length || 0) + (datasource.google_search_console_sites?.length || 0)
+    domain_count: (datasource.mangools_domains?.length || 0) + (datasource.google_analytics_properties?.length || 0) + (datasource.semrush_domains?.length || 0) + (datasource.google_search_console_sites?.length || 0) + (datasource.google_business_profile_locations?.length || 0)
   }))
 }
 
@@ -167,6 +171,29 @@ export async function attachGoogleSearchConsoleSite(
     .insert({
       datasource_id: datasourceId,
       site_url: siteUrl
+    })
+    .select()
+    .single()
+
+  if (error) throw error
+  return data
+}
+
+/**
+ * Attach a Google Business Profile location to a datasource
+ */
+export async function attachGoogleBusinessProfileLocation(
+  datasourceId: string,
+  locationId: string,
+  businessName: string
+): Promise<GoogleBusinessProfileLocation> {
+  const supabase = await createClient()
+  const { data, error } = await supabase
+    .from("google_business_profile_locations")
+    .insert({
+      datasource_id: datasourceId,
+      location_id: locationId,
+      business_name: businessName
     })
     .select()
     .single()

@@ -64,23 +64,16 @@ function calculateKPICards(dailyData: GSCDailyData[], endDate: string): GSCKPICa
   const ctrComparison = calculateCTRComparison(dailyData, endDate)
   const positionComparison = calculatePositionComparison(dailyData, endDate)
   
-  console.log('\n=== BEST WINDOWS SELECTED ===')
+  console.log('=== BEST WINDOWS SELECTED ===')
   console.log(`Clicks: ${clicksComparison.periodType}`)
-  console.log(`  Period: ${clicksComparison.currentPeriod || 'N/A'} vs ${clicksComparison.previousPeriod || 'N/A'}`)
   console.log(`  Current: ${clicksComparison.current.toFixed(0)}, Previous: ${clicksComparison.previous.toFixed(0)}, Change: ${clicksComparison.isIncrease ? '+' : ''}${clicksComparison.change.toFixed(2)}%`)
-  
   console.log(`Impressions: ${impressionsComparison.periodType}`)
-  console.log(`  Period: ${impressionsComparison.currentPeriod || 'N/A'} vs ${impressionsComparison.previousPeriod || 'N/A'}`)
   console.log(`  Current: ${impressionsComparison.current.toFixed(0)}, Previous: ${impressionsComparison.previous.toFixed(0)}, Change: ${impressionsComparison.isIncrease ? '+' : ''}${impressionsComparison.change.toFixed(2)}%`)
-  
   console.log(`CTR: ${ctrComparison.periodType}`)
-  console.log(`  Period: ${ctrComparison.currentPeriod || 'N/A'} vs ${ctrComparison.previousPeriod || 'N/A'}`)
   console.log(`  Current: ${ctrComparison.current.toFixed(2)}%, Previous: ${ctrComparison.previous.toFixed(2)}%, Change: ${ctrComparison.isIncrease ? '+' : ''}${ctrComparison.change.toFixed(2)}%`)
-  
   console.log(`Position: ${positionComparison.periodType}`)
-  console.log(`  Period: ${positionComparison.currentPeriod || 'N/A'} vs ${positionComparison.previousPeriod || 'N/A'}`)
   console.log(`  Current: ${positionComparison.current.toFixed(2)}, Previous: ${positionComparison.previous.toFixed(2)}, Change: ${positionComparison.isIncrease ? '+' : ''}${positionComparison.change.toFixed(2)}%`)
-  console.log('=====================================\n')
+  console.log('=========================================\n')
   
   return {
     totalClicks: {
@@ -148,11 +141,21 @@ function calculateMetricComparison(dailyData: GSCDailyData[], endDate: string, m
     const currentTotal = currentData.reduce((sum, d) => sum + d[metric], 0)
     const previousTotal = previousData.reduce((sum, d) => sum + d[metric], 0)
     
-    console.log(`[GSC ${metric}] ${label}: Current=${currentTotal.toFixed(0)}, Previous=${previousTotal.toFixed(0)}`)
+    // Calculate days count
+    const currentDays = currentData.length
+    const previousDays = previousData.length
+    
+    // Debug logging with detailed format matching GA
+    const metricName = metric === 'clicks' ? 'GSC Total Clicks' : 'GSC Total Impressions'
+    console.log(`[${metricName}] ${label}:`)
+    console.log(`  Current:  ${currentDates.startDate} to ${currentDates.endDate} (${currentDays} days) = ${currentTotal.toFixed(2)}`)
+    console.log(`  Previous: ${previousDates.startDate} to ${previousDates.endDate} (${previousDays} days) = ${previousTotal.toFixed(2)}`)
     
     if (previousTotal > 0) {
       const change = ((currentTotal - previousTotal) / previousTotal) * 100
       const isIncrease = change >= 0
+      
+      console.log(`  Change: ${change >= 0 ? '+' : ''}${change.toFixed(2)}%`)
       
       const result: ComparisonWindow = {
         current: currentTotal,
@@ -224,11 +227,20 @@ function calculateCTRComparison(dailyData: GSCDailyData[], endDate: string): Com
     const previousImpressions = previousData.reduce((sum, d) => sum + d.impressions, 0)
     const previousCTR = previousImpressions > 0 ? (previousClicks / previousImpressions) * 100 : 0
     
-    console.log(`[GSC CTR] ${label}: Current=${currentCTR.toFixed(2)}%, Previous=${previousCTR.toFixed(2)}%`)
+    // Calculate days count
+    const currentDays = currentData.length
+    const previousDays = previousData.length
+    
+    // Debug logging with detailed format matching GA
+    console.log(`[GSC Average CTR] ${label}:`)
+    console.log(`  Current:  ${currentDates.startDate} to ${currentDates.endDate} (${currentDays} days) = ${currentCTR.toFixed(2)}`)
+    console.log(`  Previous: ${previousDates.startDate} to ${previousDates.endDate} (${previousDays} days) = ${previousCTR.toFixed(2)}`)
     
     if (previousCTR > 0) {
       const change = ((currentCTR - previousCTR) / previousCTR) * 100
       const isIncrease = change >= 0
+      
+      console.log(`  Change: ${change >= 0 ? '+' : ''}${change.toFixed(2)}%`)
       
       const result: ComparisonWindow = {
         current: currentCTR,
@@ -301,11 +313,20 @@ function calculatePositionComparison(dailyData: GSCDailyData[], endDate: string)
     const previousWeightedPosition = previousData.reduce((sum, d) => sum + (d.position * d.impressions), 0)
     const previousPosition = previousImpressions > 0 ? previousWeightedPosition / previousImpressions : 0
     
-    console.log(`[GSC Position] ${label}: Current=${currentPosition.toFixed(2)}, Previous=${previousPosition.toFixed(2)}`)
+    // Calculate days count
+    const currentDays = currentData.length
+    const previousDays = previousData.length
+    
+    // Debug logging with detailed format matching GA
+    console.log(`[GSC Average Position] ${label}:`)
+    console.log(`  Current:  ${currentDates.startDate} to ${currentDates.endDate} (${currentDays} days) = ${currentPosition.toFixed(2)}`)
+    console.log(`  Previous: ${previousDates.startDate} to ${previousDates.endDate} (${previousDays} days) = ${previousPosition.toFixed(2)}`)
     
     if (previousPosition > 0) {
       const change = ((currentPosition - previousPosition) / previousPosition) * 100
       const isIncrease = change < 0 // Lower position is better
+      
+      console.log(`  Change: ${change >= 0 ? '+' : ''}${change.toFixed(2)}%`)
       
       const result: ComparisonWindow = {
         current: currentPosition,

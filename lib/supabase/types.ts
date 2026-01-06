@@ -23,7 +23,7 @@ export interface Project {
 export interface Datasource {
   id: string
   project_id: string
-  type: "mangools" | "semrush" | "google_analytics" | "google_search_console"
+  type: "mangools" | "semrush" | "google_analytics" | "google_search_console" | "gbp"
   created_at: string
   updated_at: string
 }
@@ -65,6 +65,15 @@ export interface GoogleSearchConsoleSite {
   updated_at: string
 }
 
+export interface GoogleBusinessProfileLocation {
+  id: string
+  datasource_id: string
+  location_id: string  // Full location ID (e.g., "accounts/123/locations/456")
+  business_name: string
+  created_at: string
+  updated_at: string
+}
+
 // Alias for MangoolsDomain used in datasource components
 export type DatasourceDomain = MangoolsDomain
 
@@ -87,6 +96,7 @@ export interface DatasourceWithDomains extends Datasource {
   google_analytics_properties?: GoogleAnalyticsProperty[]
   semrush_domains?: SemrushDomain[]
   google_search_console_sites?: GoogleSearchConsoleSite[]
+  google_business_profile_locations?: GoogleBusinessProfileLocation[]
   domain_count?: number
 }
 
@@ -138,5 +148,36 @@ export interface ProjectInput {
 
 export interface DatasourceInput {
   project_id: string
-  type: "mangools" | "semrush" | "google_analytics" | "google_search_console"
+  type: "mangools" | "semrush" | "google_analytics" | "google_search_console" | "gbp"
+}
+
+// ============================================
+// GBP API Response Types
+// ============================================
+
+export interface GBPAccount {
+  name: string // e.g., "accounts/123456789"
+  accountName: string // Display name
+  type: string
+  role: string
+}
+
+export interface GBPLocation {
+  name: string // e.g., "accounts/123456789/locations/987654321"
+  locationName: string // Business name (display name from API)
+  primaryCategory?: {
+    displayName: string // e.g., "Marketing Agency"
+  }
+  address?: {
+    addressLines?: string[] // e.g., ["Tölzer Straße 1"]
+    locality?: string // City, e.g., "Grünwald"
+    administrativeArea?: string // State/Province
+    postalCode?: string // e.g., "82031"
+    regionCode?: string // Country code, e.g., "DE"
+  }
+  websiteUrl?: string
+}
+
+export interface GBPAccountWithLocations extends GBPAccount {
+  locations: GBPLocation[]
 }

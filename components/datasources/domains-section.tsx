@@ -4,7 +4,7 @@ import { useState, useEffect } from "react"
 import { AvailableDomainsSection } from "./available-domains-section"
 import { AttachedDomainsSection } from "./attached-domains-section"
 import type { DatasourceWithDomains } from "@/lib/supabase/types"
-import { BarChart3, Globe, Clock, DollarSign } from "lucide-react"
+import { BarChart3, Globe, Clock, DollarSign, MapPin, Store } from "lucide-react"
 
 interface DomainsSectionProps {
   datasource: DatasourceWithDomains
@@ -172,6 +172,46 @@ export function DomainsSection({
                 <Globe className="h-4 w-4 flex-shrink-0" />
                 <span className="truncate">Visit website</span>
               </a>
+            </div>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  // Handle Google Business Profile datasources
+  if (datasource.type === "gbp") {
+    const locations = datasource.google_business_profile_locations || []
+    
+    if (locations.length === 0) {
+      return (
+        <div className="text-xs sm:text-sm text-muted-foreground">
+          No Google Business Profile location attached.
+        </div>
+      )
+    }
+
+    const location = locations[0]
+    
+    return (
+      <div className="space-y-1.5">
+        <h3 className="text-xs sm:text-sm font-semibold text-foreground">Google Business Profile Location</h3>
+        <div className="group relative flex flex-col sm:flex-row items-start gap-2 sm:gap-3 p-3 sm:p-3.5 border rounded-lg bg-gradient-to-br from-background to-muted/30 hover:shadow-sm hover:border-primary/20 transition-all duration-200">
+          <div className="relative p-1.5 rounded bg-primary/10 group-hover:bg-primary/15 transition-colors flex-shrink-0">
+            <Store className="h-7 w-7 text-primary" />
+          </div>
+          <div className="flex-1 min-w-0 w-full space-y-2">
+            <h4 className="font-semibold text-sm sm:text-base">{location.business_name}</h4>
+            
+            <div className="space-y-1.5">
+              <div className="flex items-start gap-1.5">
+                <MapPin className="h-3.5 w-3.5 flex-shrink-0 mt-0.5 text-muted-foreground" />
+                <div className="flex-1">
+                  <div className="font-mono text-[10px] break-all text-muted-foreground leading-relaxed">
+                    {location.location_id}
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
         </div>

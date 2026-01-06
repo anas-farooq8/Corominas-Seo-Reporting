@@ -20,14 +20,16 @@ export function DatasourceCard({
     mangools: "Mangools",
     semrush: "Semrush",
     google_analytics: "Google Analytics",
-    google_search_console: "Google Search Console"
+    google_search_console: "Google Search Console",
+    gbp: "Google Business Profile"
   }
   
   const typeDescriptions: Record<string, string> = {
     mangools: "Track domain rankings and keywords",
     semrush: "SEO analytics and competitive research",
     google_analytics: "Website traffic and user behavior analytics",
-    google_search_console: "Search performance and indexing data"
+    google_search_console: "Search performance and indexing data",
+    gbp: "Manage and track your business locations"
   }
   
   const typeLabel = typeLabels[datasource.type] || datasource.type

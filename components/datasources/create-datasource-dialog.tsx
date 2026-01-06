@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useMemo, useTransition } from "react"
+import { useState, useEffect, useMemo } from "react"
 import { Button } from "@/components/ui/button"
 import {
   Dialog,
@@ -14,9 +14,9 @@ import {
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { createDatasource, attachDomain, attachGoogleAnalyticsProperty, attachSemrushDomain, attachGoogleSearchConsoleSite } from "@/lib/actions/datasources"
-import { Plus, Loader2, Search, AlertCircle, CheckCircle2 } from "lucide-react"
-import type { Datasource, MangoolsApiDomain, GoogleAnalyticsApiProperty } from "@/lib/supabase/types"
+import { createDatasource, attachDomain, attachGoogleAnalyticsProperty, attachSemrushDomain, attachGoogleSearchConsoleSite, attachGoogleBusinessProfileLocation } from "@/lib/actions/datasources"
+import { Plus, Loader2, Search, AlertCircle, CheckCircle2, ChevronDown, ChevronRight } from "lucide-react"
+import type { Datasource, MangoolsApiDomain, GoogleAnalyticsApiProperty, GBPAccountWithLocations, GBPLocation } from "@/lib/supabase/types"
 
 interface CreateDatasourceDialogProps {
   projectId: string
@@ -40,10 +40,65 @@ interface SiteOption {
   attachedInfo?: string
 }
 
+interface LocationOption extends GBPLocation {
+  isAttached: boolean
+  attachedInfo?: string
+}
+
+interface AccountWithLocations extends GBPAccountWithLocations {
+  expanded?: boolean
+}
+
+// Helper function to format address properly
+function formatAddress(address?: GBPLocation['address']): string {
+  if (!address) return ""
+  
+  const parts: string[] = []
+  
+  // Street address
+  if (address.addressLines && address.addressLines.length > 0) {
+    parts.push(address.addressLines.join(", "))
+  }
+  
+  // Postal code and city (e.g., "82031 Grünwald")
+  const cityParts: string[] = []
+  if (address.postalCode) cityParts.push(address.postalCode)
+  if (address.locality) cityParts.push(address.locality)
+  if (cityParts.length > 0) {
+    parts.push(cityParts.join(" "))
+  }
+  
+  // Country (convert code to name)
+  if (address.regionCode) {
+    const countryNames: Record<string, string> = {
+      'DE': 'Germany',
+      'US': 'United States',
+      'GB': 'United Kingdom',
+      'FR': 'France',
+      'ES': 'Spain',
+      'IT': 'Italy',
+      'AT': 'Austria',
+      'CH': 'Switzerland',
+      // Add more as needed
+    }
+    const countryName = countryNames[address.regionCode] || address.regionCode
+    parts.push(countryName)
+  }
+  
+  return parts.filter(p => p).join(", ")
+}
+
+// Helper to flatten all GBP locations from accounts
+function flattenLocations(accounts: AccountWithLocations[]): LocationOption[] {
+  return accounts.flatMap(account =>
+    account.locations.map(location => location as LocationOption)
+  )
+}
+
 export function CreateDatasourceDialog({ projectId, existingTypes, onDatasourceAdded }: CreateDatasourceDialogProps) {
   const [open, setOpen] = useState(false)
   const [loading, setLoading] = useState(false)
-  const [selectedType, setSelectedType] = useState<"mangools" | "semrush" | "google_analytics" | "google_search_console" | "">("")
+  const [selectedType, setSelectedType] = useState<"mangools" | "semrush" | "google_analytics" | "google_search_console" | "gbp" | "">("")
   
   // Mangools-specific state
   const [fetchingDomains, setFetchingDomains] = useState(false)
@@ -72,6 +127,14 @@ export function CreateDatasourceDialog({ projectId, existingTypes, onDatasourceA
     showResult: boolean
   }>({ verified: false, result: null, showResult: false })
   
+  // GBP-specific state
+  const [fetchingGBPLocations, setFetchingGBPLocations] = useState(false)
+  const [gbpAccounts, setGbpAccounts] = useState<AccountWithLocations[]>([])
+  const [gbpLocationSearchQuery, setGbpLocationSearchQuery] = useState("")
+  const [selectedGBPLocation, setSelectedGBPLocation] = useState<string>("")
+  const [gbpAuthStatus, setGbpAuthStatus] = useState<"checking" | "authenticated" | "not_authenticated">("checking")
+  const [initiatingOAuth, setInitiatingOAuth] = useState(false)
+  
   const [error, setError] = useState<string | null>(null)
 
   // Reset state when dialog opens/closes
@@ -90,6 +153,11 @@ export function CreateDatasourceDialog({ projectId, existingTypes, onDatasourceA
       setSemrushDomain("")
       setVerifyingDomain(false)
       setDomainVerificationState({ verified: false, result: null, showResult: false })
+      setGbpAccounts([])
+      setGbpLocationSearchQuery("")
+      setSelectedGBPLocation("")
+      setGbpAuthStatus("checking")
+      setInitiatingOAuth(false)
       setError(null)
     }
   }, [open])
@@ -235,6 +303,131 @@ export function CreateDatasourceDialog({ projectId, existingTypes, onDatasourceA
     fetchSites()
   }, [selectedType])
 
+  // Check GBP auth status and fetch locations when GBP is selected
+  useEffect(() => {
+    async function checkAuthAndFetchLocations() {
+      if (selectedType !== "gbp") return
+      
+      setGbpAuthStatus("checking")
+      setError(null)
+      
+      try {
+        console.log("[GBP UI] Checking authentication status")
+        
+        // Check if we have a refresh token
+        const authStatusResponse = await fetch("/api/gbp/auth-status")
+        if (!authStatusResponse.ok) {
+          throw new Error("Failed to check GBP authentication status")
+        }
+        const { authenticated } = await authStatusResponse.json()
+        
+        console.log(`[GBP UI] Authentication status: ${authenticated}`)
+        
+        if (!authenticated) {
+          setGbpAuthStatus("not_authenticated")
+          return
+        }
+        
+        setGbpAuthStatus("authenticated")
+        
+        // Fetch locations
+        console.log("[GBP UI] Fetching locations")
+        setFetchingGBPLocations(true)
+        
+        const locationsResponse = await fetch("/api/gbp/locations")
+        if (!locationsResponse.ok) {
+          throw new Error("Failed to fetch GBP locations")
+        }
+        const accountsWithLocations: GBPAccountWithLocations[] = await locationsResponse.json()
+        
+        // Fetch attached locations to check which ones are already used
+        const attachedResponse = await fetch("/api/gbp/attached")
+        if (!attachedResponse.ok) {
+          throw new Error("Failed to fetch attached GBP locations")
+        }
+        const attachedLocations: { location_id: string }[] = await attachedResponse.json()
+        const attachedLocationSet = new Set(attachedLocations.map(l => l.location_id))
+        
+        // Mark locations as attached or available and set accounts to expanded by default
+        const accountsWithMarkedLocations: AccountWithLocations[] = accountsWithLocations.map(account => ({
+          ...account,
+          expanded: true, // Expand all accounts by default
+          locations: account.locations.map(location => ({
+            ...location,
+            isAttached: attachedLocationSet.has(location.name),
+            attachedInfo: attachedLocationSet.has(location.name) ? "Already attached to another project" : undefined
+          }))
+        }))
+        
+        setGbpAccounts(accountsWithMarkedLocations)
+        
+        const totalLocations = accountsWithMarkedLocations.reduce((sum, acc) => sum + acc.locations.length, 0)
+        console.log(`[GBP UI] Found ${totalLocations} location(s)`)
+        
+        if (totalLocations === 0) {
+          setError("No locations found in your Google Business Profile account")
+        }
+      } catch (err) {
+        console.error("[GBP UI] Error:", err)
+        setError(err instanceof Error ? err.message : "Failed to fetch GBP locations")
+        setGbpAuthStatus("not_authenticated")
+      } finally {
+        setFetchingGBPLocations(false)
+      }
+    }
+    
+    checkAuthAndFetchLocations()
+  }, [selectedType])
+
+  // Listen for OAuth success message from popup window
+  useEffect(() => {
+    function handleOAuthMessage(event: MessageEvent) {
+      // Only handle messages from our OAuth callback
+      if (event.data.type === 'GBP_AUTH_SUCCESS') {
+        console.log("[GBP UI] OAuth successful, refetching locations")
+        setInitiatingOAuth(false)
+        setError(null)
+        // Trigger refetch by changing selectedType temporarily
+        setSelectedType("")
+        setTimeout(() => setSelectedType("gbp"), 100)
+      } else if (event.data.type === 'GBP_AUTH_ERROR') {
+        console.error("[GBP UI] OAuth failed:", event.data.error)
+        setInitiatingOAuth(false)
+        setError(`Authorization failed: ${event.data.error}`)
+      }
+    }
+
+    window.addEventListener('message', handleOAuthMessage)
+    return () => window.removeEventListener('message', handleOAuthMessage)
+  }, [])
+
+  // Handle GBP OAuth
+  async function handleGBPOAuth() {
+    console.log("[GBP UI] Initiating OAuth flow")
+    setInitiatingOAuth(true)
+    setError(null)
+    
+    try {
+      const response = await fetch("/api/gbp/auth-url")
+      if (!response.ok) {
+        throw new Error("Failed to generate authorization URL")
+      }
+      
+      const { authUrl } = await response.json()
+      console.log("[GBP UI] Opening authorization URL")
+      
+      // Open in new window
+      window.open(authUrl, "_blank", "width=600,height=700")
+      
+      // Show message to user
+      setError("Please complete the authorization in the new window. The window will close automatically when done.")
+    } catch (err) {
+      console.error("[GBP UI] OAuth error:", err)
+      setError(err instanceof Error ? err.message : "Failed to start OAuth flow")
+      setInitiatingOAuth(false)
+    }
+  }
+
   // Handle Semrush domain verification
   async function handleVerifyDomain() {
     if (!semrushDomain.trim()) {
@@ -329,6 +522,37 @@ export function CreateDatasourceDialog({ projectId, existingTypes, onDatasourceA
     )
   }, [sites, siteSearchQuery])
 
+  // Filter GBP accounts and locations based on search query
+  const filteredGBPAccounts = useMemo(() => {
+    if (!gbpLocationSearchQuery.trim()) return gbpAccounts
+    
+    const query = gbpLocationSearchQuery.toLowerCase()
+    return gbpAccounts.map(account => ({
+      ...account,
+      locations: account.locations.filter(location => 
+        location.locationName.toLowerCase().includes(query) ||
+        location.name.toLowerCase().includes(query) ||
+        location.address?.locality?.toLowerCase().includes(query) ||
+        location.primaryCategory?.displayName?.toLowerCase().includes(query) ||
+        account.accountName.toLowerCase().includes(query)
+      )
+    })).filter(account => account.locations.length > 0)
+  }, [gbpAccounts, gbpLocationSearchQuery])
+  
+  const allGBPLocations = useMemo(() => flattenLocations(gbpAccounts), [gbpAccounts])
+  
+  // Toggle account expand/collapse
+  function toggleAccountExpanded(accountName: string) {
+    setGbpAccounts(prev => prev.map(acc => 
+      acc.name === accountName ? { ...acc, expanded: !acc.expanded } : acc
+    ))
+  }
+  
+  // Count total locations
+  const totalGBPLocations = useMemo(() => {
+    return filteredGBPAccounts.reduce((sum, acc) => sum + acc.locations.length, 0)
+  }, [filteredGBPAccounts])
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     
@@ -352,6 +576,12 @@ export function CreateDatasourceDialog({ projectId, existingTypes, onDatasourceA
     // For Semrush, require verified domain
     if (selectedType === "semrush" && (!semrushDomain || !domainVerificationState.verified)) {
       setError("Please verify a domain before creating the datasource")
+      return
+    }
+
+    // For GBP, require location selection
+    if (selectedType === "gbp" && !selectedGBPLocation) {
+      setError("Please select a location to attach")
       return
     }
 
@@ -412,6 +642,19 @@ export function CreateDatasourceDialog({ projectId, existingTypes, onDatasourceA
         )
       }
 
+      // If GBP, attach the selected location
+      if (selectedType === "gbp" && selectedGBPLocation) {
+        const location = allGBPLocations.find(l => l.name === selectedGBPLocation)
+        if (location) {
+          await attachGoogleBusinessProfileLocation(
+            datasource.id,
+            location.name,
+            location.locationName,
+            projectId
+          )
+        }
+      }
+
       setOpen(false)
       onDatasourceAdded?.(datasource)
     } catch (error) {
@@ -427,13 +670,15 @@ export function CreateDatasourceDialog({ projectId, existingTypes, onDatasourceA
     { value: "google_analytics", label: "Google Analytics", disabled: existingTypes.includes("google_analytics") },
     { value: "google_search_console", label: "Google Search Console", disabled: existingTypes.includes("google_search_console") },
     { value: "semrush", label: "Semrush", disabled: existingTypes.includes("semrush") },
+    { value: "gbp", label: "Google Business Profile", disabled: existingTypes.includes("gbp") },
   ]
 
   const canSubmit = selectedType && 
     (selectedType !== "mangools" || selectedDomain) &&
     (selectedType !== "google_analytics" || selectedProperty) &&
     (selectedType !== "google_search_console" || selectedSite) &&
-    (selectedType !== "semrush" || (semrushDomain && domainVerificationState.verified))
+    (selectedType !== "semrush" || (semrushDomain && domainVerificationState.verified)) &&
+    (selectedType !== "gbp" || selectedGBPLocation)
 
   return (
     <Dialog open={open} onOpenChange={(open) => !loading && setOpen(open)}>
@@ -456,6 +701,8 @@ export function CreateDatasourceDialog({ projectId, existingTypes, onDatasourceA
                 ? "Select a site from your Google Search Console account. Note: Each site can only be attached once, and each project can have only one Google Search Console data source."
                 : selectedType === "semrush"
                 ? "Enter a domain to track with Semrush. We'll verify the domain before adding it. Note: Each domain can only be attached once, and each project can have only one Semrush data source."
+                : selectedType === "gbp"
+                ? "Select a location from your Google Business Profile account. Note: Each location can only be attached once, and each project can have only one Google Business Profile data source."
                 : "Add a new data source to this project. Each type can only be added once per project."
               }
             </DialogDescription>
@@ -467,8 +714,8 @@ export function CreateDatasourceDialog({ projectId, existingTypes, onDatasourceA
               <Label htmlFor="type" className="text-xs sm:text-sm">Data Source Type *</Label>
               <Select
                 value={selectedType}
-                onValueChange={(value) => setSelectedType(value as "mangools" | "semrush" | "google_analytics" | "google_search_console")}
-                disabled={loading || fetchingDomains || fetchingProperties || fetchingSites}
+                onValueChange={(value) => setSelectedType(value as "mangools" | "semrush" | "google_analytics" | "google_search_console" | "gbp")}
+                disabled={loading || fetchingDomains || fetchingProperties || fetchingSites || fetchingGBPLocations}
               >
                 <SelectTrigger id="type" className="cursor-pointer h-9 text-sm">
                   <SelectValue placeholder="Select a data source type" />
@@ -757,6 +1004,171 @@ export function CreateDatasourceDialog({ projectId, existingTypes, onDatasourceA
               </>
             )}
 
+            {/* GBP Location Selection */}
+            {selectedType === "gbp" && (
+              <>
+                {gbpAuthStatus === "checking" ? (
+                  <div className="flex flex-col sm:flex-row items-center justify-center py-6 sm:py-8 gap-2 sm:gap-3">
+                    <Loader2 className="h-6 w-6 sm:h-8 sm:w-8 animate-spin text-muted-foreground" />
+                    <span className="text-xs sm:text-sm text-muted-foreground text-center">
+                      Checking authentication status...
+                    </span>
+                  </div>
+                ) : gbpAuthStatus === "not_authenticated" ? (
+                  <div className="space-y-3">
+                    <div className="flex items-start gap-2 p-3 text-xs sm:text-sm text-blue-700 bg-blue-50 border border-blue-200 rounded-lg">
+                      <AlertCircle className="h-4 w-4 mt-0.5 flex-shrink-0" />
+                      <div>
+                        <p className="font-medium">Authorization Required</p>
+                        <p className="mt-1">Please authorize this application to access your Google Business Profile. Click the button below to sign in with the Google account that has access to your business profiles.</p>
+                      </div>
+                    </div>
+                    <Button
+                      type="button"
+                      onClick={handleGBPOAuth}
+                      disabled={initiatingOAuth}
+                      className="w-full"
+                      variant="default"
+                    >
+                      {initiatingOAuth ? (
+                        <>
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          Opening authorization...
+                        </>
+                      ) : (
+                        "Authorize Google Business Profile"
+                      )}
+                    </Button>
+                  </div>
+                ) : fetchingGBPLocations ? (
+                  <div className="flex flex-col sm:flex-row items-center justify-center py-6 sm:py-8 gap-2 sm:gap-3">
+                    <Loader2 className="h-6 w-6 sm:h-8 sm:w-8 animate-spin text-muted-foreground" />
+                    <span className="text-xs sm:text-sm text-muted-foreground text-center">
+                      Loading locations from Google Business Profile...
+                    </span>
+                  </div>
+                ) : (
+                  <>
+                    {/* Search */}
+                    <div className="grid gap-1.5">
+                      <Label htmlFor="gbp-location-search" className="text-xs sm:text-sm">Search Locations</Label>
+                      <div className="relative">
+                        <Search className="absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground pointer-events-none" />
+                        <Input
+                          id="gbp-location-search"
+                          type="text"
+                          placeholder="Search by business name, location..."
+                          value={gbpLocationSearchQuery}
+                          onChange={(e) => setGbpLocationSearchQuery(e.target.value)}
+                          className="pl-8 h-9 text-sm"
+                          disabled={loading}
+                        />
+                      </div>
+                    </div>
+
+                    {/* Accounts and Locations List */}
+                    <div className="grid gap-1.5">
+                      <Label className="text-xs sm:text-sm">Available Locations ({totalGBPLocations})</Label>
+                      <div className="border rounded-lg max-h-[400px] sm:max-h-[450px] overflow-y-auto">
+                        {filteredGBPAccounts.length === 0 ? (
+                          <div className="p-6 sm:p-8 text-center text-xs sm:text-sm text-muted-foreground">
+                            {gbpLocationSearchQuery ? "No locations match your search" : "No locations available"}
+                          </div>
+                        ) : (
+                          <div className="divide-y">
+                            {filteredGBPAccounts.map((account) => (
+                              <div key={account.name} className="bg-background">
+                                {/* Account Header */}
+                                <button
+                                  type="button"
+                                  onClick={() => toggleAccountExpanded(account.name)}
+                                  className="w-full flex items-center gap-2 p-3 hover:bg-muted/30 transition-colors cursor-pointer"
+                                >
+                                  {account.expanded ? (
+                                    <ChevronDown className="h-4 w-4 flex-shrink-0 text-muted-foreground" />
+                                  ) : (
+                                    <ChevronRight className="h-4 w-4 flex-shrink-0 text-muted-foreground" />
+                                  )}
+                                  <div className="flex-1 text-left">
+                                    <p className="font-semibold text-xs sm:text-sm">
+                                      {account.accountName}
+                                    </p>
+                                  </div>
+                                  <span className="text-xs text-muted-foreground">
+                                    {account.locations.length} location{account.locations.length !== 1 ? 's' : ''}
+                                  </span>
+                                </button>
+                                
+                                {/* Locations under this account */}
+                                {account.expanded && (
+                                  <div className="bg-muted/20 divide-y divide-muted">
+                                    {account.locations.map((loc) => {
+                                      const location = loc as LocationOption
+                                      const formattedAddress = formatAddress(location.address)
+                                      return (
+                                        <label
+                                          key={location.name}
+                                          className={`flex items-start gap-2 sm:gap-3 p-3 pl-10 cursor-pointer hover:bg-muted/50 transition-colors ${
+                                            location.isAttached ? "opacity-50 cursor-not-allowed" : ""
+                                          } ${selectedGBPLocation === location.name ? "bg-muted" : ""}`}
+                                        >
+                                          <input
+                                            type="radio"
+                                            name="gbp-location"
+                                            value={location.name}
+                                            checked={selectedGBPLocation === location.name}
+                                            onChange={(e) => setSelectedGBPLocation(e.target.value)}
+                                            disabled={location.isAttached || loading}
+                                            className="mt-1 flex-shrink-0"
+                                          />
+                                          <div className="flex-1 min-w-0">
+                                            <div className="flex items-center gap-2 mb-1">
+                                              <p className="font-medium text-xs sm:text-sm">
+                                                {location.locationName || "(No Name)"}
+                                              </p>
+                                              {location.isAttached && (
+                                                <AlertCircle className="h-4 w-4 text-yellow-600 flex-shrink-0" />
+                                              )}
+                                              {selectedGBPLocation === location.name && !location.isAttached && (
+                                                <CheckCircle2 className="h-4 w-4 text-green-600 flex-shrink-0" />
+                                              )}
+                                            </div>
+                                            
+                                            {/* Location Details */}
+                                            <div className="space-y-1 text-[11px] text-muted-foreground">
+                                              {location.primaryCategory && (
+                                                <div>🏷️ {location.primaryCategory.displayName}</div>
+                                              )}
+                                              {formattedAddress && (
+                                                <div>📍 {formattedAddress}</div>
+                                              )}
+                                              {location.websiteUrl && (
+                                                <div className="truncate">🌐 {location.websiteUrl}</div>
+                                              )}
+                                            </div>
+                                            
+                                            {location.isAttached && (
+                                              <p className="text-[11px] sm:text-xs text-yellow-600 mt-2">
+                                                {location.attachedInfo}
+                                              </p>
+                                            )}
+                                          </div>
+                                        </label>
+                                      )
+                                    })}
+                                  </div>
+                                )}
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </>
+                )}
+              </>
+            )}
+
             {/* Semrush Domain Input and Verification */}
             {selectedType === "semrush" && (
               <>
@@ -847,7 +1259,7 @@ export function CreateDatasourceDialog({ projectId, existingTypes, onDatasourceA
             <Button type="button" variant="outline" onClick={() => setOpen(false)} disabled={loading} className="h-8 sm:h-9 text-xs sm:text-sm flex-1 sm:flex-none touch-manipulation">
               Cancel
             </Button>
-            <Button type="submit" disabled={loading || fetchingDomains || fetchingProperties || verifyingDomain || !canSubmit} className="h-8 sm:h-9 text-xs sm:text-sm flex-1 sm:flex-none touch-manipulation">
+            <Button type="submit" disabled={loading || fetchingDomains || fetchingProperties || fetchingSites || fetchingGBPLocations || verifyingDomain || initiatingOAuth || !canSubmit} className="h-8 sm:h-9 text-xs sm:text-sm flex-1 sm:flex-none touch-manipulation">
               {loading ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
