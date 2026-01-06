@@ -509,7 +509,7 @@ export function GBPDashboardPage({
                   return [formatNumber(Number(value)), label + dateInfo]
                 }}
               />
-              <Legend content={<CustomActivityLegend />} wrapperStyle={{ paddingTop: '5px' }} />
+              <Legend content={<CustomActivityLegend />} wrapperStyle={{ paddingTop: '20px' }} />
               {/* Current Period - Solid Lines */}
               <Line
                 type="monotone"

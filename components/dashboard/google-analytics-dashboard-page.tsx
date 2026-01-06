@@ -559,7 +559,7 @@ export function GoogleAnalyticsDashboardPage({
                   return [formatNumber(Number(value)), label + dateInfo]
                 }}
               />
-              <Legend content={<CustomGATrafficLegend />} wrapperStyle={{ paddingTop: '5px' }} />
+              <Legend content={<CustomGATrafficLegend />} wrapperStyle={{ paddingTop: '20px' }} />
               {/* Current Period - Solid Lines */}
               <Line
                 type="monotone"
@@ -725,13 +725,13 @@ export function GoogleAnalyticsDashboardPage({
           </ResponsiveContainer>
           {/* Desktop Chart */}
           <ResponsiveContainer width="100%" height={450} className="hidden sm:block">
-            <LineChart data={sessionsConversionsChartData} margin={{ top: 2, right: 10, left: 0, bottom: 5 }}>
+            <LineChart data={sessionsConversionsChartData} margin={{ top: 2, right: 10, left: 0, bottom: 15 }}>
               <CartesianGrid strokeDasharray="3 3" className="stroke-muted" opacity={0.3} />
               <XAxis
                 dataKey="dayIndex"
                 tick={{ fontSize: 11 }}
-                label={{ value: 'Day', position: 'insideBottom', offset: 0, fontSize: 12 }}
-                height={45}
+                label={{ value: 'Day', position: 'insideBottom', offset: -10, fontSize: 12 }}
+                height={50}
                 interval={Math.floor(sessionsConversionsChartData.length / 12)}
               />
               <YAxis tick={{ fontSize: 12 }} width={50} />
@@ -772,7 +772,7 @@ export function GoogleAnalyticsDashboardPage({
                   return [formatNumber(Number(value)), label + dateInfo]
                 }}
               />
-              <Legend content={<CustomGASessionsLegend />} wrapperStyle={{ paddingTop: '5px' }} />
+              <Legend content={<CustomGASessionsLegend />} wrapperStyle={{ paddingTop: '20px' }} />
               {/* Current Period - Solid Lines */}
               <Line
                 type="monotone"

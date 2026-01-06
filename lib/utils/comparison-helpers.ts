@@ -129,7 +129,6 @@ export function calculateWindowComparison<T extends { date: string }>(
     return dateNum >= currentDates.startYYYYMMDD && dateNum <= currentDates.endYYYYMMDD
   })
   const currentSum = currentData.reduce((sum, d) => sum + valueExtractor(d), 0)
-  const currentAvg = currentData.length > 0 ? currentSum / windowMonths : 0
   
   // Filter and sum previous period
   const previousData = dailyData.filter(d => {
@@ -137,11 +136,10 @@ export function calculateWindowComparison<T extends { date: string }>(
     return dateNum >= previousDates.startYYYYMMDD && dateNum <= previousDates.endYYYYMMDD
   })
   const previousSum = previousData.reduce((sum, d) => sum + valueExtractor(d), 0)
-  const previousAvg = previousData.length > 0 ? previousSum / windowMonths : 0
   
   return {
-    current: currentAvg,
-    previous: previousAvg,
+    current: currentSum,
+    previous: previousSum,
     dates: {
       currentStart: currentDates.startDate,
       currentEnd: currentDates.endDate,

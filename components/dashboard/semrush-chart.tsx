@@ -109,7 +109,7 @@ export const SEMrushChart = memo(function SEMrushChart({
             />
             <YAxis tick={{ fontSize: 12 }} width={60} />
             <Tooltip content={<CustomTooltip />} />
-            <Legend content={<CustomSEMrushLegend />} wrapperStyle={{ paddingTop: '10px' }} />
+            <Legend content={<CustomSEMrushLegend />} wrapperStyle={{ paddingTop: '20px' }} />
             {/* Render all layers to maintain consistent stacking order */}
             {LAYER_ORDER.map((layer) => (
               <Area

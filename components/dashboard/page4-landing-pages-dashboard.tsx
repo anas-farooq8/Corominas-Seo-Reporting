@@ -347,7 +347,7 @@ export function Page4LandingPagesDashboard({
             </ResponsiveContainer>
             {/* Desktop Chart */}
             <ResponsiveContainer width="100%" height={450} className="hidden sm:block">
-              <LineChart data={chartData} margin={{ top: 5, right: 10, left: 0, bottom: 15 }}>
+              <LineChart data={chartData} margin={{ top: 2, right: 10, left: 0, bottom: 15 }}>
                 <CartesianGrid strokeDasharray="3 3" className="stroke-muted" opacity={0.3} />
                 <XAxis
                   dataKey="date"
