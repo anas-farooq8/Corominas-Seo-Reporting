@@ -27,6 +27,15 @@ export const formatDateForDisplay = (dateStr: string): string => {
   return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
 }
 
+// Format date with year for multi-year charts (to avoid duplicate labels)
+export const formatDateWithYear = (dateStr: string): string => {
+  const year = dateStr.substring(0, 4)
+  const month = dateStr.substring(4, 6)
+  const day = dateStr.substring(6, 8)
+  const date = new Date(`${year}-${month}-${day}`)
+  return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+}
+
 // Format full date for tooltips
 export const formatFullDate = (dateStr: string): string => {
   const year = dateStr.substring(0, 4)

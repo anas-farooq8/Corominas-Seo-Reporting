@@ -78,3 +78,31 @@ export function calculateDashboardDateRanges() {
   return result
 }
 
+/**
+ * Calculate date ranges for SEMrush (all data up to last completed month)
+ * Only returns end date - Semrush API will return all historical data
+ */
+export function calculateSemrushDateRanges() {
+  const today = new Date()
+  const endDate = new Date(today.getFullYear(), today.getMonth(), 0) // Last day of previous month
+  
+  const formatDate = (date: Date) => {
+    const year = date.getFullYear()
+    const month = String(date.getMonth() + 1).padStart(2, '0')
+    const day = String(date.getDate()).padStart(2, '0')
+    return `${year}-${month}-${day}`
+  }
+  
+  const endDateStr = formatDate(endDate)
+  
+  console.log('[SEMrush] Fetching all data up to:', endDateStr)
+  
+  return {
+    startDate: undefined,
+    endDate: endDateStr,
+    startDateAPI: undefined,
+    endDateAPI: endDateStr.replace(/-/g, ''),
+    endDateObj: endDate
+  }
+}
+

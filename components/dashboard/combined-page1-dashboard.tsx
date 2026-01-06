@@ -270,6 +270,7 @@ export function CombinedPage1Dashboard({ googleAnalyticsId, semrushId }: Combine
           periodLabel={semrushData.kpiCards?.totalRankingKeywords.periodType ? 
             `Past ${semrushData.kpiCards.totalRankingKeywords.periodType === '1-month' ? 'Month' : semrushData.kpiCards.totalRankingKeywords.periodType.replace('-month', ' Months')}` 
             : 'Past 12 Months'}
+          endDate={semrushData.dateRanges?.endDate}
         />
       )}
 

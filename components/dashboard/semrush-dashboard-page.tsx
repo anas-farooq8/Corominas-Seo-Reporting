@@ -74,6 +74,9 @@ export function SEMrushDashboardPage({ datasourceId, data: externalData, showMet
     }
   }, [datasourceId, externalData])
 
+  // Get end date from data
+  const endDate = useMemo(() => data?.dateRanges?.endDate, [data])
+  
   // Memoize calculations to prevent unnecessary re-renders - using kpiCards from backend
   const keywordsKPI = useMemo(() => {
     if (!data || !data.kpiCards) return null
@@ -142,6 +145,7 @@ export function SEMrushDashboardPage({ datasourceId, data: externalData, showMet
         dailyData={data.dailyData}
         visibleLayers={visibleLayers}
         onToggleLayer={toggleLayer}
+        endDate={endDate}
       />
     </div>
   )

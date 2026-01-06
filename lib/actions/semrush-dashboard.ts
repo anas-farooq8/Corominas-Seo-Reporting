@@ -7,7 +7,7 @@ import {
 } from "@/lib/semrush/api"
 import { getCachedDashboardData, saveDashboardCache } from "@/lib/cache/dashboard-cache"
 import { selectBestComparisonWindow, type WindowResult } from "@/lib/utils/comparison-helpers"
-import { calculateDashboardDateRanges } from "@/lib/utils/date-ranges"
+import { calculateSemrushDateRanges } from "@/lib/utils/date-ranges"
 
 /**
  * Helper to compute totalKeywords from a day object
@@ -41,6 +41,10 @@ export interface SEMrushDashboardData {
   domain: string
   dailyData: SEMrushParsedDailyData[]
   kpiCards: SEMrushKPICardData
+  dateRanges: {
+    startDate: string | undefined // undefined means all historical data
+    endDate: string
+  }
 }
 
 /**
@@ -82,6 +86,7 @@ function calculateKPICards(
 /**
  * Fetch SEMrush dashboard data
  * Uses cache when available to reduce API calls
+ * Now fetches ALL historical data and stores it in cache
  * @param datasourceId - The datasource ID
  */
 export async function fetchSEMrushDashboard(
@@ -103,12 +108,15 @@ export async function fetchSEMrushDashboard(
     
     const domain = semrushDomain.domain
     
-    // Use the same date calculation as all dashboards for consistency
-    const { startDate: startDateStr, endDate: endDateStr } = calculateDashboardDateRanges()
+    // Use new date calculation to get ALL data until last completed month
+    const { endDate: endDateStr } = calculateSemrushDateRanges()
     
-    // Check cache first
-    const cachedData = await getCachedDashboardData(datasourceId, domain, startDateStr, endDateStr)
+    console.log('[SEMrush Dashboard] Fetching all data up to', endDateStr)
+    
+    // Check cache first (use endDate as both start and end for "all data" cache key)
+    const cachedData = await getCachedDashboardData(datasourceId, domain, endDateStr, endDateStr)
     if (cachedData) {
+      console.log('[SEMrush Dashboard] Cache hit - restoring data')
       // Restore totalKeywords getter to cached dailyData
       const dailyDataWithGetter = (cachedData.dailyData as any[]).map(addTotalKeywordsGetter)
       
@@ -118,36 +126,42 @@ export async function fetchSEMrushDashboard(
       } as SEMrushDashboardData
     }
     
-    // Cache miss - fetch from API (pass the calculated dates to avoid duplication)
-    const apiData = await fetchSEMrushDashboardData(domain, startDateStr, endDateStr)
+    // Cache miss - fetch ALL data from API
+    console.log('[SEMrush Dashboard] Cache miss - fetching from API')
+    const apiData = await fetchSEMrushDashboardData(domain, undefined, endDateStr, "us", true)
 
-    // Calculate KPI cards and get best window
+    console.log('[SEMrush Dashboard] Fetched', apiData.dailyData.length, 'days of data')
+    
+    // Calculate KPI cards using all data
     const { kpiCards, bestWindow } = calculateKPICards(apiData.dailyData, endDateStr)
     
-    // Filter dailyData to only include the best period's current window
-    const filteredDailyData = apiData.dailyData.filter(d => {
-      const dateNum = parseInt(d.date)
-      return dateNum >= bestWindow.currentStartYYYYMMDD && dateNum <= bestWindow.currentEndYYYYMMDD
-    })
-    
+    // Store ALL data (not filtered) - we'll filter on the frontend based on selected period
     // Remove totalKeywords from each day before caching (it's a computed field)
-    const dailyDataForCache = filteredDailyData.map(({ totalKeywords, ...rest }) => rest)
+    const dailyDataForCache = apiData.dailyData.map(({ totalKeywords, ...rest }) => rest)
 
     const dashboardData: SEMrushDashboardData = {
       domain: domain,
-      dailyData: filteredDailyData, // Original data with getter for runtime use
-      kpiCards: kpiCards // Best period KPI data
+      dailyData: apiData.dailyData, // ALL data with getter for runtime use
+      kpiCards: kpiCards, // Best period KPI data
+      dateRanges: {
+        startDate: undefined, // No start date - all historical data
+        endDate: endDateStr
+      }
     }
     
     // Create cache version without totalKeywords
     const cacheData = {
       domain: domain,
-      dailyData: dailyDataForCache, // Without totalKeywords
-      kpiCards: kpiCards
+      dailyData: dailyDataForCache, // ALL data without totalKeywords
+      kpiCards: kpiCards,
+      dateRanges: {
+        startDate: undefined, // No start date - all historical data
+        endDate: endDateStr
+      }
     }
     
-    // Save to cache (fire and forget - don't wait)
-    saveDashboardCache(datasourceId, domain, startDateStr, endDateStr, cacheData)
+    // Save to cache (fire and forget - don't wait) - use endDate as both start and end
+    saveDashboardCache(datasourceId, domain, endDateStr, endDateStr, cacheData)
       .catch(err => console.error("Failed to save cache:", err))
     
     return dashboardData

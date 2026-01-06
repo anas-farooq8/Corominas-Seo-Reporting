@@ -1,5 +1,5 @@
 import { v4 as uuidv4 } from "uuid"
-import { calculateDashboardDateRanges } from "@/lib/utils/date-ranges"
+import { calculateDashboardDateRanges, calculateSemrushDateRanges } from "@/lib/utils/date-ranges"
 
 // ============================================
 // SEMrush API Types
@@ -124,16 +124,20 @@ export async function fetchSEMrushOverviewTrend(
 /**
  * Filter SEMrush data by date range
  * @param data - The raw data from SEMrush API
- * @param startDate - Start date in YYYYMMDD format
+ * @param startDate - Start date in YYYYMMDD format (optional - if not provided, includes all data from beginning)
  * @param endDate - End date in YYYYMMDD format
  */
 export function filterByDateRange(
   data: SEMrushOverviewTrendItem[],
-  startDate: string,
+  startDate: string | undefined,
   endDate: string
 ): SEMrushOverviewTrendItem[] {
   return data.filter(row => {
     const rowDate = row.date
+    // If no start date, only filter by end date
+    if (!startDate) {
+      return rowDate <= endDate
+    }
     return rowDate >= startDate && rowDate <= endDate
   })
 }
@@ -187,12 +191,14 @@ export function parseSEMrushData(
  * @param startDate - Start date in YYYY-MM-DD format (optional, will calculate if not provided)
  * @param endDate - End date in YYYY-MM-DD format (optional, will calculate if not provided)
  * @param database - The database to search in (default: "us")
+ * @param fetchAllData - If true, fetches all historical data from 2010 to last month (default: false)
  */
 export async function fetchSEMrushDashboardData(
   domain: string, 
   startDate?: string,
   endDate?: string,
-  database: string = "us"
+  database: string = "us",
+  fetchAllData: boolean = false
 ) {
   // Use provided dates or calculate them
   const dateRanges = startDate && endDate 
@@ -210,16 +216,36 @@ export async function fetchSEMrushDashboardData(
           endAPI: calculateLastMonthEnd(endDate)
         }
       }
-    : calculateDashboardDateRanges()
+    : fetchAllData 
+      ? calculateSemrushDateRanges() 
+      : calculateDashboardDateRanges()
   
   // Fetch raw data from SEMrush
   const rawData = await fetchSEMrushOverviewTrend(domain, database)
   
-  // Filter by date range
+  // Filter by date range (startDateAPI can be undefined for "all data" mode)
   const filteredData = filterByDateRange(rawData, dateRanges.startDateAPI, dateRanges.endDateAPI)
   
   // Parse the data
   const parsedData = parseSEMrushData(filteredData)
+  
+  // Debug log for first and last rows
+  if (parsedData.length > 0) {
+    const firstRow = parsedData[0]
+    const lastRow = parsedData[parsedData.length - 1]
+    console.log('[SEMrush API] Data range:', {
+      firstDate: firstRow.date,
+      lastDate: lastRow.date,
+      totalRows: parsedData.length,
+      lastRowData: {
+        date: lastRow.date,
+        top3: lastRow.top3,
+        totalKeywords: lastRow.top3 + lastRow.top4to10 + lastRow.top11to20 + 
+                       lastRow.top21to50 + lastRow.top51to100 + 
+                       lastRow.aiOverviews + lastRow.serpFunctions
+      }
+    })
+  }
   
   return {
     dailyData: parsedData,
