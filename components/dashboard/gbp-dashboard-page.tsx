@@ -245,7 +245,7 @@ export function GBPDashboardPage({
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-[600px]">
-        <LoadingSpinner message="Loading Google Business Profile data..." />
+        <LoadingSpinner message="Loading SEO dashboard data..." />
       </div>
     )
   }

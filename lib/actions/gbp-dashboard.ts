@@ -152,14 +152,13 @@ export async function fetchGBPDashboardData(
     const fullLocationId = location.location_id // e.g., "accounts/123/locations/456"
     const businessName = location.business_name
     
-    // Extract just "locations/{locationId}" part for Performance API
-    // The Performance API expects "locations/{locationId}" not the full path
+    // Extract ONLY "locations/{locationId}" part for Performance API
+    // The API expects just "locations/123" not the full "accounts/456/locations/123"
     const locationIdForAPI = fullLocationId.includes('/') 
-      ? fullLocationId.split('/').slice(-2).join('/') // Get last two parts: "locations/456"
+      ? fullLocationId.split('/').slice(-2).join('/') // Get "locations/456"
       : fullLocationId
     
-    console.log(`[GBP Dashboard] Full location ID: ${fullLocationId}`)
-    console.log(`[GBP Dashboard] API location ID: ${locationIdForAPI}`)
+    console.log(`[GBP Dashboard] Full ID: ${fullLocationId}, API ID: ${locationIdForAPI}`)
     
     // Use the same date calculation as all dashboards for consistency
     const { startDate: startDateStr, endDate: endDateStr } = calculateDashboardDateRanges()

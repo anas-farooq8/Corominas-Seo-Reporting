@@ -9,6 +9,7 @@ import { calculateDashboardDateRanges } from "@/lib/utils/date-ranges"
 const GBP_REFRESH_TOKEN_KEY = "gbp-refresh-token"
 
 // OAuth2 Scopes for Google Business Profile
+// Note: The Performance API requires the business.manage scope
 const SCOPES = ["https://www.googleapis.com/auth/business.manage"]
 
 // ============================================
@@ -40,17 +41,14 @@ function getOAuth2Client() {
  * Generate OAuth2 authorization URL
  */
 export function generateAuthUrl(): string {
-  console.log("[GBP OAuth] Generating authorization URL")
-  
   const oauth2Client = getOAuth2Client()
   
   const authUrl = oauth2Client.generateAuthUrl({
     access_type: "offline",
     scope: SCOPES,
-    prompt: "consent", // Force consent to get refresh token
+    prompt: "consent",
   })
 
-  console.log("[GBP OAuth] Authorization URL generated")
   return authUrl
 }
 
@@ -59,8 +57,6 @@ export function generateAuthUrl(): string {
  * Stores the refresh token in KVS
  */
 export async function exchangeCodeForTokens(code: string): Promise<void> {
-  console.log("[GBP OAuth] Exchanging authorization code for tokens")
-  
   const oauth2Client = getOAuth2Client()
   
   try {
@@ -70,14 +66,9 @@ export async function exchangeCodeForTokens(code: string): Promise<void> {
       throw new Error("No refresh token received. User may have already authorized this app.")
     }
 
-    console.log("[GBP OAuth] Tokens received, storing refresh token")
-    
-    // Store the refresh token in KVS (will be encrypted automatically)
     await setKVS(GBP_REFRESH_TOKEN_KEY, tokens.refresh_token)
-    
-    console.log("[GBP OAuth] Refresh token stored successfully")
   } catch (error) {
-    console.error("[GBP OAuth] Failed to exchange code for tokens:", error)
+    console.error("[GBP OAuth] Failed to exchange tokens:", error)
     throw new Error("Failed to exchange authorization code for tokens")
   }
 }
@@ -87,11 +78,7 @@ export async function exchangeCodeForTokens(code: string): Promise<void> {
  * Uses refresh token from KVS
  */
 async function getAuthenticatedClient() {
-  console.log("[GBP Auth] Getting authenticated client")
-  
   const oauth2Client = getOAuth2Client()
-  
-  // Get refresh token from KVS (will be decrypted automatically)
   const refreshToken = await getKVS(GBP_REFRESH_TOKEN_KEY)
   
   if (!refreshToken) {
@@ -102,7 +89,6 @@ async function getAuthenticatedClient() {
     refresh_token: refreshToken,
   })
 
-  console.log("[GBP Auth] Client authenticated with refresh token")
   return oauth2Client
 }
 
@@ -110,13 +96,9 @@ async function getAuthenticatedClient() {
  * Check if refresh token exists
  */
 export async function hasRefreshToken(): Promise<boolean> {
-  console.log("[GBP Auth] Checking if refresh token exists")
-  
   try {
     const refreshToken = await getKVS(GBP_REFRESH_TOKEN_KEY)
-    const exists = refreshToken !== null && refreshToken !== ""
-    console.log(`[GBP Auth] Refresh token exists: ${exists}`)
-    return exists
+    return refreshToken !== null && refreshToken !== ""
   } catch (error) {
     console.error("[GBP Auth] Error checking refresh token:", error)
     return false
@@ -162,8 +144,6 @@ export interface GBPAccountWithLocations extends GBPAccount {
  * List all GBP accounts
  */
 export async function listAccounts(): Promise<GBPAccount[]> {
-  console.log("[GBP API] Fetching accounts")
-  
   try {
     const auth = await getAuthenticatedClient()
     const mybusiness = google.mybusinessaccountmanagement({ version: "v1", auth })
@@ -177,12 +157,10 @@ export async function listAccounts(): Promise<GBPAccount[]> {
       role: account.role || "OWNER",
     }))
 
-    console.log(`[GBP API] Found ${accounts.length} account(s)`)
     return accounts
   } catch (error: any) {
     console.error("[GBP API] Failed to fetch accounts:", error)
     
-    // Handle specific error cases
     if (error.code === 401 || error.code === 403) {
       throw new Error("Authentication failed. Please re-authorize the application.")
     }
@@ -195,20 +173,16 @@ export async function listAccounts(): Promise<GBPAccount[]> {
  * List all locations for a specific account
  */
 export async function listLocations(accountName: string): Promise<GBPLocation[]> {
-  console.log(`[GBP API] Fetching locations for account: ${accountName}`)
-  
   try {
     const auth = await getAuthenticatedClient()
     const mybusiness = google.mybusinessbusinessinformation({ version: "v1", auth })
 
     const response = await mybusiness.accounts.locations.list({
       parent: accountName,
-      // Keep the mask minimal to avoid extra payload; categories omitted per request
       readMask: "name,title,websiteUri,storefrontAddress",
     })
     
     const locations: GBPLocation[] = (response.data.locations || []).map((location: any) => ({
-      // Always use "accountName/location.name" as the full name path, because the location.name is only location/locationId
       name: `${accountName}/${location.name}`,
       locationName: location.title || location.name || "",
       address: location.storefrontAddress ? {
@@ -221,12 +195,10 @@ export async function listLocations(accountName: string): Promise<GBPLocation[]>
       websiteUrl: location.websiteUri,
     }))
 
-    console.log(`[GBP API] Found ${locations.length} location(s) for account: ${accountName}`)
     return locations
   } catch (error: any) {
-    console.error(`[GBP API] Failed to fetch locations for account ${accountName}:`, error)
+    console.error(`[GBP API] Failed to fetch locations:`, error)
     
-    // Handle specific error cases
     if (error.code === 401 || error.code === 403) {
       throw new Error("Authentication failed. Please re-authorize the application.")
     }
@@ -239,18 +211,13 @@ export async function listLocations(accountName: string): Promise<GBPLocation[]>
  * List all accounts with their locations
  * 
  * API CALLS MADE:
- * 1. One call to mybusinessaccountmanagement.accounts.list() - Gets all accounts
- * 2. For each account: One call to mybusinessbusinessinformation.accounts.locations.list() - Gets locations for that account
- * 
- * Total API calls = 1 + (number of accounts)
+ * - One call to list all accounts
+ * - One call per account to list locations
  * 
  * LOCATION ID FORMAT:
  * The 'name' field in each location contains the full path: "accounts/123456789/locations/987654321"
- * This full path is required for the Business Performance API.
  */
 export async function listAccountsWithLocations(): Promise<GBPAccountWithLocations[]> {
-  console.log("[GBP API] Fetching all accounts with locations")
-  
   try {
     const accounts = await listAccounts()
     
@@ -263,8 +230,7 @@ export async function listAccountsWithLocations(): Promise<GBPAccountWithLocatio
             locations,
           }
         } catch (error) {
-          console.error(`[GBP API] Failed to fetch locations for account ${account.name}:`, error)
-          // Return account with empty locations if fetching fails
+          console.error(`[GBP API] Failed to fetch locations for account:`, error)
           return {
             ...account,
             locations: [],
@@ -272,9 +238,6 @@ export async function listAccountsWithLocations(): Promise<GBPAccountWithLocatio
         }
       })
     )
-
-    const totalLocations = accountsWithLocations.reduce((sum, acc) => sum + acc.locations.length, 0)
-    console.log(`[GBP API] Fetched ${accounts.length} account(s) with ${totalLocations} total location(s)`)
     
     return accountsWithLocations
   } catch (error) {
@@ -307,65 +270,43 @@ export interface GBPActivityResponse {
 /**
  * Fetch activity data (calls, directions, website clicks) for a location
  * 
- * IMPORTANT: locationId should be in format "locations/{locationId}" only
+ * IMPORTANT: locationId should be in format "locations/{locationId}" ONLY
  * NOT the full "accounts/{accountId}/locations/{locationId}" path
  * 
- * The Performance API expects: "locations/{locationId}"
- * But in our database we store: "accounts/{accountId}/locations/{locationId}"
- * So we need to extract just the "locations/{locationId}" part
+ * The Performance API expects ONLY "locations/{locationId}" as per Google's Python SDK.
+ * In our database we store the full path, so we extract just the locations part before calling this.
  * 
  * @param locationId - The location ID in format "locations/123456789"
  * @returns Activity data for the past 12 months
  */
 export async function fetchGBPActivityData(locationId: string): Promise<GBPActivityResponse> {
-  console.log(`[GBP Activity] Fetching activity data for location: ${locationId}`)
-  
   try {
     const auth = await getAuthenticatedClient()
     
     // Use the same date calculation as all dashboards for consistency
-    const { startDate: startDateStr, endDate: endDateStr, startDateObj, endDateObj } = calculateDashboardDateRanges()
+    const { startDateObj, endDateObj } = calculateDashboardDateRanges()
     
-    console.log(`[GBP Activity] Date range: ${startDateStr} to ${endDateStr}`)
+    // locationId should be in format "locations/123456789"
+    console.log(`[GBP Activity API] Fetching data for location: ${locationId}`)
     
-    // Build request - NOTE: This is a custom request because the Performance API
-    // is not fully supported by the standard googleapis library
-    // We need to call it directly using the authenticated client
-    const url = `https://businessprofileperformance.googleapis.com/v1/${locationId}:fetchMultiDailyMetricsTimeSeries`
+    // Use the official googleapis library for businessprofileperformance API
+    const businessPerformance = google.businessprofileperformance({ version: "v1", auth })
     
-    // GBP API expects month as 1-12 (not 0-11 like JavaScript Date)
-    // The +1 is necessary to convert from JavaScript's 0-indexed months to API's 1-indexed months
-    const requestBody = {
+    const response = await businessPerformance.locations.fetchMultiDailyMetricsTimeSeries({
+      location: locationId,
       dailyMetrics: [
         "CALL_CLICKS",
         "BUSINESS_DIRECTION_REQUESTS",
         "WEBSITE_CLICKS",
       ],
-      dailyRange: {
-        startDate: {
-          year: startDateObj.getFullYear(),
-          month: startDateObj.getMonth() + 1, // Convert from 0-11 to 1-12
-          day: startDateObj.getDate(),
-        },
-        endDate: {
-          year: endDateObj.getFullYear(),
-          month: endDateObj.getMonth() + 1, // Convert from 0-11 to 1-12
-          day: endDateObj.getDate(),
-        },
-      },
-    }
-    
-    console.log(`[GBP Activity] Request URL: ${url}`)
-    console.log(`[GBP Activity] Request body:`, JSON.stringify(requestBody, null, 2))
-    
-    // Make the API request using the authenticated client
-    const response = await auth.request({
-      url: url,
-      method: "POST",
-      data: requestBody,
+      // Note: The googleapis library expects these as nested parameters
+      'dailyRange.startDate.year': startDateObj.getFullYear(),
+      'dailyRange.startDate.month': startDateObj.getMonth() + 1,
+      'dailyRange.startDate.day': startDateObj.getDate(),
+      'dailyRange.endDate.year': endDateObj.getFullYear(),
+      'dailyRange.endDate.month': endDateObj.getMonth() + 1,
+      'dailyRange.endDate.day': endDateObj.getDate(),
     })
-    
-    console.log(`[GBP Activity] Response status: ${response.status}`)
     
     const responseData = response.data as any
     
@@ -393,8 +334,6 @@ export async function fetchGBPActivityData(locationId: string): Promise<GBPActiv
     // Process the response data
     const blocks = responseData.multiDailyMetricTimeSeries || []
     
-    console.log(`[GBP Activity] Processing ${blocks.length} metric blocks`)
-    
     for (const block of blocks) {
       const metricSeries = block.dailyMetricTimeSeries || []
       
@@ -402,11 +341,8 @@ export async function fetchGBPActivityData(locationId: string): Promise<GBPActiv
         const metric = series.dailyMetric
         const datedValues = series.timeSeries?.datedValues || []
         
-        console.log(`[GBP Activity] Processing metric: ${metric} with ${datedValues.length} data points`)
-        
         for (const row of datedValues) {
           const date = row.date
-          // Format date as YYYYMMDD (date.month is 1-12 from API, so we pad directly)
           const dateStr = date.year + 
             String(date.month).padStart(2, '0') + 
             String(date.day).padStart(2, '0')
@@ -432,22 +368,11 @@ export async function fetchGBPActivityData(locationId: string): Promise<GBPActiv
       parseInt(a.date) - parseInt(b.date)
     )
     
-    console.log(`[GBP Activity] Processed ${dailyData.length} days of activity data`)
-    
     return {
       dailyData,
     }
   } catch (error: any) {
-    console.error(`[GBP Activity] Failed to fetch activity data:`, error)
-    
-    // Log detailed error information
-    if (error.response) {
-      console.error(`[GBP Activity] Error response:`, {
-        status: error.response.status,
-        statusText: error.response.statusText,
-        data: error.response.data,
-      })
-    }
+    console.error("[GBP Activity] Error fetching activity data:", error.message)
     
     // Handle specific error cases
     if (error.code === 401 || error.code === 403) {
@@ -455,7 +380,7 @@ export async function fetchGBPActivityData(locationId: string): Promise<GBPActiv
     }
     
     if (error.response?.status === 404) {
-      throw new Error(`Location not found: ${locationId}. Please check the location ID format.`)
+      throw new Error("Location not found or Performance API not enabled.")
     }
     
     throw new Error(`Failed to fetch activity data: ${error.message || 'Unknown error'}`)

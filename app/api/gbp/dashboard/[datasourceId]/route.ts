@@ -7,10 +7,10 @@ import { fetchGBPDashboardData } from "@/lib/actions/gbp-dashboard"
  */
 export async function GET(
   request: NextRequest,
-  { params }: { params: { datasourceId: string } }
+  { params }: { params: Promise<{ datasourceId: string }> }
 ) {
   try {
-    const { datasourceId } = params
+    const { datasourceId } = await params
 
     if (!datasourceId) {
       return NextResponse.json(
