@@ -1,6 +1,6 @@
 import { cache } from "react"
 import { google } from "googleapis"
-import { calculateGADateRanges } from "@/lib/google-analytics/api"
+import { calculateDashboardDateRanges } from "@/lib/utils/date-ranges"
 
 const SCOPES = ["https://www.googleapis.com/auth/webmasters.readonly"]
 
@@ -129,7 +129,7 @@ export async function fetchSearchConsoleData(siteUrl: string): Promise<GSCDashbo
 
   try {
     const client = getSearchConsoleClient()
-    const { startDate, endDate } = calculateGADateRanges()
+    const { startDate, endDate } = calculateDashboardDateRanges()
     
     // Create abort controller with 30 second timeout
     const controller = new AbortController()

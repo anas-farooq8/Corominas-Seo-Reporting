@@ -11,6 +11,7 @@ import { CombinedPage1Dashboard } from "@/components/dashboard/combined-page1-da
 import { CombinedPage4Dashboard } from "@/components/dashboard/combined-page4-dashboard"
 import { MangoolsDashboardPage } from "@/components/dashboard/mangools-dashboard-page"
 import { Page3Dashboard } from "@/components/dashboard/page3-dashboard"
+import { GBPDashboardPage } from "@/components/dashboard/gbp-dashboard-page"
 
 interface PageConfig {
   id: string
@@ -85,6 +86,17 @@ export default function UnifiedDashboardPage({ params }: { params: Promise<{ id:
           label: "Page 4",
           datasourceType: "combined_page4",
           datasourceId: googleAnalyticsDatasource?.id || searchConsoleDatasource?.id || ""
+        })
+      }
+      
+      // Page 5: Google Business Profile Activity
+      const gbpDatasource = data.datasources?.find((ds: any) => ds.type === "gbp")
+      if (gbpDatasource) {
+        connectedPages.push({
+          id: "page-5",
+          label: "Page 5",
+          datasourceType: "gbp",
+          datasourceId: gbpDatasource.id
         })
       }
       
@@ -194,6 +206,9 @@ export default function UnifiedDashboardPage({ params }: { params: Promise<{ id:
                 />
               )
             })()}
+            {activePageConfig?.datasourceType === "gbp" && (
+              <GBPDashboardPage datasourceId={activePageConfig.datasourceId} />
+            )}
           </>
         )}
       </div>

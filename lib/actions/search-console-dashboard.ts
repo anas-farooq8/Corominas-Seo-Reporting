@@ -3,7 +3,7 @@
 import { createClient } from "@/lib/supabase/server"
 import { fetchSearchConsoleData, type GSCDashboardResponse, type GSCDailyData } from "@/lib/google-search-console/api"
 import { getCachedDashboardData, saveDashboardCache } from "@/lib/cache/dashboard-cache"
-import { calculateGADateRanges } from "@/lib/google-analytics/api"
+import { calculateDashboardDateRanges } from "@/lib/utils/date-ranges"
 import { calculateWindowDates, type ComparisonWindow, type PeriodType } from "@/lib/utils/comparison-helpers"
 
 /**
@@ -388,7 +388,7 @@ export async function fetchGSCDashboardData(
     const siteUrl = site.site_url
     
     // Use the same date calculation as GA for consistency
-    const { startDate: startDateStr, endDate: endDateStr } = calculateGADateRanges()
+    const { startDate: startDateStr, endDate: endDateStr } = calculateDashboardDateRanges()
     
     console.log('[GSC Dashboard] Date ranges:', { startDateStr, endDateStr })
     
@@ -403,7 +403,7 @@ export async function fetchGSCDashboardData(
     // Cache miss - fetch from API (use the dates we already calculated)
     console.log("⟳ Fetching fresh GSC dashboard data from API")
     
-    // Fetch Search Console data (it will call calculateGADateRanges internally)
+    // Fetch Search Console data (it will call calculateDashboardDateRanges internally)
     const gscData = await fetchSearchConsoleData(siteUrl)
     
     // Calculate KPI cards

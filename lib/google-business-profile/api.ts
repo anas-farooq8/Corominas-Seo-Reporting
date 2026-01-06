@@ -4,6 +4,7 @@
 
 import { google } from "googleapis"
 import { getKVS, setKVS } from "@/lib/db/kvs"
+import { calculateDashboardDateRanges } from "@/lib/utils/date-ranges"
 
 const GBP_REFRESH_TOKEN_KEY = "gbp-refresh-token"
 
@@ -279,6 +280,185 @@ export async function listAccountsWithLocations(): Promise<GBPAccountWithLocatio
   } catch (error) {
     console.error("[GBP API] Failed to fetch accounts with locations:", error)
     throw error
+  }
+}
+
+// ============================================
+// GBP Performance API - Activity Data
+// ============================================
+
+/**
+ * Daily activity metrics data structure
+ */
+export interface GBPDailyActivityData {
+  date: string // YYYYMMDD format
+  calls: number
+  directions: number
+  websiteClicks: number
+}
+
+/**
+ * Response from GBP Activity API
+ */
+export interface GBPActivityResponse {
+  dailyData: GBPDailyActivityData[]
+}
+
+/**
+ * Fetch activity data (calls, directions, website clicks) for a location
+ * 
+ * IMPORTANT: locationId should be in format "locations/{locationId}" only
+ * NOT the full "accounts/{accountId}/locations/{locationId}" path
+ * 
+ * The Performance API expects: "locations/{locationId}"
+ * But in our database we store: "accounts/{accountId}/locations/{locationId}"
+ * So we need to extract just the "locations/{locationId}" part
+ * 
+ * @param locationId - The location ID in format "locations/123456789"
+ * @returns Activity data for the past 12 months
+ */
+export async function fetchGBPActivityData(locationId: string): Promise<GBPActivityResponse> {
+  console.log(`[GBP Activity] Fetching activity data for location: ${locationId}`)
+  
+  try {
+    const auth = await getAuthenticatedClient()
+    
+    // Use the same date calculation as all dashboards for consistency
+    const { startDate: startDateStr, endDate: endDateStr, startDateObj, endDateObj } = calculateDashboardDateRanges()
+    
+    console.log(`[GBP Activity] Date range: ${startDateStr} to ${endDateStr}`)
+    
+    // Build request - NOTE: This is a custom request because the Performance API
+    // is not fully supported by the standard googleapis library
+    // We need to call it directly using the authenticated client
+    const url = `https://businessprofileperformance.googleapis.com/v1/${locationId}:fetchMultiDailyMetricsTimeSeries`
+    
+    // GBP API expects month as 1-12 (not 0-11 like JavaScript Date)
+    // The +1 is necessary to convert from JavaScript's 0-indexed months to API's 1-indexed months
+    const requestBody = {
+      dailyMetrics: [
+        "CALL_CLICKS",
+        "BUSINESS_DIRECTION_REQUESTS",
+        "WEBSITE_CLICKS",
+      ],
+      dailyRange: {
+        startDate: {
+          year: startDateObj.getFullYear(),
+          month: startDateObj.getMonth() + 1, // Convert from 0-11 to 1-12
+          day: startDateObj.getDate(),
+        },
+        endDate: {
+          year: endDateObj.getFullYear(),
+          month: endDateObj.getMonth() + 1, // Convert from 0-11 to 1-12
+          day: endDateObj.getDate(),
+        },
+      },
+    }
+    
+    console.log(`[GBP Activity] Request URL: ${url}`)
+    console.log(`[GBP Activity] Request body:`, JSON.stringify(requestBody, null, 2))
+    
+    // Make the API request using the authenticated client
+    const response = await auth.request({
+      url: url,
+      method: "POST",
+      data: requestBody,
+    })
+    
+    console.log(`[GBP Activity] Response status: ${response.status}`)
+    
+    const responseData = response.data as any
+    
+    // Parse the response
+    const dailyDataMap = new Map<string, GBPDailyActivityData>()
+    
+    // Initialize all dates in range with zeros
+    const currentDate = new Date(startDateObj)
+    while (currentDate <= endDateObj) {
+      // Format as YYYYMMDD (getMonth() is 0-11, so we add 1)
+      const dateStr = currentDate.getFullYear() + 
+        String(currentDate.getMonth() + 1).padStart(2, '0') + 
+        String(currentDate.getDate()).padStart(2, '0')
+      
+      dailyDataMap.set(dateStr, {
+        date: dateStr,
+        calls: 0,
+        directions: 0,
+        websiteClicks: 0,
+      })
+      
+      currentDate.setDate(currentDate.getDate() + 1)
+    }
+    
+    // Process the response data
+    const blocks = responseData.multiDailyMetricTimeSeries || []
+    
+    console.log(`[GBP Activity] Processing ${blocks.length} metric blocks`)
+    
+    for (const block of blocks) {
+      const metricSeries = block.dailyMetricTimeSeries || []
+      
+      for (const series of metricSeries) {
+        const metric = series.dailyMetric
+        const datedValues = series.timeSeries?.datedValues || []
+        
+        console.log(`[GBP Activity] Processing metric: ${metric} with ${datedValues.length} data points`)
+        
+        for (const row of datedValues) {
+          const date = row.date
+          // Format date as YYYYMMDD (date.month is 1-12 from API, so we pad directly)
+          const dateStr = date.year + 
+            String(date.month).padStart(2, '0') + 
+            String(date.day).padStart(2, '0')
+          
+          const value = parseInt(row.value || '0', 10)
+          
+          const existingData = dailyDataMap.get(dateStr)
+          if (existingData) {
+            if (metric === "CALL_CLICKS") {
+              existingData.calls = value
+            } else if (metric === "BUSINESS_DIRECTION_REQUESTS") {
+              existingData.directions = value
+            } else if (metric === "WEBSITE_CLICKS") {
+              existingData.websiteClicks = value
+            }
+          }
+        }
+      }
+    }
+    
+    // Convert map to sorted array
+    const dailyData = Array.from(dailyDataMap.values()).sort((a, b) => 
+      parseInt(a.date) - parseInt(b.date)
+    )
+    
+    console.log(`[GBP Activity] Processed ${dailyData.length} days of activity data`)
+    
+    return {
+      dailyData,
+    }
+  } catch (error: any) {
+    console.error(`[GBP Activity] Failed to fetch activity data:`, error)
+    
+    // Log detailed error information
+    if (error.response) {
+      console.error(`[GBP Activity] Error response:`, {
+        status: error.response.status,
+        statusText: error.response.statusText,
+        data: error.response.data,
+      })
+    }
+    
+    // Handle specific error cases
+    if (error.code === 401 || error.code === 403) {
+      throw new Error("Authentication failed. Please re-authorize the application.")
+    }
+    
+    if (error.response?.status === 404) {
+      throw new Error(`Location not found: ${locationId}. Please check the location ID format.`)
+    }
+    
+    throw new Error(`Failed to fetch activity data: ${error.message || 'Unknown error'}`)
   }
 }
 

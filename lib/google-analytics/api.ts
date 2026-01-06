@@ -1,47 +1,9 @@
 import type { GoogleAnalyticsApiProperty } from "@/lib/supabase/types"
 import { cache } from "react"
 import { google } from "googleapis"
+import { calculateDashboardDateRanges } from "@/lib/utils/date-ranges"
 
 const SCOPES = ["https://www.googleapis.com/auth/analytics.readonly"]
-
-// ============================================
-// Date Range Calculation
-// ============================================
-
-/**
- * Calculate date ranges for GA reports (12 months of data)
- * Returns the last 12 completed months (ending with the previous month)
- */
-export function calculateGADateRanges() {
-  const today = new Date()
-  
-  // Get the first day of the current month
-  const currentMonthStart = new Date(today.getFullYear(), today.getMonth(), 1)
-  
-  // Go back one day to get to the last day of the previous month
-  const endDate = new Date(currentMonthStart.getTime() - 1)
-  
-  // Start date: 12 months before the end date (first day of that month)
-  const startDate = new Date(endDate.getFullYear(), endDate.getMonth() - 11, 1)
-  
-  // Format dates as YYYY-MM-DD
-  const formatDate = (date: Date) => {
-    const year = date.getFullYear()
-    const month = String(date.getMonth() + 1).padStart(2, '0')
-    const day = String(date.getDate()).padStart(2, '0')
-    return `${year}-${month}-${day}`
-  }
-  
-  const startDateStr = formatDate(startDate)
-  const endDateStr = formatDate(endDate)
-  
-  return {
-    startDate: startDateStr,
-    endDate: endDateStr,
-    startDateObj: startDate,
-    endDateObj: endDate
-  }
-}
 
 // ============================================
 // Google Analytics API Clients
@@ -188,7 +150,7 @@ export async function fetchGATrafficData(propertyId: string): Promise<GATrafficR
   
   try {
     const client = getDataClient()
-    const { startDate, endDate, endDateObj } = calculateGADateRanges()
+    const { startDate, endDate, endDateObj } = calculateDashboardDateRanges()
     
     // Create abort controller with 30 second timeout
     const controller = new AbortController()
@@ -328,7 +290,7 @@ export async function fetchGALandingPagesData(propertyId: string): Promise<GALan
   
   try {
     const client = getDataClient()
-    const { startDate, endDate } = calculateGADateRanges()
+    const { startDate, endDate } = calculateDashboardDateRanges()
     
     // Create abort controller with 30 second timeout
     const controller = new AbortController()

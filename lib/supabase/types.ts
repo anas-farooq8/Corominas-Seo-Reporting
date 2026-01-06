@@ -68,7 +68,7 @@ export interface GoogleSearchConsoleSite {
 export interface GoogleBusinessProfileLocation {
   id: string
   datasource_id: string
-  location_id: string  // Full location ID (e.g., "accounts/123/locations/456")
+  location_id: string  // Full location ID (e.g., "accounts/123456789/locations/987654321")
   business_name: string
   created_at: string
   updated_at: string

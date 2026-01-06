@@ -7,6 +7,7 @@ import {
 } from "@/lib/semrush/api"
 import { getCachedDashboardData, saveDashboardCache } from "@/lib/cache/dashboard-cache"
 import { selectBestComparisonWindow, type WindowResult } from "@/lib/utils/comparison-helpers"
+import { calculateDashboardDateRanges } from "@/lib/utils/date-ranges"
 
 /**
  * Helper to compute totalKeywords from a day object
@@ -102,20 +103,8 @@ export async function fetchSEMrushDashboard(
     
     const domain = semrushDomain.domain
     
-    // Calculate date ranges once (12 months of data - last completed month going back 12 months)
-    const today = new Date()
-    const endDate = new Date(today.getFullYear(), today.getMonth(), 0) // Last day of previous month
-    const startDate = new Date(endDate.getFullYear(), endDate.getMonth() - 11, 1) // 12 months back
-    
-    const formatDate = (date: Date) => {
-      const year = date.getFullYear()
-      const month = String(date.getMonth() + 1).padStart(2, '0')
-      const day = String(date.getDate()).padStart(2, '0')
-      return `${year}-${month}-${day}`
-    }
-    
-    const startDateStr = formatDate(startDate)
-    const endDateStr = formatDate(endDate)
+    // Use the same date calculation as all dashboards for consistency
+    const { startDate: startDateStr, endDate: endDateStr } = calculateDashboardDateRanges()
     
     // Check cache first
     const cachedData = await getCachedDashboardData(datasourceId, domain, startDateStr, endDateStr)
