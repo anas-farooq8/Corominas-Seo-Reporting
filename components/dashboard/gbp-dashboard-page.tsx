@@ -73,6 +73,59 @@ export function GBPDashboardPage({
     }
   }, [datasourceId, externalData])
 
+  // Helper function to aggregate daily data into monthly sums
+  const aggregateToMonthly = (dailyData: Array<{
+    date: string
+    dateKey: string
+    fullDate: string
+    calls: number
+    directions: number
+    websiteClicks: number
+  }>) => {
+    const monthlyMap = new Map<string, {
+      calls: number
+      directions: number
+      websiteClicks: number
+      monthKey: string
+      monthLabel: string
+    }>()
+    
+    dailyData.forEach(day => {
+      // Extract year and month from YYYYMMDD format (dateKey)
+      const year = day.dateKey.substring(0, 4)
+      const month = day.dateKey.substring(4, 6)
+      const monthKey = `${year}-${month}`
+      
+      // Create month label (e.g., "Aug 2025", "Sep 2025")
+      const date = new Date(parseInt(year), parseInt(month) - 1, 1)
+      const monthLabel = date.toLocaleDateString('en-US', { month: 'short', year: 'numeric' })
+      
+      if (!monthlyMap.has(monthKey)) {
+        monthlyMap.set(monthKey, {
+          calls: 0,
+          directions: 0,
+          websiteClicks: 0,
+          monthKey,
+          monthLabel
+        })
+      }
+      
+      const monthData = monthlyMap.get(monthKey)!
+      monthData.calls += day.calls
+      monthData.directions += day.directions
+      monthData.websiteClicks += day.websiteClicks
+    })
+    
+    // Convert map to array and sort by month key
+    return Array.from(monthlyMap.values()).sort((a, b) => a.monthKey.localeCompare(b.monthKey))
+  }
+
+  // Determine if we should use monthly aggregation
+  const useMonthlyAggregation = useMemo(() => {
+    if (!data || !data.chartPeriod) return false
+    return data.chartPeriod !== '1-month' // Aggregate for 3-month and 6-month
+  }, [data])
+
   // Memoize chart data - process both current and previous periods with numeric x-axis
   const chartData = useMemo(() => {
     if (!data || !data.currentPeriod || !data.previousPeriod) return { current: [], previous: [] }
@@ -88,7 +141,53 @@ export function GBPDashboardPage({
       return dateNum >= data.previousPeriod.startYYYYMMDD && dateNum <= data.previousPeriod.endYYYYMMDD
     })
     
-    // Create arrays with numeric day index (1, 2, 3, ...)
+    // If period > 1 month, aggregate to monthly data
+    if (useMonthlyAggregation) {
+      const currentFormatted = currentData.map(day => ({
+        date: formatDateForDisplay(day.date),
+        dateKey: day.date,
+        fullDate: formatFullDate(day.date),
+        calls: day.calls,
+        directions: day.directions,
+        websiteClicks: day.websiteClicks
+      }))
+      
+      const previousFormatted = previousData.map(day => ({
+        date: formatDateForDisplay(day.date),
+        dateKey: day.date,
+        fullDate: formatFullDate(day.date),
+        calls: day.calls,
+        directions: day.directions,
+        websiteClicks: day.websiteClicks
+      }))
+      
+      const currentMonthly = aggregateToMonthly(currentFormatted)
+      const previousMonthly = aggregateToMonthly(previousFormatted)
+      
+      const current = currentMonthly.map((month, index) => ({
+        dayIndex: index + 1,
+        date: month.monthLabel,
+        dateKey: month.monthKey,
+        fullDate: month.monthLabel,
+        calls: month.calls,
+        directions: month.directions,
+        websiteClicks: month.websiteClicks
+      }))
+      
+      const previous = previousMonthly.map((month, index) => ({
+        dayIndex: index + 1,
+        date: month.monthLabel,
+        dateKey: month.monthKey,
+        fullDate: month.monthLabel,
+        calls: month.calls,
+        directions: month.directions,
+        websiteClicks: month.websiteClicks
+      }))
+      
+      return { current, previous }
+    }
+    
+    // For 1-month period, use daily data (original behavior)
     const current = currentData.map((day, index) => ({
       dayIndex: index + 1, // Numeric x-axis starting from 1
       date: formatDateForDisplay(day.date),
@@ -110,13 +209,42 @@ export function GBPDashboardPage({
     }))
     
     return { current, previous }
-  }, [data])
+  }, [data, useMonthlyAggregation])
   
   // Create combined chart data for all metrics
   const activityChartData = useMemo(() => {
     if (!data || !data.kpiCards || !chartData.current.length) return []
     
-    // Combine both periods into a single chart data array with aligned dayIndex
+    if (useMonthlyAggregation) {
+      // For monthly data, align months by their labels
+      const maxLength = Math.max(chartData.current.length, chartData.previous.length)
+      const combinedData = []
+      
+      for (let i = 0; i < maxLength; i++) {
+        const current = chartData.current[i]
+        const previous = chartData.previous[i]
+        
+        combinedData.push({
+          dayIndex: i + 1,
+          // Current period data (undefined if month doesn't exist)
+          currentCalls: current?.calls,
+          currentDirections: current?.directions,
+          currentWebsiteClicks: current?.websiteClicks,
+          currentDate: current?.fullDate,
+          currentDateShort: current?.date,
+          // Previous period data (undefined if month doesn't exist)
+          previousCalls: previous?.calls,
+          previousDirections: previous?.directions,
+          previousWebsiteClicks: previous?.websiteClicks,
+          previousDate: previous?.fullDate,
+          previousDateShort: previous?.date,
+        })
+      }
+      
+      return combinedData
+    }
+    
+    // For daily data, combine both periods with aligned dayIndex
     // Use the maximum length to handle unequal periods
     const maxLength = Math.max(chartData.current.length, chartData.previous.length)
     const combinedData = []
@@ -144,7 +272,7 @@ export function GBPDashboardPage({
     }
     
     return combinedData
-  }, [data, chartData])
+  }, [data, chartData, useMonthlyAggregation])
 
   // Memoize KPI calculations - using kpiCards from backend
   const callsKPI = useMemo(() => {
@@ -212,32 +340,40 @@ export function GBPDashboardPage({
   
   // Custom legend for activity chart
   const CustomActivityLegend = () => {
+    const legendItems = [
+      { value: 'Calls (Last)', color: '#3b82f6', strokeDasharray: '' },
+      { value: 'Directions (Last)', color: '#22c55e', strokeDasharray: '' },
+      { value: 'Website Clicks (Last)', color: '#8b5cf6', strokeDasharray: '' },
+      { value: 'Calls (Previous)', color: '#3b82f6', strokeDasharray: '5 5' },
+      { value: 'Directions (Previous)', color: '#22c55e', strokeDasharray: '5 5' },
+      { value: 'Website Clicks (Previous)', color: '#8b5cf6', strokeDasharray: '5 5' },
+    ]
+    
     return (
-      <div className="flex flex-wrap justify-center gap-x-4 gap-y-2 text-xs sm:text-sm">
-        <div className="flex items-center gap-1.5">
-          <div className="w-3 h-0.5 bg-blue-500" />
-          <span className="text-muted-foreground">Calls (Last)</span>
-        </div>
-        <div className="flex items-center gap-1.5">
-          <div className="w-3 h-0.5 bg-blue-500 opacity-40" style={{ borderTop: '2px dashed' }} />
-          <span className="text-muted-foreground">Calls (Previous)</span>
-        </div>
-        <div className="flex items-center gap-1.5">
-          <div className="w-3 h-0.5 bg-green-500" />
-          <span className="text-muted-foreground">Directions (Last)</span>
-        </div>
-        <div className="flex items-center gap-1.5">
-          <div className="w-3 h-0.5 bg-green-500 opacity-40" style={{ borderTop: '2px dashed' }} />
-          <span className="text-muted-foreground">Directions (Previous)</span>
-        </div>
-        <div className="flex items-center gap-1.5">
-          <div className="w-3 h-0.5 bg-purple-500" />
-          <span className="text-muted-foreground">Website Clicks (Last)</span>
-        </div>
-        <div className="flex items-center gap-1.5">
-          <div className="w-3 h-0.5 bg-purple-500 opacity-40" style={{ borderTop: '2px dashed' }} />
-          <span className="text-muted-foreground">Website Clicks (Previous)</span>
-        </div>
+      <div style={{ 
+        display: 'flex', 
+        justifyContent: 'center', 
+        flexWrap: 'wrap', 
+        gap: '16px',
+        paddingTop: '10px',
+        fontSize: '13px'
+      }}>
+        {legendItems.map((item) => (
+          <div key={item.value} style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <svg width="18" height="2" style={{ overflow: 'visible' }}>
+              <line 
+                x1="0" 
+                y1="1" 
+                x2="18" 
+                y2="1" 
+                stroke={item.color} 
+                strokeWidth="3"
+                strokeDasharray={item.strokeDasharray}
+              />
+            </svg>
+            <span>{item.value}</span>
+          </div>
+        ))}
       </div>
     )
   }
@@ -329,11 +465,13 @@ export function GBPDashboardPage({
             <LineChart data={activityChartData} margin={{ top: 2, right: 5, left: -5, bottom: 0 }}>
               <CartesianGrid strokeDasharray="3 3" className="stroke-muted" opacity={0.3} />
               <XAxis
-                dataKey="dayIndex"
+                dataKey={useMonthlyAggregation ? "currentDateShort" : "dayIndex"}
                 tick={{ fontSize: 9 }}
-                label={{ value: 'Day', position: 'insideBottom', offset: -5, fontSize: 9 }}
+                label={{ value: useMonthlyAggregation ? 'Month' : 'Day', position: 'insideBottom', offset: -5, fontSize: 9 }}
                 height={35}
-                interval={Math.floor(activityChartData.length / 6)}
+                interval={useMonthlyAggregation ? 0 : Math.floor(activityChartData.length / 6)}
+                angle={useMonthlyAggregation ? -45 : 0}
+                textAnchor={useMonthlyAggregation ? "end" : "middle"}
               />
               <YAxis tick={{ fontSize: 10 }} width={35} />
               <Tooltip
@@ -351,7 +489,7 @@ export function GBPDashboardPage({
                   marginBottom: '6px',
                   fontSize: '11px'
                 }}
-                labelFormatter={(value) => `Day ${value}`}
+                labelFormatter={(value) => useMonthlyAggregation ? String(value) : `Day ${value}`}
                 formatter={(value: any, name: any, props: any) => {
                   if (value === undefined || value === null) return [null, '']
                   const payload = props.payload
@@ -383,70 +521,70 @@ export function GBPDashboardPage({
               />
               {/* Current Period - Solid Lines */}
               <Line
-                type="monotone"
+                type={useMonthlyAggregation ? "linear" : "monotone"}
                 dataKey="currentCalls"
                 stroke="#3b82f6"
                 strokeWidth={2}
                 name="Calls (Last)"
-                dot={false}
+                dot={useMonthlyAggregation ? { r: 4 } : false}
                 activeDot={{ r: 4 }}
                 connectNulls={false}
                 animationDuration={300}
               />
               <Line
-                type="monotone"
+                type={useMonthlyAggregation ? "linear" : "monotone"}
                 dataKey="currentDirections"
                 stroke="#22c55e"
                 strokeWidth={2}
                 name="Directions (Last)"
-                dot={false}
+                dot={useMonthlyAggregation ? { r: 4 } : false}
                 activeDot={{ r: 4 }}
                 connectNulls={false}
                 animationDuration={300}
               />
               <Line
-                type="monotone"
+                type={useMonthlyAggregation ? "linear" : "monotone"}
                 dataKey="currentWebsiteClicks"
                 stroke="#8b5cf6"
                 strokeWidth={2}
                 name="Website Clicks (Last)"
-                dot={false}
+                dot={useMonthlyAggregation ? { r: 4 } : false}
                 activeDot={{ r: 4 }}
                 connectNulls={false}
                 animationDuration={300}
               />
               {/* Previous Period - Dotted Lines */}
               <Line
-                type="monotone"
+                type={useMonthlyAggregation ? "linear" : "monotone"}
                 dataKey="previousCalls"
                 stroke="#3b82f6"
                 strokeWidth={2}
                 name="Calls (Previous)"
-                dot={false}
+                dot={useMonthlyAggregation ? { r: 4 } : false}
                 activeDot={{ r: 4 }}
                 strokeDasharray="5 5"
                 connectNulls={false}
                 animationDuration={300}
               />
               <Line
-                type="monotone"
+                type={useMonthlyAggregation ? "linear" : "monotone"}
                 dataKey="previousDirections"
                 stroke="#22c55e"
                 strokeWidth={2}
                 name="Directions (Previous)"
-                dot={false}
+                dot={useMonthlyAggregation ? { r: 4 } : false}
                 activeDot={{ r: 4 }}
                 strokeDasharray="5 5"
                 connectNulls={false}
                 animationDuration={300}
               />
               <Line
-                type="monotone"
+                type={useMonthlyAggregation ? "linear" : "monotone"}
                 dataKey="previousWebsiteClicks"
                 stroke="#8b5cf6"
                 strokeWidth={2}
                 name="Website Clicks (Previous)"
-                dot={false}
+                dot={useMonthlyAggregation ? { r: 4 } : false}
                 activeDot={{ r: 4 }}
                 strokeDasharray="5 5"
                 connectNulls={false}
@@ -456,14 +594,16 @@ export function GBPDashboardPage({
           </ResponsiveContainer>
           {/* Desktop Chart */}
           <ResponsiveContainer width="100%" height={450} className="hidden sm:block">
-            <LineChart data={activityChartData} margin={{ top: 2, right: 10, left: 0, bottom: 15 }}>
+            <LineChart data={activityChartData} margin={{ top: 2, right: 10, left: 0, bottom: useMonthlyAggregation ? 35 : 15 }}>
               <CartesianGrid strokeDasharray="3 3" className="stroke-muted" opacity={0.3} />
               <XAxis
-                dataKey="dayIndex"
+                dataKey={useMonthlyAggregation ? "currentDateShort" : "dayIndex"}
                 tick={{ fontSize: 11 }}
-                label={{ value: 'Day', position: 'insideBottom', offset: -10, fontSize: 12 }}
-                height={50}
-                interval={Math.floor(activityChartData.length / 12)}
+                label={{ value: useMonthlyAggregation ? 'Month' : 'Day', position: 'insideBottom', offset: useMonthlyAggregation ? -15 : -10, fontSize: 12 }}
+                height={useMonthlyAggregation ? 70 : 50}
+                interval={useMonthlyAggregation ? 0 : Math.floor(activityChartData.length / 12)}
+                angle={useMonthlyAggregation ? -45 : 0}
+                textAnchor={useMonthlyAggregation ? "end" : "middle"}
               />
               <YAxis tick={{ fontSize: 12 }} width={60} />
               <Tooltip
@@ -479,7 +619,7 @@ export function GBPDashboardPage({
                   fontWeight: 600,
                   marginBottom: '8px'
                 }}
-                labelFormatter={(value) => `Day ${value}`}
+                labelFormatter={(value) => useMonthlyAggregation ? String(value) : `Day ${value}`}
                 formatter={(value: any, name: any, props: any) => {
                   if (value === undefined || value === null) return [null, '']
                   const payload = props.payload
@@ -512,70 +652,70 @@ export function GBPDashboardPage({
               <Legend content={<CustomActivityLegend />} wrapperStyle={{ paddingTop: '20px' }} />
               {/* Current Period - Solid Lines */}
               <Line
-                type="monotone"
+                type={useMonthlyAggregation ? "linear" : "monotone"}
                 dataKey="currentCalls"
                 stroke="#3b82f6"
                 strokeWidth={2.5}
                 name="Calls (Last)"
-                dot={false}
+                dot={useMonthlyAggregation ? { r: 5 } : false}
                 activeDot={{ r: 6 }}
                 connectNulls={false}
                 animationDuration={300}
               />
               <Line
-                type="monotone"
+                type={useMonthlyAggregation ? "linear" : "monotone"}
                 dataKey="currentDirections"
                 stroke="#22c55e"
                 strokeWidth={2.5}
                 name="Directions (Last)"
-                dot={false}
+                dot={useMonthlyAggregation ? { r: 5 } : false}
                 activeDot={{ r: 6 }}
                 connectNulls={false}
                 animationDuration={300}
               />
               <Line
-                type="monotone"
+                type={useMonthlyAggregation ? "linear" : "monotone"}
                 dataKey="currentWebsiteClicks"
                 stroke="#8b5cf6"
                 strokeWidth={2.5}
                 name="Website Clicks (Last)"
-                dot={false}
+                dot={useMonthlyAggregation ? { r: 5 } : false}
                 activeDot={{ r: 6 }}
                 connectNulls={false}
                 animationDuration={300}
               />
               {/* Previous Period - Dotted Lines */}
               <Line
-                type="monotone"
+                type={useMonthlyAggregation ? "linear" : "monotone"}
                 dataKey="previousCalls"
                 stroke="#3b82f6"
                 strokeWidth={2.5}
                 name="Calls (Previous)"
-                dot={false}
+                dot={useMonthlyAggregation ? { r: 5 } : false}
                 activeDot={{ r: 6 }}
                 strokeDasharray="5 5"
                 connectNulls={false}
                 animationDuration={300}
               />
               <Line
-                type="monotone"
+                type={useMonthlyAggregation ? "linear" : "monotone"}
                 dataKey="previousDirections"
                 stroke="#22c55e"
                 strokeWidth={2.5}
                 name="Directions (Previous)"
-                dot={false}
+                dot={useMonthlyAggregation ? { r: 5 } : false}
                 activeDot={{ r: 6 }}
                 strokeDasharray="5 5"
                 connectNulls={false}
                 animationDuration={300}
               />
               <Line
-                type="monotone"
+                type={useMonthlyAggregation ? "linear" : "monotone"}
                 dataKey="previousWebsiteClicks"
                 stroke="#8b5cf6"
                 strokeWidth={2.5}
                 name="Website Clicks (Previous)"
-                dot={false}
+                dot={useMonthlyAggregation ? { r: 5 } : false}
                 activeDot={{ r: 6 }}
                 strokeDasharray="5 5"
                 connectNulls={false}
