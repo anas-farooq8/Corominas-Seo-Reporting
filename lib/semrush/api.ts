@@ -83,12 +83,18 @@ export async function fetchSEMrushOverviewTrend(
     }
   }
 
+  // Create abort controller with 30 second timeout
+  const controller = new AbortController()
+  const timeoutId = setTimeout(() => controller.abort(), 30000)
+
   try {
     const response = await fetch(SEMRUSH_API_URL, {
       method: "POST",
       headers: HEADERS,
       body: JSON.stringify(payload),
+      signal: controller.signal,
     })
+    clearTimeout(timeoutId)
 
     if (!response.ok) {
       throw new Error(`SEMrush API request failed: ${response.status} ${response.statusText}`)
@@ -105,7 +111,11 @@ export async function fetchSEMrushOverviewTrend(
     }
     
     return data.result as SEMrushOverviewTrendItem[]
-  } catch (error) {
+  } catch (error: any) {
+    clearTimeout(timeoutId)
+    if (error.name === 'AbortError') {
+      throw new Error('SEMrush API request timed out after 30 seconds')
+    }
     console.error("[SEMrush API] Fetch failed:", error)
     throw error
   }

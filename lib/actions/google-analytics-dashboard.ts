@@ -1,9 +1,10 @@
 "use server"
 
-import { createClient } from "@/lib/supabase/server"
 import { fetchGATrafficData, type GATrafficResponse, type GADailyTrafficData } from "@/lib/google-analytics/api"
 import { getCachedDashboardData, saveDashboardCache } from "@/lib/cache/dashboard-cache"
-import { selectBestComparisonWindow, type WindowResult } from "@/lib/utils/comparison-helpers"
+import { selectBestComparisonWindow, type WindowResult, calculateWindowDates } from "@/lib/utils/comparison-helpers"
+import { calculateDashboardDateRanges } from "@/lib/utils/date-ranges"
+import { getGAPropertyDetails, extractPropertyId } from "@/lib/google-analytics/helpers"
 
 /**
  * KPI Card Data for Google Analytics metrics
@@ -115,34 +116,15 @@ export async function fetchGADashboardData(
 ): Promise<GADashboardData | null> {
   try {
     // Get property details from database
-    const supabase = await createClient()
-    const { data: property, error: propertyError } = await supabase
-      .from("google_analytics_properties")
-      .select("name, display_name, time_zone, currency_code")
-      .eq("datasource_id", datasourceId)
-      .single()
-    
-    if (propertyError || !property) {
-      console.error("Property not found for datasource:", datasourceId, propertyError)
+    const property = await getGAPropertyDetails(datasourceId)
+    if (!property) {
       return null
     }
     
     const propertyName = property.name
     
-    // Calculate date ranges (12 months of data - last completed month going back 12 months)
-    const today = new Date()
-    const endDate = new Date(today.getFullYear(), today.getMonth(), 0) // Last day of previous month
-    const startDate = new Date(endDate.getFullYear(), endDate.getMonth() - 11, 1) // 12 months back
-    
-    const formatDate = (date: Date) => {
-      const year = date.getFullYear()
-      const month = String(date.getMonth() + 1).padStart(2, '0')
-      const day = String(date.getDate()).padStart(2, '0')
-      return `${year}-${month}-${day}`
-    }
-    
-    const startDateStr = formatDate(startDate)
-    const endDateStr = formatDate(endDate)
+    // Use the same date calculation as all dashboards for consistency
+    const { startDate: startDateStr, endDate: endDateStr } = calculateDashboardDateRanges()
     
     // Check cache first
     const cachedData = await getCachedDashboardData(datasourceId, propertyName, startDateStr, endDateStr)
@@ -151,13 +133,7 @@ export async function fetchGADashboardData(
     }
     
     // Cache miss - fetch from API
-    
-    // Extract property ID from name (e.g., "properties/469744307" -> "469744307")
-    const propertyId = propertyName.split('/')[1]
-    
-    if (!propertyId) {
-      throw new Error("Invalid property name format")
-    }
+    const propertyId = extractPropertyId(propertyName)
 
     // Fetch traffic data from Google Analytics API
     const trafficData = await fetchGATrafficData(propertyId)
@@ -180,7 +156,6 @@ export async function fetchGADashboardData(
     
     // Calculate previous period dates for the larger window
     const largerPeriodMonths = Math.max(sessionsMonths, conversionsMonths)
-    const { calculateWindowDates } = await import('@/lib/utils/comparison-helpers')
     const previousPeriodDates = calculateWindowDates(endDateStr, largerPeriodMonths, largerPeriodMonths)
     
     // Filter dailyData to include BOTH current and previous periods for the larger window

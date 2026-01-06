@@ -1,8 +1,9 @@
 "use server"
 
-import { createClient } from "@/lib/supabase/server"
 import { fetchGALandingPagesData, type GALandingPagesResponse, type GALandingPageData, type GADailyLandingPageData } from "@/lib/google-analytics/api"
 import { getCachedDashboardData, saveDashboardCache } from "@/lib/cache/dashboard-cache"
+import { calculateDashboardDateRanges } from "@/lib/utils/date-ranges"
+import { getGAPropertyDetails, extractPropertyId } from "@/lib/google-analytics/helpers"
 
 export interface GALandingPagesDashboardData {
   displayName: string
@@ -24,34 +25,15 @@ export async function fetchGALandingPagesDashboard(
 ): Promise<GALandingPagesDashboardData | null> {
   try {
     // Get property details from database
-    const supabase = await createClient()
-    const { data: property, error: propertyError } = await supabase
-      .from("google_analytics_properties")
-      .select("name, display_name, time_zone, currency_code")
-      .eq("datasource_id", datasourceId)
-      .single()
-    
-    if (propertyError || !property) {
-      console.error("Property not found for datasource:", datasourceId, propertyError)
+    const property = await getGAPropertyDetails(datasourceId)
+    if (!property) {
       return null
     }
     
     const propertyName = property.name
     
-    // Calculate date ranges (12 months of data - last completed month going back 12 months)
-    const today = new Date()
-    const endDate = new Date(today.getFullYear(), today.getMonth(), 0) // Last day of previous month
-    const startDate = new Date(endDate.getFullYear(), endDate.getMonth() - 11, 1) // 12 months back
-    
-    const formatDate = (date: Date) => {
-      const year = date.getFullYear()
-      const month = String(date.getMonth() + 1).padStart(2, '0')
-      const day = String(date.getDate()).padStart(2, '0')
-      return `${year}-${month}-${day}`
-    }
-    
-    const startDateStr = formatDate(startDate)
-    const endDateStr = formatDate(endDate)
+    // Use the same date calculation as all dashboards for consistency
+    const { startDate: startDateStr, endDate: endDateStr } = calculateDashboardDateRanges()
     
     // Check cache first (use a different resource ID for landing pages)
     const resourceId = `${propertyName}-landing-pages`
@@ -63,13 +45,7 @@ export async function fetchGALandingPagesDashboard(
     
     // Cache miss - fetch from API
     console.log("⟳ Fetching fresh GA landing pages data from API")
-    
-    // Extract property ID from name (e.g., "properties/469744307" -> "469744307")
-    const propertyId = propertyName.split('/')[1]
-    
-    if (!propertyId) {
-      throw new Error("Invalid property name format")
-    }
+    const propertyId = extractPropertyId(propertyName)
 
     // Fetch landing pages data from Google Analytics API
     const landingPagesData = await fetchGALandingPagesData(propertyId)

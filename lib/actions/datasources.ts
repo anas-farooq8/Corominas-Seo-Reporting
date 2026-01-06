@@ -4,9 +4,9 @@
 // Datasource Actions
 // ============================================
 
-import { revalidatePath } from "next/cache"
 import * as db from "@/lib/db/datasources"
 import type { Datasource, DatasourceInput, MangoolsDomain, GoogleAnalyticsProperty, SemrushDomain, GoogleSearchConsoleSite, GoogleBusinessProfileLocation } from "@/lib/supabase/types"
+import { withActionHandler } from "./action-helpers"
 
 /**
  * Get all datasources for a project with their respective data (domains, etc.)
@@ -19,28 +19,31 @@ export async function getDataSourcesWithRespectiveData(projectId: string) {
  * Create a new datasource
  */
 export async function createDatasource(input: DatasourceInput): Promise<Datasource> {
-  try {
-    const datasource = await db.createDatasource(input)
-    revalidatePath(`/dashboard/projects/${input.project_id}`)
-    return datasource
-  } catch (error) {
-    console.error("Error creating datasource:", error)
-    throw new Error("Failed to create datasource")
-  }
+  return withActionHandler(
+    () => db.createDatasource(input),
+    {
+      errorMessage: "Failed to create datasource",
+      revalidatePaths: [`/dashboard/projects/${input.project_id}`]
+    }
+  )
 }
 
 /**
  * Delete a datasource
  */
 export async function deleteDatasource(id: string): Promise<void> {
-  try {
-    // Delete returns the deleted datasource, so we get project_id in one call
-    const datasource = await db.deleteDatasource(id)
-    revalidatePath(`/dashboard/projects/${datasource.project_id}`)
-  } catch (error) {
-    console.error("Error deleting datasource:", error)
-    throw new Error("Failed to delete datasource")
-  }
+  return withActionHandler(
+    async () => {
+      const datasource = await db.deleteDatasource(id)
+      // Manually revalidate since we need datasource data
+      const { revalidatePath } = await import("next/cache")
+      revalidatePath(`/dashboard/projects/${datasource.project_id}`)
+    },
+    {
+      errorMessage: "Failed to delete datasource",
+      revalidatePaths: []
+    }
+  )
 }
 
 /**
@@ -53,21 +56,13 @@ export async function attachDomain(
   domain: string,
   projectId: string
 ): Promise<MangoolsDomain> {
-  try {
-    const attachedDomain = await db.attachDomain(
-      datasourceId,
-      trackingId,
-      domain
-    )
-    
-    // Use projectId parameter instead of making extra DB call
-    revalidatePath(`/dashboard/projects/${projectId}`)
-    
-    return attachedDomain
-  } catch (error) {
-    console.error("Error attaching domain:", error)
-    throw new Error("Failed to attach domain")
-  }
+  return withActionHandler(
+    () => db.attachDomain(datasourceId, trackingId, domain),
+    {
+      errorMessage: "Failed to attach domain",
+      revalidatePaths: [`/dashboard/projects/${projectId}`]
+    }
+  )
 }
 
 /**
@@ -82,23 +77,13 @@ export async function attachGoogleAnalyticsProperty(
   currencyCode: string,
   projectId: string
 ): Promise<GoogleAnalyticsProperty> {
-  try {
-    const attachedProperty = await db.attachGoogleAnalyticsProperty(
-      datasourceId,
-      name,
-      parent,
-      displayName,
-      timeZone,
-      currencyCode
-    )
-    
-    revalidatePath(`/dashboard/projects/${projectId}`)
-    
-    return attachedProperty
-  } catch (error) {
-    console.error("Error attaching Google Analytics property:", error)
-    throw new Error("Failed to attach Google Analytics property")
-  }
+  return withActionHandler(
+    () => db.attachGoogleAnalyticsProperty(datasourceId, name, parent, displayName, timeZone, currencyCode),
+    {
+      errorMessage: "Failed to attach Google Analytics property",
+      revalidatePaths: [`/dashboard/projects/${projectId}`]
+    }
+  )
 }
 
 /**
@@ -109,19 +94,13 @@ export async function attachSemrushDomain(
   domain: string,
   projectId: string
 ): Promise<SemrushDomain> {
-  try {
-    const attachedDomain = await db.attachSemrushDomain(
-      datasourceId,
-      domain
-    )
-    
-    revalidatePath(`/dashboard/projects/${projectId}`)
-    
-    return attachedDomain
-  } catch (error) {
-    console.error("Error attaching Semrush domain:", error)
-    throw new Error("Failed to attach Semrush domain")
-  }
+  return withActionHandler(
+    () => db.attachSemrushDomain(datasourceId, domain),
+    {
+      errorMessage: "Failed to attach Semrush domain",
+      revalidatePaths: [`/dashboard/projects/${projectId}`]
+    }
+  )
 }
 
 /**
@@ -132,19 +111,13 @@ export async function attachGoogleSearchConsoleSite(
   siteUrl: string,
   projectId: string
 ): Promise<GoogleSearchConsoleSite> {
-  try {
-    const attachedSite = await db.attachGoogleSearchConsoleSite(
-      datasourceId,
-      siteUrl,
-    )
-    
-    revalidatePath(`/dashboard/projects/${projectId}`)
-    
-    return attachedSite
-  } catch (error) {
-    console.error("Error attaching Google Search Console site:", error)
-    throw new Error("Failed to attach Google Search Console site")
-  }
+  return withActionHandler(
+    () => db.attachGoogleSearchConsoleSite(datasourceId, siteUrl),
+    {
+      errorMessage: "Failed to attach Google Search Console site",
+      revalidatePaths: [`/dashboard/projects/${projectId}`]
+    }
+  )
 }
 
 /**
@@ -156,19 +129,12 @@ export async function attachGoogleBusinessProfileLocation(
   businessName: string,
   projectId: string
 ): Promise<GoogleBusinessProfileLocation> {
-  try {
-    const attachedLocation = await db.attachGoogleBusinessProfileLocation(
-      datasourceId,
-      locationId,
-      businessName
-    )
-    
-    revalidatePath(`/dashboard/projects/${projectId}`)
-    
-    return attachedLocation
-  } catch (error) {
-    console.error("Error attaching Google Business Profile location:", error)
-    throw new Error("Failed to attach Google Business Profile location")
-  }
+  return withActionHandler(
+    () => db.attachGoogleBusinessProfileLocation(datasourceId, locationId, businessName),
+    {
+      errorMessage: "Failed to attach Google Business Profile location",
+      revalidatePaths: [`/dashboard/projects/${projectId}`]
+    }
+  )
 }
 

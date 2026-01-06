@@ -292,84 +292,99 @@ export async function fetchGBPActivityData(locationId: string): Promise<GBPActiv
     // Use the official googleapis library for businessprofileperformance API
     const businessPerformance = google.businessprofileperformance({ version: "v1", auth })
     
-    const response = await businessPerformance.locations.fetchMultiDailyMetricsTimeSeries({
-      location: locationId,
-      dailyMetrics: [
-        "CALL_CLICKS",
-        "BUSINESS_DIRECTION_REQUESTS",
-        "WEBSITE_CLICKS",
-      ],
-      // Note: The googleapis library expects these as nested parameters
-      'dailyRange.startDate.year': startDateObj.getFullYear(),
-      'dailyRange.startDate.month': startDateObj.getMonth() + 1,
-      'dailyRange.startDate.day': startDateObj.getDate(),
-      'dailyRange.endDate.year': endDateObj.getFullYear(),
-      'dailyRange.endDate.month': endDateObj.getMonth() + 1,
-      'dailyRange.endDate.day': endDateObj.getDate(),
-    })
-    
-    const responseData = response.data as any
-    
-    // Parse the response
-    const dailyDataMap = new Map<string, GBPDailyActivityData>()
-    
-    // Initialize all dates in range with zeros
-    const currentDate = new Date(startDateObj)
-    while (currentDate <= endDateObj) {
-      // Format as YYYYMMDD (getMonth() is 0-11, so we add 1)
-      const dateStr = currentDate.getFullYear() + 
-        String(currentDate.getMonth() + 1).padStart(2, '0') + 
-        String(currentDate.getDate()).padStart(2, '0')
-      
-      dailyDataMap.set(dateStr, {
-        date: dateStr,
-        calls: 0,
-        directions: 0,
-        websiteClicks: 0,
+    // Create abort controller with 30 second timeout
+    const controller = new AbortController()
+    const timeoutId = setTimeout(() => controller.abort(), 30000)
+
+    try {
+      const response = await businessPerformance.locations.fetchMultiDailyMetricsTimeSeries({
+        location: locationId,
+        dailyMetrics: [
+          "CALL_CLICKS",
+          "BUSINESS_DIRECTION_REQUESTS",
+          "WEBSITE_CLICKS",
+        ],
+        // Note: The googleapis library expects these as nested parameters
+        'dailyRange.startDate.year': startDateObj.getFullYear(),
+        'dailyRange.startDate.month': startDateObj.getMonth() + 1,
+        'dailyRange.startDate.day': startDateObj.getDate(),
+        'dailyRange.endDate.year': endDateObj.getFullYear(),
+        'dailyRange.endDate.month': endDateObj.getMonth() + 1,
+        'dailyRange.endDate.day': endDateObj.getDate(),
+      }, {
+        signal: controller.signal,
       })
-      
-      currentDate.setDate(currentDate.getDate() + 1)
-    }
+      clearTimeout(timeoutId)
     
-    // Process the response data
-    const blocks = responseData.multiDailyMetricTimeSeries || []
+      const responseData = response.data as any
     
-    for (const block of blocks) {
-      const metricSeries = block.dailyMetricTimeSeries || []
-      
-      for (const series of metricSeries) {
-        const metric = series.dailyMetric
-        const datedValues = series.timeSeries?.datedValues || []
+      // Parse the response
+      const dailyDataMap = new Map<string, GBPDailyActivityData>()
+    
+      // Initialize all dates in range with zeros
+      const currentDate = new Date(startDateObj)
+      while (currentDate <= endDateObj) {
+        // Format as YYYYMMDD (getMonth() is 0-11, so we add 1)
+        const dateStr = currentDate.getFullYear() + 
+          String(currentDate.getMonth() + 1).padStart(2, '0') + 
+          String(currentDate.getDate()).padStart(2, '0')
         
-        for (const row of datedValues) {
-          const date = row.date
-          const dateStr = date.year + 
-            String(date.month).padStart(2, '0') + 
-            String(date.day).padStart(2, '0')
+        dailyDataMap.set(dateStr, {
+          date: dateStr,
+          calls: 0,
+          directions: 0,
+          websiteClicks: 0,
+        })
+        
+        currentDate.setDate(currentDate.getDate() + 1)
+      }
+      
+      // Process the response data
+      const blocks = responseData.multiDailyMetricTimeSeries || []
+      
+      for (const block of blocks) {
+        const metricSeries = block.dailyMetricTimeSeries || []
+        
+        for (const series of metricSeries) {
+          const metric = series.dailyMetric
+          const datedValues = series.timeSeries?.datedValues || []
           
-          const value = parseInt(row.value || '0', 10)
-          
-          const existingData = dailyDataMap.get(dateStr)
-          if (existingData) {
-            if (metric === "CALL_CLICKS") {
-              existingData.calls = value
-            } else if (metric === "BUSINESS_DIRECTION_REQUESTS") {
-              existingData.directions = value
-            } else if (metric === "WEBSITE_CLICKS") {
-              existingData.websiteClicks = value
+          for (const row of datedValues) {
+            const date = row.date
+            const dateStr = date.year + 
+              String(date.month).padStart(2, '0') + 
+              String(date.day).padStart(2, '0')
+            
+            const value = parseInt(row.value || '0', 10)
+            
+            const existingData = dailyDataMap.get(dateStr)
+            if (existingData) {
+              if (metric === "CALL_CLICKS") {
+                existingData.calls = value
+              } else if (metric === "BUSINESS_DIRECTION_REQUESTS") {
+                existingData.directions = value
+              } else if (metric === "WEBSITE_CLICKS") {
+                existingData.websiteClicks = value
+              }
             }
           }
         }
       }
-    }
-    
-    // Convert map to sorted array
-    const dailyData = Array.from(dailyDataMap.values()).sort((a, b) => 
-      parseInt(a.date) - parseInt(b.date)
-    )
-    
-    return {
-      dailyData,
+      
+      // Convert map to sorted array
+      const dailyData = Array.from(dailyDataMap.values()).sort((a, b) => 
+        parseInt(a.date) - parseInt(b.date)
+      )
+      
+      return {
+        dailyData,
+      }
+    } catch (apiError: any) {
+      clearTimeout(timeoutId)
+      if (apiError.name === 'AbortError') {
+        throw new Error('Google Business Profile API request timed out after 30 seconds')
+      }
+      throw apiError
     }
   } catch (error: any) {
     console.error("[GBP Activity] Error fetching activity data:", error.message)

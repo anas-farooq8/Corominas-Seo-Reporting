@@ -4,9 +4,9 @@
 // Client Actions
 // ============================================
 
-import { revalidatePath } from "next/cache"
 import * as db from "@/lib/db/clients"
 import type { Client, ClientInput } from "@/lib/supabase/types"
+import { withActionHandler } from "./action-helpers"
 
 /**
  * Get all clients with project count
@@ -26,40 +26,37 @@ export async function getClientWithProjects(id: string) {
  * Create a new client
  */
 export async function createClient(input: ClientInput): Promise<Client> {
-  try {
-    const client = await db.dbCreateClient(input)
-    revalidatePath("/dashboard")
-    return client
-  } catch (error) {
-    console.error("Error creating client:", error)
-    throw new Error("Failed to create client")
-  }
+  return withActionHandler(
+    () => db.dbCreateClient(input),
+    {
+      errorMessage: "Failed to create client",
+      revalidatePaths: ["/dashboard"]
+    }
+  )
 }
 
 /**
  * Update a client
  */
 export async function updateClient(id: string, input: Partial<ClientInput>): Promise<Client> {
-  try {
-    const client = await db.updateClient(id, input)
-    revalidatePath("/dashboard")
-    revalidatePath(`/dashboard/clients/${id}`)
-    return client
-  } catch (error) {
-    console.error("Error updating client:", error)
-    throw new Error("Failed to update client")
-  }
+  return withActionHandler(
+    () => db.updateClient(id, input),
+    {
+      errorMessage: "Failed to update client",
+      revalidatePaths: ["/dashboard", `/dashboard/clients/${id}`]
+    }
+  )
 }
 
 /**
  * Delete a client
  */
 export async function deleteClient(id: string): Promise<void> {
-  try {
-    await db.deleteClient(id)
-    revalidatePath("/dashboard")
-  } catch (error) {
-    console.error("Error deleting client:", error)
-    throw new Error("Failed to delete client")
-  }
+  return withActionHandler(
+    () => db.deleteClient(id),
+    {
+      errorMessage: "Failed to delete client",
+      revalidatePaths: ["/dashboard"]
+    }
+  )
 }

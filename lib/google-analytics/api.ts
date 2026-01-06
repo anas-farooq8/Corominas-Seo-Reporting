@@ -2,6 +2,7 @@ import type { GoogleAnalyticsApiProperty } from "@/lib/supabase/types"
 import { cache } from "react"
 import { google } from "googleapis"
 import { calculateDashboardDateRanges } from "@/lib/utils/date-ranges"
+import { createGoogleAuthClient, validateGoogleCredentials } from "@/lib/api/google-auth"
 
 const SCOPES = ["https://www.googleapis.com/auth/analytics.readonly"]
 
@@ -10,33 +11,10 @@ const SCOPES = ["https://www.googleapis.com/auth/analytics.readonly"]
 // ============================================
 
 /**
- * Get service account credentials
- */
-function getCredentials() {
-  return {
-    type: process.env.GOOGLE_TYPE || "service_account",
-    project_id: process.env.GOOGLE_PROJECT_ID,
-    private_key_id: process.env.GOOGLE_PRIVATE_KEY_ID,
-    private_key: process.env.GOOGLE_PRIVATE_KEY?.replace(/\\n/g, "\n"),
-    client_email: process.env.GOOGLE_CLIENT_EMAIL,
-    client_id: process.env.GOOGLE_CLIENT_ID,
-    auth_uri: process.env.GOOGLE_AUTH_URI || "https://accounts.google.com/o/oauth2/auth",
-    token_uri: process.env.GOOGLE_TOKEN_URI || "https://oauth2.googleapis.com/token",
-    auth_provider_x509_cert_url: process.env.GOOGLE_AUTH_PROVIDER_CERT_URL || "https://www.googleapis.com/oauth2/v1/certs",
-    client_x509_cert_url: process.env.GOOGLE_CLIENT_CERT_URL,
-    universe_domain: process.env.GOOGLE_UNIVERSE_DOMAIN || "googleapis.com",
-  }
-}
-
-/**
  * Get authenticated Google Analytics Admin API client
  */
 function getAdminClient() {
-  const auth = new google.auth.GoogleAuth({
-    credentials: getCredentials(),
-    scopes: SCOPES,
-  })
-
+  const auth = createGoogleAuthClient(SCOPES)
   return google.analyticsadmin({ version: "v1beta", auth })
 }
 
@@ -44,11 +22,7 @@ function getAdminClient() {
  * Get authenticated Google Analytics Data API client
  */
 function getDataClient() {
-  const auth = new google.auth.GoogleAuth({
-    credentials: getCredentials(),
-    scopes: SCOPES,
-  })
-
+  const auth = createGoogleAuthClient(SCOPES)
   return google.analyticsdata({ version: "v1beta", auth })
 }
 
@@ -64,9 +38,7 @@ export const fetchGoogleAnalyticsProperties = cache(async (accountId?: string): 
     throw new Error("GA_ACCOUNT_ID environment variable is not set or accountId not provided")
   }
 
-  if (!process.env.GOOGLE_CLIENT_EMAIL || !process.env.GOOGLE_PRIVATE_KEY) {
-    throw new Error("Google service account credentials are not configured")
-  }
+  validateGoogleCredentials()
 
   try {
     const client = getAdminClient()
