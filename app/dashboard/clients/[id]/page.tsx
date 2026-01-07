@@ -44,7 +44,7 @@ export default function ClientDetailPage({ params }: { params: Promise<{ id: str
   }
 
   function handleProjectUpdated(project: ProjectWithDatasources) {
-    setProjects((prev) => prev.map((p) => (p.id === project.id ? project : p)))
+    setProjects((prev) => prev.map((p) => (p.id === project.id ? { ...project, datasource_count: p.datasource_count } : p)))
   }
 
   function handleProjectDeleted(projectId: string) {

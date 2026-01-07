@@ -35,7 +35,7 @@ export default function ClientsPage() {
   }
 
   function handleClientUpdated(client: ClientWithProjects) {
-    setClients((prev) => prev.map((c) => (c.id === client.id ? client : c)))
+    setClients((prev) => prev.map((c) => (c.id === client.id ? { ...client, project_count: c.project_count } : c)))
   }
 
   function handleClientDeleted(clientId: string) {
