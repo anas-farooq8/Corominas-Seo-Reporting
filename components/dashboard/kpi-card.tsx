@@ -12,7 +12,7 @@ interface KPICardProps {
   previousValue: number
   currentLabel: string
   previousLabel: string
-  colorScheme: 'purple' | 'green' | 'blue'
+  colorScheme: 'purple' | 'green' | 'blue' | 'orange'
   percentageChange: {
     change: number
     isIncrease: boolean
@@ -36,6 +36,11 @@ const colorClasses = {
     border: 'border-blue-200 dark:border-blue-900/50',
     bg: 'bg-gradient-to-br from-blue-50 to-white dark:from-blue-950/20 dark:to-background',
     text: 'text-blue-700 dark:text-blue-400',
+  },
+  orange: {
+    border: 'border-orange-200 dark:border-orange-900/50',
+    bg: 'bg-gradient-to-br from-orange-50 to-white dark:from-orange-950/20 dark:to-background',
+    text: 'text-orange-700 dark:text-orange-400',
   },
 }
 

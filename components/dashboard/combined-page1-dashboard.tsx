@@ -3,9 +3,10 @@
 import { useState, useEffect, useMemo, useCallback } from "react"
 import { LoadingSpinner } from "@/components/ui/loading-spinner"
 import { ErrorDisplay } from "@/components/ui/error-display"
-import { TrendingUp, MousePointerClick, Key } from "lucide-react"
+import { TrendingUp, MousePointerClick, Key, Activity } from "lucide-react"
 import type { GADashboardData } from "@/lib/actions/google-analytics-dashboard"
 import type { SEMrushDashboardData } from "@/lib/actions/semrush-dashboard"
+import type { GBPActionsPage1Data } from "@/lib/actions/gbp-dashboard"
 import { KPICard } from "./kpi-card"
 import { SEMrushChart } from "./semrush-chart"
 import { GoogleAnalyticsDashboardPage } from "./google-analytics-dashboard-page"
@@ -14,11 +15,13 @@ import type { LayerKey } from "./chart-layer-filters"
 interface CombinedPage1DashboardProps {
   googleAnalyticsId?: string
   semrushId?: string
+  gbpId?: string
 }
 
-export function CombinedPage1Dashboard({ googleAnalyticsId, semrushId }: CombinedPage1DashboardProps) {
+export function CombinedPage1Dashboard({ googleAnalyticsId, semrushId, gbpId }: CombinedPage1DashboardProps) {
   const [gaData, setGAData] = useState<GADashboardData | null>(null)
   const [semrushData, setSemrushData] = useState<SEMrushDashboardData | null>(null)
+  const [gbpData, setGBPData] = useState<GBPActionsPage1Data | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   
@@ -63,6 +66,14 @@ export function CombinedPage1Dashboard({ googleAnalyticsId, semrushId }: Combine
           )
         }
 
+        if (gbpId) {
+          promises.push(
+            fetch(`/api/gbp/dashboard/${gbpId}/actions`)
+              .then(res => res.json())
+              .then(data => isMounted && setGBPData(data))
+          )
+        }
+
         await Promise.all(promises)
       } catch (err) {
         console.error("Error fetching dashboard data:", err)
@@ -81,7 +92,7 @@ export function CombinedPage1Dashboard({ googleAnalyticsId, semrushId }: Combine
     return () => {
       isMounted = false
     }
-  }, [googleAnalyticsId, semrushId])
+  }, [googleAnalyticsId, semrushId, gbpId])
 
   // Memoize KPI calculations - using kpiCards from backend (follows Page 4 GSC pattern)
   const semrushKPI = useMemo(() => {
@@ -138,18 +149,55 @@ export function CombinedPage1Dashboard({ googleAnalyticsId, semrushId }: Combine
     }
   }, [gaData])
 
-  // Determine metadata display (title, timezone, and currency)
-  const metadata = useMemo(() => {
-    const displayMetadata = gaData || semrushData
-    if (!displayMetadata) return null
+  const gbpActionsKPI = useMemo(() => {
+    if (!gbpData || !gbpData.totalActions) return null
+    
+    const kpi = gbpData.totalActions
     
     return {
-      title: gaData ? gaData.displayName : semrushData?.domain,
-      subtitle: gaData && semrushData ? semrushData.domain : undefined, // Show domain when both exist
+      change: {
+        change: kpi.change,
+        isIncrease: kpi.isIncrease
+      },
+      currentValue: Math.round(kpi.current),
+      previousValue: Math.round(kpi.previous),
+      currentLabel: `Last ${kpi.periodType === '1-month' ? 'Month' : kpi.periodType.replace('-month', ' Months')}`,
+      previousLabel: `Previous ${kpi.periodType === '1-month' ? 'Month' : kpi.periodType.replace('-month', ' Months')}`,
+      comparisonLabel: kpi.periodLabel
+    }
+  }, [gbpData])
+
+  // Determine metadata display (title, timezone, and currency)
+  const metadata = useMemo(() => {
+    const displayMetadata = gaData || semrushData || gbpData
+    if (!displayMetadata) return null
+    
+    // Priority: GA displayName > SEMrush domain > GBP business name
+    let title = gaData?.displayName || semrushData?.domain || gbpData?.businessName || ''
+    let subtitle: string | undefined = undefined
+    
+    // Build subtitle based on what's connected
+    const subtitleParts: string[] = []
+    
+    // If GA is primary title, add domain and/or business name to subtitle
+    if (gaData?.displayName) {
+      if (semrushData?.domain) subtitleParts.push(semrushData.domain)
+      if (gbpData?.businessName) subtitleParts.push(gbpData.businessName)
+    } 
+    // If SEMrush is primary title (no GA), add business name to subtitle
+    else if (semrushData?.domain && gbpData?.businessName) {
+      subtitleParts.push(gbpData.businessName)
+    }
+    
+    subtitle = subtitleParts.length > 0 ? subtitleParts.join(' • ') : undefined
+    
+    return {
+      title,
+      subtitle,
       timeZone: gaData?.timeZone,
       currencyCode: gaData?.currencyCode
     }
-  }, [gaData, semrushData])
+  }, [gaData, semrushData, gbpData])
 
   if (loading) {
     return (
@@ -159,7 +207,7 @@ export function CombinedPage1Dashboard({ googleAnalyticsId, semrushId }: Combine
     )
   }
 
-  if (error || (!gaData && !semrushData)) {
+  if (error || (!gaData && !semrushData && !gbpData)) {
     return (
       <div className="flex items-center justify-center min-h-[600px] p-4">
         <ErrorDisplay
@@ -172,7 +220,7 @@ export function CombinedPage1Dashboard({ googleAnalyticsId, semrushId }: Combine
 
   // If only Google Analytics data is available, use the native GA layout so charts and titles
   // align correctly instead of using the combined layout shell.
-  if (gaData && !semrushData) {
+  if (gaData && !semrushData && !gbpData) {
     return (
       <GoogleAnalyticsDashboardPage 
         data={gaData} 
@@ -182,7 +230,14 @@ export function CombinedPage1Dashboard({ googleAnalyticsId, semrushId }: Combine
     )
   }
 
-  const kpiCount = (semrushData ? 1 : 0) + (gaData ? 2 : 0)
+  // Calculate KPI count for grid layout
+  const kpiCount = (semrushData ? 1 : 0) + (gaData ? 2 : 0) + (gbpData ? 1 : 0)
+  
+  // Determine grid columns based on KPI count
+  let gridCols = 'grid-cols-1'
+  if (kpiCount === 2) gridCols = 'grid-cols-2'
+  else if (kpiCount === 3) gridCols = 'grid-cols-3'
+  else if (kpiCount === 4) gridCols = 'grid-cols-4'
 
   return (
     <div className="space-y-4 sm:space-y-6 p-3 sm:p-4 md:p-6 lg:p-8">
@@ -215,7 +270,7 @@ export function CombinedPage1Dashboard({ googleAnalyticsId, semrushId }: Combine
       )}
 
       {/* KPI Cards - Combined */}
-      <div className={`grid gap-2 sm:gap-3 ${kpiCount === 3 ? 'grid-cols-3' : 'grid-cols-2'}`}>
+      <div className={`grid gap-2 sm:gap-3 ${gridCols}`}>
         {/* SEMrush Total Organic Keywords */}
         {semrushData && semrushKPI && (
           <KPICard
@@ -257,6 +312,21 @@ export function CombinedPage1Dashboard({ googleAnalyticsId, semrushId }: Combine
             colorScheme="blue"
             percentageChange={gaConversionsKPI.change}
             comparisonLabel={gaConversionsKPI.comparisonLabel}
+          />
+        )}
+
+        {/* GBP Actions KPI Card */}
+        {gbpData && gbpActionsKPI && (
+          <KPICard
+            title="GBP Actions"
+            icon={<Activity className="h-3 w-3 sm:h-3.5 sm:w-3.5 flex-shrink-0" />}
+            currentValue={gbpActionsKPI.currentValue}
+            previousValue={gbpActionsKPI.previousValue}
+            currentLabel={gbpActionsKPI.currentLabel}
+            previousLabel={gbpActionsKPI.previousLabel}
+            colorScheme="orange"
+            percentageChange={gbpActionsKPI.change}
+            comparisonLabel={gbpActionsKPI.comparisonLabel}
           />
         )}
       </div>

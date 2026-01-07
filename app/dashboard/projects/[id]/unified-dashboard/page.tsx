@@ -49,14 +49,15 @@ export default function UnifiedDashboardPage({ params }: { params: Promise<{ id:
       const googleAnalyticsDatasource = data.datasources?.find((ds: any) => ds.type === "google_analytics")
       const semrushDatasource = data.datasources?.find((ds: any) => ds.type === "semrush")
       const mangoolsDatasource = data.datasources?.find((ds: any) => ds.type === "mangools")
+      const gbpDatasource = data.datasources?.find((ds: any) => ds.type === "gbp")
       
-      // Page 1: Google Analytics + SEMrush (show if either is connected)
-      if (googleAnalyticsDatasource || semrushDatasource) {
+      // Page 1: Google Analytics + SEMrush + GBP (show if any is connected)
+      if (googleAnalyticsDatasource || semrushDatasource || gbpDatasource) {
         connectedPages.push({
           id: "page-1",
           label: "Page 1",
           datasourceType: "combined",
-          datasourceId: googleAnalyticsDatasource?.id || semrushDatasource?.id || ""
+          datasourceId: googleAnalyticsDatasource?.id || semrushDatasource?.id || gbpDatasource?.id || ""
         })
       }
       
@@ -90,7 +91,6 @@ export default function UnifiedDashboardPage({ params }: { params: Promise<{ id:
       }
       
       // Page 5: Google Business Profile Activity
-      const gbpDatasource = data.datasources?.find((ds: any) => ds.type === "gbp")
       if (gbpDatasource) {
         connectedPages.push({
           id: "page-5",
@@ -181,11 +181,13 @@ export default function UnifiedDashboardPage({ params }: { params: Promise<{ id:
             {activePageConfig?.datasourceType === "combined" && (() => {
               const googleAnalyticsDs = datasources.find((ds: any) => ds.type === "google_analytics")
               const semrushDs = datasources.find((ds: any) => ds.type === "semrush")
+              const gbpDs = datasources.find((ds: any) => ds.type === "gbp")
               
               return (
                 <CombinedPage1Dashboard 
                   googleAnalyticsId={googleAnalyticsDs?.id}
                   semrushId={semrushDs?.id}
+                  gbpId={gbpDs?.id}
                 />
               )
             })()}
