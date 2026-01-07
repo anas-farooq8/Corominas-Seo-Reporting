@@ -3,7 +3,7 @@
 import { createClient } from "@/lib/supabase/server"
 import { fetchGBPActivityData, type GBPDailyActivityData } from "@/lib/google-business-profile/api"
 import { getCachedDashboardData, saveDashboardCache } from "@/lib/cache/dashboard-cache"
-import { selectBestComparisonWindow, type WindowResult, calculateWindowDates } from "@/lib/utils/comparison-helpers"
+import { selectBestComparisonWindow, type WindowResult } from "@/lib/utils/comparison-helpers"
 import { calculateDashboardDateRanges } from "@/lib/utils/date-ranges"
 
 /**
@@ -38,18 +38,7 @@ export interface GBPKPICardData {
 
 export interface GBPDashboardData {
   businessName: string
-  dailyData: GBPDailyActivityData[] // Contains both current and previous period data
   kpiCards: GBPKPICardData
-  chartPeriod: '1-month' | '3-month' | '6-month' // The longest period among all metrics
-  // Date ranges for filtering current/previous periods on frontend
-  currentPeriod: {
-    startYYYYMMDD: number
-    endYYYYMMDD: number
-  }
-  previousPeriod: {
-    startYYYYMMDD: number
-    endYYYYMMDD: number
-  }
 }
 
 /**
@@ -248,13 +237,12 @@ export async function fetchGBPDashboardData(
       return null
     }
     
-    const fullLocationId = location.location_id // e.g., "accounts/123/locations/456"
+    const fullLocationId = location.location_id
     const businessName = location.business_name
     
     // Extract ONLY "locations/{locationId}" part for Performance API
-    // The API expects just "locations/123" not the full "accounts/456/locations/123"
     const locationIdForAPI = fullLocationId.includes('/') 
-      ? fullLocationId.split('/').slice(-2).join('/') // Get "locations/456"
+      ? fullLocationId.split('/').slice(-2).join('/') 
       : fullLocationId
     
     console.log(`[GBP Dashboard] Full ID: ${fullLocationId}, API ID: ${locationIdForAPI}`)
@@ -274,67 +262,15 @@ export async function fetchGBPDashboardData(
     // Fetch activity data from GBP Performance API
     const activityData = await fetchGBPActivityData(locationIdForAPI)
 
-    // Calculate KPI cards and get best windows
-    const { kpiCards, callsWindow, directionsWindow, websiteClicksWindow } = calculateKPICards(
+    // Calculate KPI cards
+    const { kpiCards } = calculateKPICards(
       activityData.dailyData, 
       endDateStr
     )
     
-    // Determine which window is largest (most months)
-    const monthsMap: Record<'1-month' | '3-month' | '6-month', number> = { 
-      '1-month': 1, 
-      '3-month': 3, 
-      '6-month': 6 
-    }
-    const callsMonths = monthsMap[callsWindow.type]
-    const directionsMonths = monthsMap[directionsWindow.type]
-    const websiteClicksMonths = monthsMap[websiteClicksWindow.type]
-    
-    // Find the largest window
-    const maxMonths = Math.max(callsMonths, directionsMonths, websiteClicksMonths)
-    let largestWindow: WindowResult
-    
-    if (callsMonths === maxMonths) {
-      largestWindow = callsWindow
-    } else if (directionsMonths === maxMonths) {
-      largestWindow = directionsWindow
-    } else {
-      largestWindow = websiteClicksWindow
-    }
-    
-    // Calculate previous period dates for the largest window
-    const previousPeriodDates = calculateWindowDates(endDateStr, maxMonths, maxMonths)
-    
-    // Filter dailyData to include BOTH current and previous periods for the largest window
-    const filteredDailyData = activityData.dailyData.filter(d => {
-      const dateNum = parseInt(d.date)
-      return (
-        // Current period
-        (dateNum >= largestWindow.currentStartYYYYMMDD && dateNum <= largestWindow.currentEndYYYYMMDD) ||
-        // Previous period
-        (dateNum >= previousPeriodDates.startYYYYMMDD && dateNum <= previousPeriodDates.endYYYYMMDD)
-      )
-    })
-    
-    console.log('=== DATA PERIODS ===')
-    console.log(`Current Period: ${largestWindow.currentStartYYYYMMDD} to ${largestWindow.currentEndYYYYMMDD}`)
-    console.log(`Previous Period: ${previousPeriodDates.startYYYYMMDD} to ${previousPeriodDates.endYYYYMMDD}`)
-    console.log(`Total days stored: ${filteredDailyData.length}`)
-    console.log('===================\n')
-    
     const dashboardData: GBPDashboardData = {
       businessName: businessName,
-      dailyData: filteredDailyData, // Both current and previous periods
-      kpiCards: kpiCards, // All three metrics' KPI data
-      chartPeriod: largestWindow.type, // Chart uses the longest period
-      currentPeriod: {
-        startYYYYMMDD: largestWindow.currentStartYYYYMMDD,
-        endYYYYMMDD: largestWindow.currentEndYYYYMMDD
-      },
-      previousPeriod: {
-        startYYYYMMDD: previousPeriodDates.startYYYYMMDD,
-        endYYYYMMDD: previousPeriodDates.endYYYYMMDD
-      }
+      kpiCards: kpiCards
     }
     
     // Save to cache (fire and forget - don't wait)
