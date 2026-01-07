@@ -8,14 +8,14 @@ import type { GALandingPagesDashboardData } from "@/lib/actions/google-analytics
 import type { GSCDashboardData } from "@/lib/actions/search-console-dashboard"
 import { formatDateRange } from "@/lib/utils/dashboard-helpers"
 import { KPICard } from "./kpi-card"
-import { Page4LandingPagesDashboard } from "./page4-landing-pages-dashboard"
+import { Page3LandingPagesDashboard } from "./page3-landing-pages-dashboard"
 
-interface CombinedPage4DashboardProps {
+interface CombinedPage3DashboardProps {
   googleAnalyticsId?: string
   searchConsoleId?: string
 }
 
-export function CombinedPage4Dashboard({ googleAnalyticsId, searchConsoleId }: CombinedPage4DashboardProps) {
+export function CombinedPage3Dashboard({ googleAnalyticsId, searchConsoleId }: CombinedPage3DashboardProps) {
   const [gaData, setGAData] = useState<GALandingPagesDashboardData | null>(null)
   const [gscData, setGSCData] = useState<GSCDashboardData | null>(null)
   const [loading, setLoading] = useState(true)
@@ -180,7 +180,7 @@ export function CombinedPage4Dashboard({ googleAnalyticsId, searchConsoleId }: C
   // If only Google Analytics data is available, use the native GA layout
   if (gaData && !gscData) {
     return (
-      <Page4LandingPagesDashboard 
+      <Page3LandingPagesDashboard 
         data={gaData} 
         showMetadata={true} 
       />
@@ -290,7 +290,7 @@ export function CombinedPage4Dashboard({ googleAnalyticsId, searchConsoleId }: C
 
       {/* Google Analytics Landing Pages Dashboard */}
       {gaData && (
-        <Page4LandingPagesDashboard data={gaData} showMetadata={false} />
+        <Page3LandingPagesDashboard data={gaData} showMetadata={false} />
       )}
     </div>
   )

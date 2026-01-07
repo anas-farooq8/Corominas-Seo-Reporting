@@ -15,7 +15,7 @@ import {
   formatDateRange,
 } from "@/lib/utils/dashboard-helpers"
 
-interface Page4LandingPagesDashboardProps {
+interface Page3LandingPagesDashboardProps {
   datasourceId?: string
   data?: GALandingPagesDashboardData | null
   showMetadata?: boolean
@@ -38,11 +38,11 @@ const CHART_COLORS = [
   '#84cc16', // lime
 ]
 
-export function Page4LandingPagesDashboard({ 
+export function Page3LandingPagesDashboard({ 
   datasourceId, 
   data: externalData, 
   showMetadata = true 
-}: Page4LandingPagesDashboardProps) {
+}: Page3LandingPagesDashboardProps) {
   const [data, setData] = useState<GALandingPagesDashboardData | null>(externalData || null)
   const [loading, setLoading] = useState(!externalData)
   const [error, setError] = useState<string | null>(null)

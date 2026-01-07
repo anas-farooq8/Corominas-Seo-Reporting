@@ -8,9 +8,8 @@ import { ErrorDisplay } from "@/components/ui/error-display"
 import { ArrowLeft } from "lucide-react"
 import type { getDataSourcesWithRespectiveData } from "@/lib/supabase/types"
 import { CombinedPage1Dashboard } from "@/components/dashboard/combined-page1-dashboard"
-import { CombinedPage4Dashboard } from "@/components/dashboard/combined-page4-dashboard"
+import { CombinedPage3Dashboard } from "@/components/dashboard/combined-page3-dashboard"
 import { MangoolsDashboardPage } from "@/components/dashboard/mangools-dashboard-page"
-import { Page3Dashboard } from "@/components/dashboard/page3-dashboard"
 import { GBPDashboardPage } from "@/components/dashboard/gbp-dashboard-page"
 
 interface PageConfig {
@@ -71,30 +70,22 @@ export default function UnifiedDashboardPage({ params }: { params: Promise<{ id:
         })
       }
       
-      // Page 3: Always show (coming soon)
-      connectedPages.push({
-        id: "page-3",
-        label: "Page 3",
-        datasourceType: "page3",
-        datasourceId: ""
-      })
-      
-      // Page 4: Google Analytics Landing Pages + Search Console
+      // Page 3: Google Analytics Landing Pages + Search Console
       const searchConsoleDatasource = data.datasources?.find((ds: any) => ds.type === "google_search_console")
       if (googleAnalyticsDatasource || searchConsoleDatasource) {
         connectedPages.push({
-          id: "page-4",
-          label: "Page 4",
-          datasourceType: "combined_page4",
+          id: "page-3",
+          label: "Page 3",
+          datasourceType: "combined_page3",
           datasourceId: googleAnalyticsDatasource?.id || searchConsoleDatasource?.id || ""
         })
       }
       
-      // Page 5: Google Business Profile Activity
+      // Page 4: Google Business Profile Activity
       if (gbpDatasource) {
         connectedPages.push({
-          id: "page-5",
-          label: "Page 5",
+          id: "page-4",
+          label: "Page 4",
           datasourceType: "gbp",
           datasourceId: gbpDatasource.id
         })
@@ -194,15 +185,12 @@ export default function UnifiedDashboardPage({ params }: { params: Promise<{ id:
             {activePageConfig?.datasourceType === "mangools" && (
               <MangoolsDashboardPage datasourceId={activePageConfig.datasourceId} />
             )}
-            {activePageConfig?.datasourceType === "page3" && (
-              <Page3Dashboard />
-            )}
-            {activePageConfig?.datasourceType === "combined_page4" && (() => {
+            {activePageConfig?.datasourceType === "combined_page3" && (() => {
               const googleAnalyticsDs = datasources.find((ds: any) => ds.type === "google_analytics")
               const searchConsoleDs = datasources.find((ds: any) => ds.type === "google_search_console")
               
               return (
-                <CombinedPage4Dashboard 
+                <CombinedPage3Dashboard 
                   googleAnalyticsId={googleAnalyticsDs?.id}
                   searchConsoleId={searchConsoleDs?.id}
                 />
