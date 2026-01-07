@@ -341,12 +341,12 @@ export function GBPDashboardPage({
   // Custom legend for activity chart
   const CustomActivityLegend = () => {
     const legendItems = [
-      { value: 'Calls (Last)', color: '#3b82f6', strokeDasharray: '' },
+      { value: 'Calls (Last)', color: '#8b5cf6', strokeDasharray: '' },
       { value: 'Directions (Last)', color: '#22c55e', strokeDasharray: '' },
-      { value: 'Website Clicks (Last)', color: '#8b5cf6', strokeDasharray: '' },
-      { value: 'Calls (Previous)', color: '#3b82f6', strokeDasharray: '5 5' },
+      { value: 'Website Clicks (Last)', color: '#3b82f6', strokeDasharray: '' },
+      { value: 'Calls (Previous)', color: '#8b5cf6', strokeDasharray: '5 5' },
       { value: 'Directions (Previous)', color: '#22c55e', strokeDasharray: '5 5' },
-      { value: 'Website Clicks (Previous)', color: '#8b5cf6', strokeDasharray: '5 5' },
+      { value: 'Website Clicks (Previous)', color: '#3b82f6', strokeDasharray: '5 5' },
     ]
     
     return (
@@ -420,7 +420,7 @@ export function GBPDashboardPage({
             previousValue={callsKPI.previousValue}
             currentLabel={callsKPI.currentLabel}
             previousLabel={callsKPI.previousLabel}
-            colorScheme="blue"
+            colorScheme="purple"
             percentageChange={callsKPI.change}
             comparisonLabel={callsKPI.comparisonLabel}
           />
@@ -444,7 +444,7 @@ export function GBPDashboardPage({
             previousValue={websiteClicksKPI.previousValue}
             currentLabel={websiteClicksKPI.currentLabel}
             previousLabel={websiteClicksKPI.previousLabel}
-            colorScheme="purple"
+            colorScheme="blue"
             percentageChange={websiteClicksKPI.change}
             comparisonLabel={websiteClicksKPI.comparisonLabel}
           />
@@ -523,7 +523,7 @@ export function GBPDashboardPage({
               <Line
                 type={useMonthlyAggregation ? "linear" : "monotone"}
                 dataKey="currentCalls"
-                stroke="#3b82f6"
+                stroke="#8b5cf6"
                 strokeWidth={2}
                 name="Calls (Last)"
                 dot={useMonthlyAggregation ? { r: 4 } : false}
@@ -545,7 +545,7 @@ export function GBPDashboardPage({
               <Line
                 type={useMonthlyAggregation ? "linear" : "monotone"}
                 dataKey="currentWebsiteClicks"
-                stroke="#8b5cf6"
+                stroke="#3b82f6"
                 strokeWidth={2}
                 name="Website Clicks (Last)"
                 dot={useMonthlyAggregation ? { r: 4 } : false}
@@ -557,7 +557,7 @@ export function GBPDashboardPage({
               <Line
                 type={useMonthlyAggregation ? "linear" : "monotone"}
                 dataKey="previousCalls"
-                stroke="#3b82f6"
+                stroke="#8b5cf6"
                 strokeWidth={2}
                 name="Calls (Previous)"
                 dot={useMonthlyAggregation ? { r: 4 } : false}
@@ -581,7 +581,7 @@ export function GBPDashboardPage({
               <Line
                 type={useMonthlyAggregation ? "linear" : "monotone"}
                 dataKey="previousWebsiteClicks"
-                stroke="#8b5cf6"
+                stroke="#3b82f6"
                 strokeWidth={2}
                 name="Website Clicks (Previous)"
                 dot={useMonthlyAggregation ? { r: 4 } : false}
@@ -654,7 +654,7 @@ export function GBPDashboardPage({
               <Line
                 type={useMonthlyAggregation ? "linear" : "monotone"}
                 dataKey="currentCalls"
-                stroke="#3b82f6"
+                stroke="#8b5cf6"
                 strokeWidth={2.5}
                 name="Calls (Last)"
                 dot={useMonthlyAggregation ? { r: 5 } : false}
@@ -676,7 +676,7 @@ export function GBPDashboardPage({
               <Line
                 type={useMonthlyAggregation ? "linear" : "monotone"}
                 dataKey="currentWebsiteClicks"
-                stroke="#8b5cf6"
+                stroke="#3b82f6"
                 strokeWidth={2.5}
                 name="Website Clicks (Last)"
                 dot={useMonthlyAggregation ? { r: 5 } : false}
@@ -688,7 +688,7 @@ export function GBPDashboardPage({
               <Line
                 type={useMonthlyAggregation ? "linear" : "monotone"}
                 dataKey="previousCalls"
-                stroke="#3b82f6"
+                stroke="#8b5cf6"
                 strokeWidth={2.5}
                 name="Calls (Previous)"
                 dot={useMonthlyAggregation ? { r: 5 } : false}
@@ -712,7 +712,7 @@ export function GBPDashboardPage({
               <Line
                 type={useMonthlyAggregation ? "linear" : "monotone"}
                 dataKey="previousWebsiteClicks"
-                stroke="#8b5cf6"
+                stroke="#3b82f6"
                 strokeWidth={2.5}
                 name="Website Clicks (Previous)"
                 dot={useMonthlyAggregation ? { r: 5 } : false}

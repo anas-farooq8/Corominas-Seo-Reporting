@@ -278,7 +278,7 @@ export function CombinedPage4Dashboard({ googleAnalyticsId, searchConsoleId }: C
                 previousValue={gscPositionKPI.previousValue}
                 currentLabel={gscPositionKPI.currentLabel}
                 previousLabel={gscPositionKPI.previousLabel}
-                colorScheme="purple"
+                colorScheme="orange"
                 percentageChange={gscPositionKPI.change}
                 comparisonLabel={gscPositionKPI.comparisonLabel}
                 formatValue={gscPositionKPI.formatValue}
