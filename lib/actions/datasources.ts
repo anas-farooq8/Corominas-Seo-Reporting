@@ -5,7 +5,7 @@
 // ============================================
 
 import * as db from "@/lib/db/datasources"
-import type { Datasource, DatasourceInput, MangoolsDomain, GoogleAnalyticsProperty, SemrushDomain, GoogleSearchConsoleSite, GoogleBusinessProfileLocation } from "@/lib/supabase/types"
+import type { Datasource, DatasourceInput, MangoolsDomain, GoogleAnalyticsProperty, SemrushDomain, GoogleSearchConsoleSite, GoogleBusinessProfileLocation, GMBProfile } from "@/lib/supabase/types"
 import { withActionHandler } from "./action-helpers"
 
 /**
@@ -138,3 +138,21 @@ export async function attachGoogleBusinessProfileLocation(
   )
 }
 
+/**
+ * Attach a GMB profile to a datasource
+ */
+export async function attachGMBProfile(
+  datasourceId: string,
+  profileId: string,
+  businessName: string,
+  address: string | null,
+  projectId: string
+): Promise<GMBProfile> {
+  return withActionHandler(
+    () => db.attachGMBProfile(datasourceId, profileId, businessName, address),
+    {
+      errorMessage: "Failed to attach Grid My Business profile",
+      revalidatePaths: [`/dashboard/projects/${projectId}`]
+    }
+  )
+}

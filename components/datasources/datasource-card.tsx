@@ -21,7 +21,8 @@ export function DatasourceCard({
     semrush: "Semrush",
     google_analytics: "Google Analytics",
     google_search_console: "Google Search Console",
-    gbp: "Google Business Profile"
+    gbp: "Google Business Profile",
+    gmb: "Grid My Business"
   }
   
   const typeDescriptions: Record<string, string> = {
@@ -29,7 +30,8 @@ export function DatasourceCard({
     semrush: "SEO analytics and competitive research",
     google_analytics: "Website traffic and user behavior analytics",
     google_search_console: "Search performance and indexing data",
-    gbp: "Manage and track your business locations"
+    gbp: "Manage and track your business locations",
+    gmb: "Business profile management and analytics"
   }
   
   const typeLabel = typeLabels[datasource.type] || datasource.type

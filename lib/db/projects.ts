@@ -55,6 +55,9 @@ export async function getProjectWithDatasources(id: string): Promise<ProjectWith
         ),
         google_business_profile_locations (
           *
+        ),
+        gmb_profiles (
+          *
         )
       )
     `)
@@ -66,7 +69,7 @@ export async function getProjectWithDatasources(id: string): Promise<ProjectWith
   // Map datasources to include domain_count for each datasource
   const datasourcesWithCount = (data.datasources || []).map((datasource: any) => ({
     ...datasource,
-    domain_count: (datasource.mangools_domains?.length || 0) + (datasource.google_analytics_properties?.length || 0) + (datasource.semrush_domains?.length || 0) + (datasource.google_search_console_sites?.length || 0) + (datasource.google_business_profile_locations?.length || 0)
+    domain_count: (datasource.mangools_domains?.length || 0) + (datasource.google_analytics_properties?.length || 0) + (datasource.semrush_domains?.length || 0) + (datasource.google_search_console_sites?.length || 0) + (datasource.google_business_profile_locations?.length || 0) + (datasource.gmb_profiles?.length || 0)
   }))
   
   return {

@@ -35,7 +35,7 @@ CREATE TABLE IF NOT EXISTS projects (
 CREATE TABLE IF NOT EXISTS datasources (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   project_id UUID NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
-  type TEXT NOT NULL CHECK (type IN ('mangools', 'semrush', 'google_analytics', 'google_search_console', 'gbp')),
+  type TEXT NOT NULL CHECK (type IN ('mangools', 'semrush', 'google_analytics', 'google_search_console', 'gbp', 'gmb')),
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
@@ -102,6 +102,19 @@ CREATE TABLE IF NOT EXISTS google_business_profile_locations (
 );
 
 -- ============================================
+-- GRID MY BUSINESS (GMB) PROFILES TABLE
+-- ============================================
+CREATE TABLE IF NOT EXISTS gmb_profiles (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  datasource_id UUID NOT NULL REFERENCES datasources(id) ON DELETE CASCADE,
+  profile_id TEXT NOT NULL UNIQUE,  -- The _id from GMB API (e.g., "695f6d6a0bdde7be0bb0abae")
+  business_name TEXT NOT NULL,  -- Main text from structured_formatting
+  address TEXT,  -- Secondary text (address)
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- ============================================
 -- KEY-VALUE STORE (KVS) TABLE
 -- ============================================
 CREATE TABLE IF NOT EXISTS kvs (
@@ -143,6 +156,8 @@ CREATE INDEX IF NOT EXISTS idx_gsc_sites_datasource_id ON google_search_console_
 CREATE INDEX IF NOT EXISTS idx_gsc_sites_site_url ON google_search_console_sites(site_url);
 CREATE INDEX IF NOT EXISTS idx_gbp_locations_datasource_id ON google_business_profile_locations(datasource_id);
 CREATE INDEX IF NOT EXISTS idx_gbp_locations_location_id ON google_business_profile_locations(location_id);
+CREATE INDEX IF NOT EXISTS idx_gmb_profiles_datasource_id ON gmb_profiles(datasource_id);
+CREATE INDEX IF NOT EXISTS idx_gmb_profiles_profile_id ON gmb_profiles(profile_id);
 CREATE INDEX IF NOT EXISTS idx_kvs_key ON kvs(key);
 CREATE INDEX IF NOT EXISTS idx_dashboard_cache_datasource_id ON dashboard_cache(datasource_id);
 CREATE INDEX IF NOT EXISTS idx_dashboard_cache_resource_id ON dashboard_cache(resource_id);
@@ -160,6 +175,7 @@ ALTER TABLE google_analytics_properties ENABLE ROW LEVEL SECURITY;
 ALTER TABLE semrush_domains ENABLE ROW LEVEL SECURITY;
 ALTER TABLE google_search_console_sites ENABLE ROW LEVEL SECURITY;
 ALTER TABLE google_business_profile_locations ENABLE ROW LEVEL SECURITY;
+ALTER TABLE gmb_profiles ENABLE ROW LEVEL SECURITY;
 ALTER TABLE kvs ENABLE ROW LEVEL SECURITY;
 ALTER TABLE dashboard_cache ENABLE ROW LEVEL SECURITY;
 
@@ -196,6 +212,10 @@ CREATE POLICY "authenticated_users_all_gsc_sites" ON google_search_console_sites
 
 DROP POLICY IF EXISTS "authenticated_users_all_gbp_locations" ON google_business_profile_locations;
 CREATE POLICY "authenticated_users_all_gbp_locations" ON google_business_profile_locations
+  FOR ALL USING (auth.role() = 'authenticated');
+
+DROP POLICY IF EXISTS "authenticated_users_all_gmb_profiles" ON gmb_profiles;
+CREATE POLICY "authenticated_users_all_gmb_profiles" ON gmb_profiles
   FOR ALL USING (auth.role() = 'authenticated');
 
 DROP POLICY IF EXISTS "authenticated_users_all_kvs" ON kvs;
@@ -255,6 +275,11 @@ CREATE TRIGGER update_gsc_sites_updated_at
 DROP TRIGGER IF EXISTS update_gbp_locations_updated_at ON google_business_profile_locations;
 CREATE TRIGGER update_gbp_locations_updated_at
   BEFORE UPDATE ON google_business_profile_locations
+  FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+DROP TRIGGER IF EXISTS update_gmb_profiles_updated_at ON gmb_profiles;
+CREATE TRIGGER update_gmb_profiles_updated_at
+  BEFORE UPDATE ON gmb_profiles
   FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
 DROP TRIGGER IF EXISTS update_kvs_updated_at ON kvs;

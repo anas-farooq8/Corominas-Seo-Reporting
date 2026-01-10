@@ -23,7 +23,7 @@ export interface Project {
 export interface Datasource {
   id: string
   project_id: string
-  type: "mangools" | "semrush" | "google_analytics" | "google_search_console" | "gbp"
+  type: "mangools" | "semrush" | "google_analytics" | "google_search_console" | "gbp" | "gmb"
   created_at: string
   updated_at: string
 }
@@ -74,6 +74,16 @@ export interface GoogleBusinessProfileLocation {
   updated_at: string
 }
 
+export interface GMBProfile {
+  id: string
+  datasource_id: string
+  profile_id: string  // The _id from GMB API (e.g., "695f6d6a0bdde7be0bb0abae")
+  business_name: string  // Main text from structured_formatting
+  address: string | null  // Secondary text (address)
+  created_at: string
+  updated_at: string
+}
+
 // Alias for MangoolsDomain used in datasource components
 export type DatasourceDomain = MangoolsDomain
 
@@ -97,6 +107,7 @@ export interface DatasourceWithDomains extends Datasource {
   semrush_domains?: SemrushDomain[]
   google_search_console_sites?: GoogleSearchConsoleSite[]
   google_business_profile_locations?: GoogleBusinessProfileLocation[]
+  gmb_profiles?: GMBProfile[]
   domain_count?: number
 }
 
@@ -151,7 +162,7 @@ export interface ProjectInput {
 
 export interface DatasourceInput {
   project_id: string
-  type: "mangools" | "semrush" | "google_analytics" | "google_search_console" | "gbp"
+  type: "mangools" | "semrush" | "google_analytics" | "google_search_console" | "gbp" | "gmb"
 }
 
 // ============================================
@@ -183,4 +194,20 @@ export interface GBPLocation {
 
 export interface GBPAccountWithLocations extends GBPAccount {
   locations: GBPLocation[]
+}
+
+// ============================================
+// GMB API Response Types
+// ============================================
+
+export interface GMBApiProfile {
+  _id: string
+  workspaceId: string
+  source: string
+  location: {
+    structured_formatting: {
+      main_text: string
+      secondary_text?: string
+    }
+  }
 }

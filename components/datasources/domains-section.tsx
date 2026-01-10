@@ -4,7 +4,7 @@ import { useState, useEffect } from "react"
 import { AvailableDomainsSection } from "./available-domains-section"
 import { AttachedDomainsSection } from "./attached-domains-section"
 import type { DatasourceWithDomains } from "@/lib/supabase/types"
-import { BarChart3, Globe, Clock, DollarSign, MapPin, Store } from "lucide-react"
+import { BarChart3, Globe, Clock, DollarSign, MapPin, Store, Building2, Star } from "lucide-react"
 
 interface DomainsSectionProps {
   datasource: DatasourceWithDomains
@@ -209,6 +209,54 @@ export function DomainsSection({
                 <div className="flex-1">
                   <div className="font-mono text-[10px] break-all text-muted-foreground leading-relaxed">
                     {location.location_id}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  // Handle Grid My Business (GMB) datasources
+  if (datasource.type === "gmb") {
+    const profiles = datasource.gmb_profiles || []
+    
+    if (profiles.length === 0) {
+      return (
+        <div className="text-xs sm:text-sm text-muted-foreground">
+          No Grid My Business profile attached.
+        </div>
+      )
+    }
+
+    const profile = profiles[0]
+    
+    return (
+      <div className="space-y-1.5">
+        <h3 className="text-xs sm:text-sm font-semibold text-foreground">Grid My Business Profile</h3>
+        <div className="group relative flex flex-col sm:flex-row items-start gap-2 sm:gap-3 p-3 sm:p-3.5 border rounded-lg bg-gradient-to-br from-background to-muted/30 hover:shadow-sm hover:border-primary/20 transition-all duration-200">
+          <div className="relative p-1.5 rounded bg-primary/10 group-hover:bg-primary/15 transition-colors flex-shrink-0">
+            <Building2 className="h-7 w-7 text-primary" />
+          </div>
+          <div className="flex-1 min-w-0 w-full space-y-2">
+            <h4 className="font-semibold text-sm sm:text-base">{profile.business_name}</h4>
+            
+            <div className="space-y-1.5">
+              {profile.address && (
+                <div className="flex items-start gap-1.5">
+                  <MapPin className="h-3.5 w-3.5 flex-shrink-0 mt-0.5 text-muted-foreground" />
+                  <div className="flex-1 text-xs text-muted-foreground">
+                    {profile.address}
+                  </div>
+                </div>
+              )}
+              <div className="flex items-start gap-1.5">
+                <Star className="h-3.5 w-3.5 flex-shrink-0 mt-0.5 text-muted-foreground" />
+                <div className="flex-1">
+                  <div className="font-mono text-[10px] break-all text-muted-foreground leading-relaxed">
+                    Profile ID: {profile.profile_id}
                   </div>
                 </div>
               </div>

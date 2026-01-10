@@ -14,9 +14,9 @@ import {
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { createDatasource, attachDomain, attachGoogleAnalyticsProperty, attachSemrushDomain, attachGoogleSearchConsoleSite, attachGoogleBusinessProfileLocation } from "@/lib/actions/datasources"
+import { createDatasource, attachDomain, attachGoogleAnalyticsProperty, attachSemrushDomain, attachGoogleSearchConsoleSite, attachGoogleBusinessProfileLocation, attachGMBProfile } from "@/lib/actions/datasources"
 import { Plus, Loader2, Search, AlertCircle, CheckCircle2, ChevronDown, ChevronRight } from "lucide-react"
-import type { Datasource, MangoolsApiDomain, GoogleAnalyticsApiProperty, GAAccountWithProperties, GBPAccountWithLocations, GBPLocation } from "@/lib/supabase/types"
+import type { Datasource, MangoolsApiDomain, GoogleAnalyticsApiProperty, GAAccountWithProperties, GBPAccountWithLocations, GBPLocation, GMBApiProfile } from "@/lib/supabase/types"
 
 interface CreateDatasourceDialogProps {
   projectId: string
@@ -52,6 +52,18 @@ interface LocationOption extends GBPLocation {
 
 interface AccountWithLocations extends GBPAccountWithLocations {
   expanded?: boolean
+}
+
+interface GMBProfileOption {
+  _id: string
+  businessName: string
+  address: string | null
+  rating?: number | null
+  totalReviews?: number | null
+  gmbScore?: number | null
+  active: boolean
+  isAttached: boolean
+  attachedInfo?: string
 }
 
 // Helper function to format address properly
@@ -103,7 +115,7 @@ function flattenLocations(accounts: AccountWithLocations[]): LocationOption[] {
 export function CreateDatasourceDialog({ projectId, existingTypes, onDatasourceAdded }: CreateDatasourceDialogProps) {
   const [open, setOpen] = useState(false)
   const [loading, setLoading] = useState(false)
-  const [selectedType, setSelectedType] = useState<"mangools" | "semrush" | "google_analytics" | "google_search_console" | "gbp" | "">("")
+  const [selectedType, setSelectedType] = useState<"mangools" | "semrush" | "google_analytics" | "google_search_console" | "gbp" | "gmb" | "">("")
   
   // Mangools-specific state
   const [fetchingDomains, setFetchingDomains] = useState(false)
@@ -140,6 +152,14 @@ export function CreateDatasourceDialog({ projectId, existingTypes, onDatasourceA
   const [gbpAuthStatus, setGbpAuthStatus] = useState<"checking" | "authenticated" | "not_authenticated">("checking")
   const [initiatingOAuth, setInitiatingOAuth] = useState(false)
   
+  // GMB-specific state
+  const [fetchingGMBProfiles, setFetchingGMBProfiles] = useState(false)
+  const [gmbProfiles, setGmbProfiles] = useState<GMBProfileOption[]>([])
+  const [gmbProfileSearchQuery, setGmbProfileSearchQuery] = useState("")
+  const [selectedGMBProfile, setSelectedGMBProfile] = useState<string>("")
+  const [gmbAuthStatus, setGmbAuthStatus] = useState<"checking" | "authenticated" | "not_authenticated">("checking")
+  const [initiatingGMBAuth, setInitiatingGMBAuth] = useState(false)
+  
   const [error, setError] = useState<string | null>(null)
 
   // Reset state when dialog opens/closes
@@ -163,6 +183,11 @@ export function CreateDatasourceDialog({ projectId, existingTypes, onDatasourceA
       setSelectedGBPLocation("")
       setGbpAuthStatus("checking")
       setInitiatingOAuth(false)
+      setGmbProfiles([])
+      setGmbProfileSearchQuery("")
+      setSelectedGMBProfile("")
+      setGmbAuthStatus("checking")
+      setInitiatingGMBAuth(false)
       setError(null)
     }
   }, [open])
@@ -390,6 +415,103 @@ export function CreateDatasourceDialog({ projectId, existingTypes, onDatasourceA
     checkAuthAndFetchLocations()
   }, [selectedType])
 
+  // Check GMB auth status and fetch profiles when GMB is selected
+  useEffect(() => {
+    async function checkAuthAndFetchProfiles() {
+      if (selectedType !== "gmb") return
+      
+      setGmbAuthStatus("checking")
+      setError(null)
+      
+      try {
+        console.log("[GMB UI] Checking authentication status")
+        
+        // Check if we have a refresh token
+        const authStatusResponse = await fetch("/api/gmb/auth-status")
+        if (!authStatusResponse.ok) {
+          throw new Error("Failed to check GMB authentication status")
+        }
+        const { authenticated } = await authStatusResponse.json()
+        
+        console.log(`[GMB UI] Authentication status: ${authenticated}`)
+        
+        if (!authenticated) {
+          // Automatically authenticate instead of asking user
+          console.log("[GMB UI] Not authenticated, auto-authenticating...")
+          setFetchingGMBProfiles(true) // Show loading state during auth
+          
+          // Auto-authenticate
+          try {
+            const authResponse = await fetch("/api/gmb/auth", {
+              method: "POST"
+            })
+            
+            if (!authResponse.ok) {
+              const errorData = await authResponse.json()
+              throw new Error(errorData.error || "Authentication failed")
+            }
+            
+            console.log("[GMB UI] Auto-authentication successful")
+            // Continue to fetch profiles after successful auth
+          } catch (authError) {
+            console.error("[GMB UI] Auto-authentication failed:", authError)
+            setFetchingGMBProfiles(false) // Stop loading
+            throw authError
+          }
+        }
+        
+        setGmbAuthStatus("authenticated")
+        
+        // Fetch profiles
+        console.log("[GMB UI] Fetching profiles")
+        setFetchingGMBProfiles(true)
+        
+        const profilesResponse = await fetch("/api/gmb/profiles")
+        if (!profilesResponse.ok) {
+          throw new Error("Failed to fetch GMB profiles")
+        }
+        const { profiles } = await profilesResponse.json()
+        
+        // Fetch attached profiles to check which ones are already used
+        const attachedResponse = await fetch("/api/gmb/attached")
+        if (!attachedResponse.ok) {
+          throw new Error("Failed to fetch attached GMB profiles")
+        }
+        const { attachedProfileIds } = await attachedResponse.json()
+        const attachedProfileSet = new Set(attachedProfileIds)
+        
+        // Mark profiles as attached or available
+        const profileOptions: GMBProfileOption[] = profiles.map((profile: any) => ({
+          _id: profile._id,
+          businessName: profile.businessName,
+          address: profile.address,
+          rating: profile.rating,
+          totalReviews: profile.totalReviews,
+          gmbScore: profile.gmbScore,
+          active: profile.active,
+          isAttached: attachedProfileSet.has(profile._id),
+          attachedInfo: attachedProfileSet.has(profile._id) ? "Already attached to another project" : undefined
+        }))
+        
+        setGmbProfiles(profileOptions)
+        
+        console.log(`[GMB UI] Found ${profileOptions.length} profile(s)`)
+        
+        if (profileOptions.length === 0) {
+          setError("No profiles found in your Grid My Business account")
+        }
+      } catch (err) {
+        console.error("[GMB UI] Error:", err)
+        setError(err instanceof Error ? err.message : "Failed to fetch GMB profiles")
+        setGmbAuthStatus("not_authenticated")
+      } finally {
+        setFetchingGMBProfiles(false)
+      }
+    }
+    
+    checkAuthAndFetchProfiles()
+  }, [selectedType])
+
   // Listen for OAuth success message from popup window
   useEffect(() => {
     function handleOAuthMessage(event: MessageEvent) {
@@ -436,6 +558,36 @@ export function CreateDatasourceDialog({ projectId, existingTypes, onDatasourceA
       console.error("[GBP UI] OAuth error:", err)
       setError(err instanceof Error ? err.message : "Failed to start OAuth flow")
       setInitiatingOAuth(false)
+    }
+  }
+
+  // Handle GMB Authentication
+  async function handleGMBAuth() {
+    console.log("[GMB UI] Initiating authentication")
+    setInitiatingGMBAuth(true)
+    setError(null)
+    
+    try {
+      const response = await fetch("/api/gmb/auth", {
+        method: "POST"
+      })
+      
+      if (!response.ok) {
+        throw new Error("Failed to authenticate with Grid My Business")
+      }
+      
+      const result = await response.json()
+      console.log("[GMB UI] Authentication successful")
+      
+      setError("Authentication successful! Refreshing profiles...")
+      
+      // Trigger refetch by changing selectedType temporarily
+      setSelectedType("")
+      setTimeout(() => setSelectedType("gmb"), 100)
+    } catch (err) {
+      console.error("[GMB UI] Authentication error:", err)
+      setError(err instanceof Error ? err.message : "Failed to authenticate")
+      setInitiatingGMBAuth(false)
     }
   }
 
@@ -553,6 +705,17 @@ export function CreateDatasourceDialog({ projectId, existingTypes, onDatasourceA
     return filteredGBPAccounts.reduce((sum, acc) => sum + acc.locations.length, 0)
   }, [filteredGBPAccounts])
 
+  // Filter GMB profiles based on search query
+  const filteredGMBProfiles = useMemo(() => {
+    if (!gmbProfileSearchQuery.trim()) return gmbProfiles
+    
+    const query = gmbProfileSearchQuery.toLowerCase()
+    return gmbProfiles.filter(profile => 
+      profile.businessName.toLowerCase().includes(query) ||
+      profile.address?.toLowerCase().includes(query)
+    )
+  }, [gmbProfiles, gmbProfileSearchQuery])
+
   // Filter GA accounts and properties based on search query
   const filteredGAAccounts = useMemo(() => {
     if (!propertySearchQuery.trim()) return gaAccounts
@@ -610,6 +773,12 @@ export function CreateDatasourceDialog({ projectId, existingTypes, onDatasourceA
     // For GBP, require location selection
     if (selectedType === "gbp" && !selectedGBPLocation) {
       setError("Please select a location to attach")
+      return
+    }
+
+    // For GMB, require profile selection
+    if (selectedType === "gmb" && !selectedGMBProfile) {
+      setError("Please select a profile to attach")
       return
     }
 
@@ -689,6 +858,20 @@ export function CreateDatasourceDialog({ projectId, existingTypes, onDatasourceA
         }
       }
 
+      // If GMB, attach the selected profile
+      if (selectedType === "gmb" && selectedGMBProfile) {
+        const profile = gmbProfiles.find(p => p._id === selectedGMBProfile)
+        if (profile) {
+          await attachGMBProfile(
+            datasource.id,
+            profile._id,
+            profile.businessName,
+            profile.address,
+            projectId
+          )
+        }
+      }
+
       setOpen(false)
       onDatasourceAdded?.(datasource)
     } catch (error) {
@@ -705,6 +888,7 @@ export function CreateDatasourceDialog({ projectId, existingTypes, onDatasourceA
     { value: "google_search_console", label: "Google Search Console", disabled: existingTypes.includes("google_search_console") },
     { value: "semrush", label: "Semrush", disabled: existingTypes.includes("semrush") },
     { value: "gbp", label: "Google Business Profile", disabled: existingTypes.includes("gbp") },
+    { value: "gmb", label: "Grid My Business", disabled: existingTypes.includes("gmb") },
   ]
 
   const canSubmit = selectedType && 
@@ -712,7 +896,8 @@ export function CreateDatasourceDialog({ projectId, existingTypes, onDatasourceA
     (selectedType !== "google_analytics" || selectedProperty) &&
     (selectedType !== "google_search_console" || selectedSite) &&
     (selectedType !== "semrush" || (semrushDomain && domainVerificationState.verified)) &&
-    (selectedType !== "gbp" || selectedGBPLocation)
+    (selectedType !== "gbp" || selectedGBPLocation) &&
+    (selectedType !== "gmb" || selectedGMBProfile)
 
   return (
     <Dialog open={open} onOpenChange={(open) => !loading && setOpen(open)}>
@@ -737,6 +922,8 @@ export function CreateDatasourceDialog({ projectId, existingTypes, onDatasourceA
                 ? "Enter a domain to track with Semrush. We'll verify the domain before adding it. Note: Each domain can only be attached once, and each project can have only one Semrush data source."
                 : selectedType === "gbp"
                 ? "Select a location from your Google Business Profile account. Note: Each location can only be attached once, and each project can have only one Google Business Profile data source."
+                : selectedType === "gmb"
+                ? "Select a profile from your Grid My Business account. Note: Each profile can only be attached once, and each project can have only one Grid My Business data source."
                 : "Add a new data source to this project. Each type can only be added once per project."
               }
             </DialogDescription>
@@ -748,8 +935,8 @@ export function CreateDatasourceDialog({ projectId, existingTypes, onDatasourceA
               <Label htmlFor="type" className="text-xs sm:text-sm">Data Source Type *</Label>
               <Select
                 value={selectedType}
-                onValueChange={(value) => setSelectedType(value as "mangools" | "semrush" | "google_analytics" | "google_search_console" | "gbp")}
-                disabled={loading || fetchingDomains || fetchingProperties || fetchingSites || fetchingGBPLocations}
+                onValueChange={(value) => setSelectedType(value as "mangools" | "semrush" | "google_analytics" | "google_search_console" | "gbp" | "gmb")}
+                disabled={loading || fetchingDomains || fetchingProperties || fetchingSites || fetchingGBPLocations || fetchingGMBProfiles}
               >
                 <SelectTrigger id="type" className="cursor-pointer h-9 text-sm">
                   <SelectValue placeholder="Select a data source type" />
@@ -1233,6 +1420,139 @@ export function CreateDatasourceDialog({ projectId, existingTypes, onDatasourceA
               </>
             )}
 
+            {/* GMB Profile Selection */}
+            {selectedType === "gmb" && (
+              <>
+                {(gmbAuthStatus === "checking" || gmbAuthStatus === "not_authenticated") && !error ? (
+                  <div className="flex flex-col sm:flex-row items-center justify-center py-6 sm:py-8 gap-2 sm:gap-3">
+                    <Loader2 className="h-6 w-6 sm:h-8 sm:w-8 animate-spin text-muted-foreground" />
+                    <span className="text-xs sm:text-sm text-muted-foreground text-center">
+                      Authenticating and loading profiles...
+                    </span>
+                  </div>
+                ) : error && (gmbAuthStatus === "checking" || gmbAuthStatus === "not_authenticated") ? (
+                  <div className="space-y-3">
+                    <div className="flex items-start gap-2 p-3 text-xs sm:text-sm text-red-700 bg-red-50 border border-red-200 rounded-lg">
+                      <AlertCircle className="h-4 w-4 mt-0.5 flex-shrink-0" />
+                      <div className="flex-1">
+                        <p className="font-medium">Authentication Failed</p>
+                        <p className="mt-1">{error}</p>
+                      </div>
+                    </div>
+                    <Button
+                      type="button"
+                      onClick={() => {
+                        setError(null)
+                        setGmbAuthStatus("checking")
+                        // Trigger refetch by temporarily changing type
+                        const currentType = selectedType
+                        setSelectedType("")
+                        setTimeout(() => setSelectedType(currentType as any), 100)
+                      }}
+                      className="w-full"
+                      variant="default"
+                    >
+                      Retry Authentication
+                    </Button>
+                  </div>
+                ) : fetchingGMBProfiles ? (
+                  <div className="flex flex-col sm:flex-row items-center justify-center py-6 sm:py-8 gap-2 sm:gap-3">
+                    <Loader2 className="h-6 w-6 sm:h-8 sm:w-8 animate-spin text-muted-foreground" />
+                    <span className="text-xs sm:text-sm text-muted-foreground text-center">
+                      Loading profiles from Grid My Business...
+                    </span>
+                  </div>
+                ) : (
+                  <>
+                    {/* Search */}
+                    <div className="grid gap-1.5">
+                      <Label htmlFor="gmb-profile-search" className="text-xs sm:text-sm">Search Profiles</Label>
+                      <div className="relative">
+                        <Search className="absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground pointer-events-none" />
+                        <Input
+                          id="gmb-profile-search"
+                          type="text"
+                          placeholder="Search by business name, address..."
+                          value={gmbProfileSearchQuery}
+                          onChange={(e) => setGmbProfileSearchQuery(e.target.value)}
+                          className="pl-8 h-9 text-sm"
+                          disabled={loading}
+                        />
+                      </div>
+                    </div>
+
+                    {/* Profile List */}
+                    <div className="grid gap-1.5">
+                      <Label className="text-xs sm:text-sm">Available Profiles ({filteredGMBProfiles.length})</Label>
+                      <div className="border rounded-lg max-h-[400px] sm:max-h-[450px] overflow-y-auto">
+                        {filteredGMBProfiles.length === 0 ? (
+                          <div className="p-6 sm:p-8 text-center text-xs sm:text-sm text-muted-foreground">
+                            {gmbProfileSearchQuery ? "No profiles match your search" : "No profiles available"}
+                          </div>
+                        ) : (
+                          <div className="divide-y">
+                            {filteredGMBProfiles.map((profile) => (
+                              <label
+                                key={profile._id}
+                                className={`flex items-start gap-2 sm:gap-3 p-3 cursor-pointer hover:bg-muted/50 transition-colors ${
+                                  profile.isAttached ? "opacity-50 cursor-not-allowed" : ""
+                                } ${selectedGMBProfile === profile._id ? "bg-muted" : ""}`}
+                              >
+                                <input
+                                  type="radio"
+                                  name="gmb-profile"
+                                  value={profile._id}
+                                  checked={selectedGMBProfile === profile._id}
+                                  onChange={(e) => setSelectedGMBProfile(e.target.value)}
+                                  disabled={profile.isAttached || loading}
+                                  className="mt-1 flex-shrink-0"
+                                />
+                                <div className="flex-1 min-w-0">
+                                  <div className="flex items-center gap-2 mb-1">
+                                    <p className="font-medium text-xs sm:text-sm">
+                                      {profile.businessName}
+                                    </p>
+                                    {profile.isAttached && (
+                                      <AlertCircle className="h-4 w-4 text-yellow-600 flex-shrink-0" />
+                                    )}
+                                    {selectedGMBProfile === profile._id && !profile.isAttached && (
+                                      <CheckCircle2 className="h-4 w-4 text-green-600 flex-shrink-0" />
+                                    )}
+                                  </div>
+                                  
+                                  {/* Profile Details */}
+                                  <div className="space-y-1 text-[11px] text-muted-foreground">
+                                    {profile.address && (
+                                      <div>📍 {profile.address}</div>
+                                    )}
+                                    {profile.rating !== null && profile.rating !== undefined && (
+                                      <div>⭐ Rating: {profile.rating} ({profile.totalReviews || 0} reviews)</div>
+                                    )}
+                                    {profile.gmbScore !== null && profile.gmbScore !== undefined && (
+                                      <div>📊 GMB Score: {profile.gmbScore.toFixed(1)}</div>
+                                    )}
+                                    {!profile.active && (
+                                      <div className="text-orange-600">⚠️ Profile is inactive</div>
+                                    )}
+                                  </div>
+                                  
+                                  {profile.isAttached && (
+                                    <p className="text-[11px] sm:text-xs text-yellow-600 mt-2">
+                                      {profile.attachedInfo}
+                                    </p>
+                                  )}
+                                </div>
+                              </label>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </>
+                )}
+              </>
+            )}
+
             {/* Semrush Domain Input and Verification */}
             {selectedType === "semrush" && (
               <>
@@ -1310,8 +1630,8 @@ export function CreateDatasourceDialog({ projectId, existingTypes, onDatasourceA
               </>
             )}
 
-            {/* Error Message */}
-            {error && (
+            {/* Error Message - Only show if not GMB auth error (which shows inline) */}
+            {error && !(selectedType === "gmb" && (gmbAuthStatus === "checking" || gmbAuthStatus === "not_authenticated")) && (
               <div className="flex items-start gap-2 p-3 text-xs sm:text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg">
                 <AlertCircle className="h-4 w-4 mt-0.5 flex-shrink-0" />
                 <p className="leading-relaxed">{error}</p>
