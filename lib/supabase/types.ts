@@ -119,15 +119,18 @@ export interface MangoolsApiDomain {
 export interface GoogleAnalyticsApiProperty {
   name: string  // e.g., "properties/516632017"
   parent: string  // e.g., "accounts/335827031"
-  create_time: string
-  update_time: string
   display_name: string
-  industry_category?: string
   time_zone: string
   currency_code: string
-  service_level?: string
-  account?: string
-  property_type?: string
+}
+
+export interface GAAccount {
+  name: string // e.g., "accounts/335827031"
+  accountName: string // Display name
+}
+
+export interface GAAccountWithProperties extends GAAccount {
+  properties: GoogleAnalyticsApiProperty[]
 }
 
 // ============================================

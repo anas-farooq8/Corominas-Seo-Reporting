@@ -1,4 +1,4 @@
-import type { GoogleAnalyticsApiProperty } from "@/lib/supabase/types"
+import type { GoogleAnalyticsApiProperty, GAAccount, GAAccountWithProperties } from "@/lib/supabase/types"
 import { cache } from "react"
 import { google } from "googleapis"
 import { calculateDashboardDateRanges } from "@/lib/utils/date-ranges"
@@ -26,21 +26,58 @@ function getDataClient() {
   return google.analyticsdata({ version: "v1beta", auth })
 }
 
+// ============================================
+// Google Analytics Account & Properties API
+// ============================================
+
+/**
+ * List all Google Analytics accounts
+ */
+export async function listAccounts(): Promise<GAAccount[]> {
+  try {
+    validateGoogleCredentials()
+    const client = getAdminClient()
+
+    // Create abort controller with 30 second timeout
+    const controller = new AbortController()
+    const timeoutId = setTimeout(() => controller.abort(), 30000)
+
+    try {
+      const response = await client.accountSummaries.list({
+        pageSize: 200,
+      }, {
+        signal: controller.signal,
+      })
+      clearTimeout(timeoutId)
+
+      const accounts: GAAccount[] = (response.data.accountSummaries || []).map((summary: any) => ({
+        name: summary.account || "",
+        accountName: summary.displayName || summary.account || "",
+      }))
+
+      return accounts
+    } catch (apiError: any) {
+      clearTimeout(timeoutId)
+      if (apiError.name === 'AbortError') {
+        throw new Error('Google Analytics API request timed out after 30 seconds')
+      }
+      throw apiError
+    }
+  } catch (error) {
+    console.error("[Google Analytics API] Failed to fetch accounts:", error)
+    throw error
+  }
+}
+
 /**
  * List all Google Analytics properties for a given account
- * @param accountId - The Google Analytics account ID (e.g., "335827031")
+ * Only fetches the fields we actually need (name, parent, display_name, time_zone, currency_code)
+ * @param accountName - The Google Analytics account name (e.g., "accounts/335827031")
  * @returns Array of Google Analytics properties
  */
-export const fetchGoogleAnalyticsProperties = cache(async (accountId?: string): Promise<GoogleAnalyticsApiProperty[]> => {
-  const gaAccountId = accountId || process.env.GA_ACCOUNT_ID
-
-  if (!gaAccountId) {
-    throw new Error("GA_ACCOUNT_ID environment variable is not set or accountId not provided")
-  }
-
-  validateGoogleCredentials()
-
+export async function listProperties(accountName: string): Promise<GoogleAnalyticsApiProperty[]> {
   try {
+    validateGoogleCredentials()
     const client = getAdminClient()
 
     // Create abort controller with 30 second timeout
@@ -49,7 +86,7 @@ export const fetchGoogleAnalyticsProperties = cache(async (accountId?: string): 
 
     try {
       const response = await client.properties.list({
-        filter: `parent:accounts/${gaAccountId}`,
+        filter: `parent:${accountName}`,
         pageSize: 200,
         showDeleted: false,
       }, {
@@ -59,19 +96,13 @@ export const fetchGoogleAnalyticsProperties = cache(async (accountId?: string): 
 
       const properties = response.data.properties || []
 
-      // Transform to our expected format
+      // Transform to our format - only fields we need for UI and DB
       const transformedProperties: GoogleAnalyticsApiProperty[] = properties.map((property: any) => ({
         name: property.name || "",
         parent: property.parent || "",
-        create_time: property.createTime || "",
-        update_time: property.updateTime || "",
         display_name: property.displayName || "",
-        industry_category: property.industryCategory,
         time_zone: property.timeZone || "",
         currency_code: property.currencyCode || "",
-        service_level: property.serviceLevel,
-        account: property.account,
-        property_type: property.propertyType,
       }))
 
       return transformedProperties
@@ -83,7 +114,46 @@ export const fetchGoogleAnalyticsProperties = cache(async (accountId?: string): 
       throw apiError
     }
   } catch (error) {
-    console.error("[Google Analytics API] Fetch failed:", error)
+    console.error(`[Google Analytics API] Failed to fetch properties for account ${accountName}:`, error)
+    throw error
+  }
+}
+
+/**
+ * List all Google Analytics accounts with their properties
+ * 
+ * API CALLS MADE:
+ * - One call to list all account summaries (includes basic info)
+ * - One call per account to list properties
+ * 
+ * PROPERTY ID FORMAT:
+ * The 'name' field in each property contains the full path: "properties/516632017"
+ */
+export const fetchGoogleAnalyticsAccountsWithProperties = cache(async (): Promise<GAAccountWithProperties[]> => {
+  try {
+    const accounts = await listAccounts()
+    
+    const accountsWithProperties: GAAccountWithProperties[] = await Promise.all(
+      accounts.map(async (account) => {
+        try {
+          const properties = await listProperties(account.name)
+          return {
+            ...account,
+            properties,
+          }
+        } catch (error) {
+          console.error(`[Google Analytics API] Failed to fetch properties for account ${account.name}:`, error)
+          return {
+            ...account,
+            properties: [],
+          }
+        }
+      })
+    )
+    
+    return accountsWithProperties
+  } catch (error) {
+    console.error("[Google Analytics API] Failed to fetch accounts with properties:", error)
     throw error
   }
 })

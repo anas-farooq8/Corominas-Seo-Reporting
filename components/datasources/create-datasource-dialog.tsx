@@ -16,7 +16,7 @@ import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { createDatasource, attachDomain, attachGoogleAnalyticsProperty, attachSemrushDomain, attachGoogleSearchConsoleSite, attachGoogleBusinessProfileLocation } from "@/lib/actions/datasources"
 import { Plus, Loader2, Search, AlertCircle, CheckCircle2, ChevronDown, ChevronRight } from "lucide-react"
-import type { Datasource, MangoolsApiDomain, GoogleAnalyticsApiProperty, GBPAccountWithLocations, GBPLocation } from "@/lib/supabase/types"
+import type { Datasource, MangoolsApiDomain, GoogleAnalyticsApiProperty, GAAccountWithProperties, GBPAccountWithLocations, GBPLocation } from "@/lib/supabase/types"
 
 interface CreateDatasourceDialogProps {
   projectId: string
@@ -32,6 +32,11 @@ interface DomainOption extends MangoolsApiDomain {
 interface PropertyOption extends GoogleAnalyticsApiProperty {
   isAttached: boolean
   attachedInfo?: string
+}
+
+interface GAAccountWithPropertiesOption extends GAAccountWithProperties {
+  expanded?: boolean
+  properties: PropertyOption[]
 }
 
 interface SiteOption {
@@ -108,7 +113,7 @@ export function CreateDatasourceDialog({ projectId, existingTypes, onDatasourceA
   
   // Google Analytics-specific state
   const [fetchingProperties, setFetchingProperties] = useState(false)
-  const [properties, setProperties] = useState<PropertyOption[]>([])
+  const [gaAccounts, setGaAccounts] = useState<GAAccountWithPropertiesOption[]>([])
   const [propertySearchQuery, setPropertySearchQuery] = useState("")
   const [selectedProperty, setSelectedProperty] = useState<string>("")
   
@@ -144,7 +149,7 @@ export function CreateDatasourceDialog({ projectId, existingTypes, onDatasourceA
       setDomains([])
       setSearchQuery("")
       setSelectedDomain("")
-      setProperties([])
+      setGaAccounts([])
       setPropertySearchQuery("")
       setSelectedProperty("")
       setSites([])
@@ -209,21 +214,21 @@ export function CreateDatasourceDialog({ projectId, existingTypes, onDatasourceA
     fetchDomains()
   }, [selectedType])
 
-  // Fetch Google Analytics properties when Google Analytics is selected
+  // Fetch Google Analytics accounts and properties when Google Analytics is selected
   useEffect(() => {
-    async function fetchProperties() {
+    async function fetchAccountsAndProperties() {
       if (selectedType !== "google_analytics") return
       
       setFetchingProperties(true)
       setError(null)
       
       try {
-        // Fetch available properties from Google Analytics
-        const propertiesResponse = await fetch("/api/google-analytics/properties")
-        if (!propertiesResponse.ok) {
-          throw new Error("Failed to fetch properties from Google Analytics")
+        // Fetch available accounts with properties from Google Analytics
+        const accountsResponse = await fetch("/api/google-analytics/properties")
+        if (!accountsResponse.ok) {
+          throw new Error("Failed to fetch accounts from Google Analytics")
         }
-        const gaProperties: GoogleAnalyticsApiProperty[] = await propertiesResponse.json()
+        const gaAccountsWithProperties: GAAccountWithProperties[] = await accountsResponse.json()
         
         // Fetch all attached properties to check which ones are already used
         const attachedResponse = await fetch("/api/google-analytics/attached")
@@ -233,27 +238,33 @@ export function CreateDatasourceDialog({ projectId, existingTypes, onDatasourceA
         const attachedProperties: { name: string }[] = await attachedResponse.json()
         const attachedPropertySet = new Set(attachedProperties.map(p => p.name))
         
-        // Mark properties as attached or available
-        const propertyOptions: PropertyOption[] = gaProperties.map(property => ({
-          ...property,
-          isAttached: attachedPropertySet.has(property.name),
-          attachedInfo: attachedPropertySet.has(property.name) ? "Already attached to another project" : undefined
+        // Mark properties as attached or available and set accounts to expanded by default
+        const accountsWithMarkedProperties: GAAccountWithPropertiesOption[] = gaAccountsWithProperties.map(account => ({
+          ...account,
+          expanded: true, // Expand all accounts by default
+          properties: account.properties.map(property => ({
+            ...property,
+            isAttached: attachedPropertySet.has(property.name),
+            attachedInfo: attachedPropertySet.has(property.name) ? "Already attached to another project" : undefined
+          }))
         }))
         
-        setProperties(propertyOptions)
+        setGaAccounts(accountsWithMarkedProperties)
         
-        if (propertyOptions.length === 0) {
-          setError("No properties found in your Google Analytics account")
+        const totalProperties = accountsWithMarkedProperties.reduce((sum, acc) => sum + acc.properties.length, 0)
+        
+        if (totalProperties === 0) {
+          setError("No properties found in your Google Analytics accounts")
         }
       } catch (err) {
-        console.error("Error fetching properties:", err)
-        setError(err instanceof Error ? err.message : "Failed to fetch properties")
+        console.error("Error fetching accounts and properties:", err)
+        setError(err instanceof Error ? err.message : "Failed to fetch accounts and properties")
       } finally {
         setFetchingProperties(false)
       }
     }
     
-    fetchProperties()
+    fetchAccountsAndProperties()
   }, [selectedType])
 
   // Fetch Google Search Console sites when Google Search Console is selected
@@ -501,17 +512,6 @@ export function CreateDatasourceDialog({ projectId, existingTypes, onDatasourceA
     )
   }, [domains, searchQuery])
 
-  // Filter properties based on search query
-  const filteredProperties = useMemo(() => {
-    if (!propertySearchQuery.trim()) return properties
-    
-    const query = propertySearchQuery.toLowerCase()
-    return properties.filter(property => 
-      property.display_name.toLowerCase().includes(query) ||
-      property.name.toLowerCase().includes(query)
-    )
-  }, [properties, propertySearchQuery])
-
   // Filter sites based on search query
   const filteredSites = useMemo(() => {
     if (!siteSearchQuery.trim()) return sites
@@ -552,6 +552,34 @@ export function CreateDatasourceDialog({ projectId, existingTypes, onDatasourceA
   const totalGBPLocations = useMemo(() => {
     return filteredGBPAccounts.reduce((sum, acc) => sum + acc.locations.length, 0)
   }, [filteredGBPAccounts])
+
+  // Filter GA accounts and properties based on search query
+  const filteredGAAccounts = useMemo(() => {
+    if (!propertySearchQuery.trim()) return gaAccounts
+    
+    const query = propertySearchQuery.toLowerCase()
+    return gaAccounts.map(account => ({
+      ...account,
+      properties: account.properties.filter(property => 
+        property.display_name.toLowerCase().includes(query) ||
+        property.name.toLowerCase().includes(query) ||
+        property.time_zone.toLowerCase().includes(query) ||
+        account.accountName.toLowerCase().includes(query)
+      )
+    })).filter(account => account.properties.length > 0)
+  }, [gaAccounts, propertySearchQuery])
+  
+  // Toggle GA account expand/collapse
+  function toggleGAAccountExpanded(accountName: string) {
+    setGaAccounts(prev => prev.map(acc => 
+      acc.name === accountName ? { ...acc, expanded: !acc.expanded } : acc
+    ))
+  }
+  
+  // Count total properties
+  const totalGAProperties = useMemo(() => {
+    return filteredGAAccounts.reduce((sum, acc) => sum + acc.properties.length, 0)
+  }, [filteredGAAccounts])
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -610,7 +638,13 @@ export function CreateDatasourceDialog({ projectId, existingTypes, onDatasourceA
 
       // If Google Analytics, attach the selected property
       if (selectedType === "google_analytics" && selectedProperty) {
-        const property = properties.find(p => p.name === selectedProperty)
+        // Find the property in all accounts
+        let property: PropertyOption | undefined
+        for (const account of gaAccounts) {
+          property = account.properties.find((p: PropertyOption) => p.name === selectedProperty)
+          if (property) break
+        }
+        
         if (property) {
           await attachGoogleAnalyticsProperty(
             datasource.id,
@@ -848,7 +882,7 @@ export function CreateDatasourceDialog({ projectId, existingTypes, onDatasourceA
                         <Input
                           id="property-search"
                           type="text"
-                          placeholder="Search by property name..."
+                          placeholder="Search by property name, account..."
                           value={propertySearchQuery}
                           onChange={(e) => setPropertySearchQuery(e.target.value)}
                           className="pl-8 h-9 text-sm"
@@ -857,59 +891,89 @@ export function CreateDatasourceDialog({ projectId, existingTypes, onDatasourceA
                       </div>
                     </div>
 
-                    {/* Property List */}
+                    {/* Accounts and Properties List */}
                     <div className="grid gap-1.5">
-                      <Label className="text-xs sm:text-sm">Available Properties ({filteredProperties.length})</Label>
-                      <div className="border rounded-lg max-h-[250px] sm:max-h-[300px] overflow-y-auto">
-                        {filteredProperties.length === 0 ? (
+                      <Label className="text-xs sm:text-sm">Available Properties ({totalGAProperties})</Label>
+                      <div className="border rounded-lg max-h-[400px] sm:max-h-[450px] overflow-y-auto">
+                        {filteredGAAccounts.length === 0 ? (
                           <div className="p-6 sm:p-8 text-center text-xs sm:text-sm text-muted-foreground">
                             {propertySearchQuery ? "No properties match your search" : "No properties available"}
                           </div>
                         ) : (
                           <div className="divide-y">
-                            {filteredProperties.map((property) => (
-                              <label
-                                key={property.name}
-                                className={`flex items-start gap-2 sm:gap-3 p-3 cursor-pointer hover:bg-muted/50 transition-colors ${
-                                  property.isAttached ? "opacity-50 cursor-not-allowed" : ""
-                                } ${selectedProperty === property.name ? "bg-muted" : ""}`}
-                              >
-                                <input
-                                  type="radio"
-                                  name="property"
-                                  value={property.name}
-                                  checked={selectedProperty === property.name}
-                                  onChange={(e) => setSelectedProperty(e.target.value)}
-                                  disabled={property.isAttached || loading}
-                                  className="mt-1 flex-shrink-0"
-                                />
-                                <div className="flex-1 min-w-0">
-                                  <div className="flex items-center gap-2">
-                                    <p className="font-medium text-xs sm:text-sm truncate">
-                                      {property.display_name}
-                                    </p>
-                                    {property.isAttached && (
-                                      <AlertCircle className="h-4 w-4 text-yellow-600 flex-shrink-0" />
-                                    )}
-                                    {selectedProperty === property.name && !property.isAttached && (
-                                      <CheckCircle2 className="h-4 w-4 text-green-600 flex-shrink-0" />
-                                    )}
-                                  </div>
-                                  <div className="flex flex-wrap gap-1.5 sm:gap-2 mt-1">
-                                    <span className="text-[11px] sm:text-xs text-muted-foreground truncate max-w-[120px] sm:max-w-none">
-                                      🕐 {property.time_zone}
-                                    </span>
-                                    <span className="text-[11px] sm:text-xs text-muted-foreground whitespace-nowrap">
-                                      💰 {property.currency_code}
-                                    </span>
-                                  </div>
-                                  {property.isAttached && (
-                                    <p className="text-[11px] sm:text-xs text-yellow-600 mt-1">
-                                      {property.attachedInfo}
-                                    </p>
+                            {filteredGAAccounts.map((account) => (
+                              <div key={account.name} className="bg-background">
+                                {/* Account Header */}
+                                <button
+                                  type="button"
+                                  onClick={() => toggleGAAccountExpanded(account.name)}
+                                  className="w-full flex items-center gap-2 p-3 hover:bg-muted/30 transition-colors cursor-pointer"
+                                >
+                                  {account.expanded ? (
+                                    <ChevronDown className="h-4 w-4 flex-shrink-0 text-muted-foreground" />
+                                  ) : (
+                                    <ChevronRight className="h-4 w-4 flex-shrink-0 text-muted-foreground" />
                                   )}
-                                </div>
-                              </label>
+                                  <div className="flex-1 text-left">
+                                    <p className="font-semibold text-xs sm:text-sm">
+                                      {account.accountName}
+                                    </p>
+                                  </div>
+                                  <span className="text-xs text-muted-foreground">
+                                    {account.properties.length} propert{account.properties.length !== 1 ? 'ies' : 'y'}
+                                  </span>
+                                </button>
+                                
+                                {/* Properties under this account */}
+                                {account.expanded && (
+                                  <div className="bg-muted/20 divide-y divide-muted">
+                                    {account.properties.map((property) => (
+                                      <label
+                                        key={property.name}
+                                        className={`flex items-start gap-2 sm:gap-3 p-3 pl-10 cursor-pointer hover:bg-muted/50 transition-colors ${
+                                          property.isAttached ? "opacity-50 cursor-not-allowed" : ""
+                                        } ${selectedProperty === property.name ? "bg-muted" : ""}`}
+                                      >
+                                        <input
+                                          type="radio"
+                                          name="property"
+                                          value={property.name}
+                                          checked={selectedProperty === property.name}
+                                          onChange={(e) => setSelectedProperty(e.target.value)}
+                                          disabled={property.isAttached || loading}
+                                          className="mt-1 flex-shrink-0"
+                                        />
+                                        <div className="flex-1 min-w-0">
+                                          <div className="flex items-center gap-2">
+                                            <p className="font-medium text-xs sm:text-sm truncate">
+                                              {property.display_name}
+                                            </p>
+                                            {property.isAttached && (
+                                              <AlertCircle className="h-4 w-4 text-yellow-600 flex-shrink-0" />
+                                            )}
+                                            {selectedProperty === property.name && !property.isAttached && (
+                                              <CheckCircle2 className="h-4 w-4 text-green-600 flex-shrink-0" />
+                                            )}
+                                          </div>
+                                          <div className="flex flex-wrap gap-1.5 sm:gap-2 mt-1">
+                                            <span className="text-[11px] sm:text-xs text-muted-foreground truncate max-w-[120px] sm:max-w-none">
+                                              🕐 {property.time_zone}
+                                            </span>
+                                            <span className="text-[11px] sm:text-xs text-muted-foreground whitespace-nowrap">
+                                              💰 {property.currency_code}
+                                            </span>
+                                          </div>
+                                          {property.isAttached && (
+                                            <p className="text-[11px] sm:text-xs text-yellow-600 mt-1">
+                                              {property.attachedInfo}
+                                            </p>
+                                          )}
+                                        </div>
+                                      </label>
+                                    ))}
+                                  </div>
+                                )}
+                              </div>
                             ))}
                           </div>
                         )}

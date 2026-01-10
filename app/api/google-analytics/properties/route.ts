@@ -1,18 +1,18 @@
 import { NextResponse } from "next/server"
-import { fetchGoogleAnalyticsProperties } from "@/lib/google-analytics/api"
+import { fetchGoogleAnalyticsAccountsWithProperties } from "@/lib/google-analytics/api"
 
 /**
  * GET /api/google-analytics/properties
- * Fetches all Google Analytics properties from the configured account
+ * Fetches all Google Analytics accounts with their properties
  */
 export async function GET() {
   try {
-    const properties = await fetchGoogleAnalyticsProperties()
-    return NextResponse.json(properties)
+    const accountsWithProperties = await fetchGoogleAnalyticsAccountsWithProperties()
+    return NextResponse.json(accountsWithProperties)
   } catch (error) {
-    console.error("Error fetching Google Analytics properties:", error)
+    console.error("Error fetching Google Analytics accounts with properties:", error)
     return NextResponse.json(
-      { error: "Failed to fetch Google Analytics properties" },
+      { error: "Failed to fetch Google Analytics accounts with properties" },
       { status: 500 }
     )
   }
