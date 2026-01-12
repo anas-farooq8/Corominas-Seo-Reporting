@@ -44,19 +44,75 @@ function processKeywordData(keywords: GMBKeyword[]): {
 } {
   const months = getLast2CompletedMonths()
   
+  // ============================================
+  // 🧪 TESTING ONLY: +1 MONTH OFFSET FOR GMB
+  // ============================================
+  // This shifts the date range forward by 1 month to simulate future data
+  // TODO: REMOVE THIS BEFORE PRODUCTION - Testing purposes only
+  // ============================================
+  
+  // Calculate next month's dates by adding 1 month to the existing ranges
+  const testLastMonthStart = new Date(months.lastMonth.start)
+  testLastMonthStart.setMonth(testLastMonthStart.getMonth() + 1)
+  
+  const testLastMonthEnd = new Date(months.lastMonth.end)
+  testLastMonthEnd.setMonth(testLastMonthEnd.getMonth() + 1)
+  const lastDayOfTestMonth = new Date(testLastMonthEnd.getFullYear(), testLastMonthEnd.getMonth() + 1, 0)
+  testLastMonthEnd.setDate(lastDayOfTestMonth.getDate())
+  
+  const testPreviousMonthStart = new Date(months.previousMonth.start)
+  testPreviousMonthStart.setMonth(testPreviousMonthStart.getMonth() + 1)
+  
+  const testPreviousMonthEnd = new Date(months.previousMonth.end)
+  testPreviousMonthEnd.setMonth(testPreviousMonthEnd.getMonth() + 1)
+  const lastDayOfTestPrevMonth = new Date(testPreviousMonthEnd.getFullYear(), testPreviousMonthEnd.getMonth() + 1, 0)
+  testPreviousMonthEnd.setDate(lastDayOfTestPrevMonth.getDate())
+  
+  const testMonths = {
+    lastMonth: {
+      start: testLastMonthStart,
+      end: testLastMonthEnd,
+      startTimestamp: testLastMonthStart.getTime(),
+      endTimestamp: new Date(testLastMonthEnd.getFullYear(), testLastMonthEnd.getMonth(), testLastMonthEnd.getDate(), 23, 59, 59, 999).getTime(),
+      label: `${['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'][testLastMonthStart.getMonth()]} ${testLastMonthStart.getFullYear()}`
+    },
+    previousMonth: {
+      start: testPreviousMonthStart,
+      end: testPreviousMonthEnd,
+      startTimestamp: testPreviousMonthStart.getTime(),
+      endTimestamp: new Date(testPreviousMonthEnd.getFullYear(), testPreviousMonthEnd.getMonth(), testPreviousMonthEnd.getDate(), 23, 59, 59, 999).getTime(),
+      label: `${['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'][testPreviousMonthStart.getMonth()]} ${testPreviousMonthStart.getFullYear()}`
+    }
+  }
+  
+  console.log('🧪 [GMB TEST MODE] Original months:', {
+    last: months.lastMonth.label,
+    previous: months.previousMonth.label
+  })
+  console.log('🧪 [GMB TEST MODE] Test months (+1):', {
+    last: testMonths.lastMonth.label,
+    previous: testMonths.previousMonth.label
+  })
+  
+  // Use test months instead of real months
+  const monthsToUse = testMonths
+  // ============================================
+  // 🧪 END TESTING CODE
+  // ============================================
+  
   const keywordData: GMBKeywordData[] = keywords.map(kw => {
     // Filter scans for last month
     const lastMonthScans = filterByMonth(
       kw.profileIds,
-      months.lastMonth.startTimestamp,
-      months.lastMonth.endTimestamp
+      monthsToUse.lastMonth.startTimestamp,
+      monthsToUse.lastMonth.endTimestamp
     )
     
     // Filter scans for previous month
     const previousMonthScans = filterByMonth(
       kw.profileIds,
-      months.previousMonth.startTimestamp,
-      months.previousMonth.endTimestamp
+      monthsToUse.previousMonth.startTimestamp,
+      monthsToUse.previousMonth.endTimestamp
     )
     
     return {
@@ -72,8 +128,8 @@ function processKeywordData(keywords: GMBKeyword[]): {
   return {
     keywordData,
     monthLabels: {
-      last: months.lastMonth.label,
-      previous: months.previousMonth.label
+      last: monthsToUse.lastMonth.label,
+      previous: monthsToUse.previousMonth.label
     }
   }
 }
