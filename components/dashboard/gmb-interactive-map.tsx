@@ -313,17 +313,49 @@ export function GMBInteractiveMap({
         style={{ minHeight: '450px' }}
       />
 
-      {/* Brightness Dropdown - Top Left */}
-      <div className="absolute top-3 left-3 bg-white dark:bg-gray-800 rounded shadow-md z-10">
-        <select
-          value={brightness}
-          onChange={(e) => setBrightness(e.target.value as BrightnessLevel)}
-          className="px-3 py-2 text-sm font-medium border-0 rounded cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200"
-        >
-          <option value="low">Low Brightness</option>
-          <option value="medium">Medium Brightness</option>
-          <option value="high">High Brightness</option>
-        </select>
+      {/* Brightness Dropdown - Top Left with Icon */}
+      <div className="absolute top-3 left-3 z-10">
+        <div className="relative">
+          <select
+            value={brightness}
+            onChange={(e) => setBrightness(e.target.value as BrightnessLevel)}
+            className="appearance-none bg-white dark:bg-gray-800 rounded shadow-md cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-700 dark:text-gray-200 pl-3 pr-8 py-2 border-0"
+            style={{ width: '44px', height: '40px' }}
+          >
+            <option value="low">Low</option>
+            <option value="medium">Med</option>
+            <option value="high">High</option>
+          </select>
+          {/* Brightness Icon (Sun) */}
+          <div className="absolute inset-0 pointer-events-none flex items-center justify-center">
+            <svg 
+              xmlns="http://www.w3.org/2000/svg" 
+              viewBox="0 0 24 24" 
+              fill="none" 
+              stroke="currentColor" 
+              strokeWidth="2" 
+              strokeLinecap="round" 
+              strokeLinejoin="round"
+              className="w-5 h-5 text-gray-600 dark:text-gray-300"
+            >
+              <circle cx="12" cy="12" r="4"/>
+              <path d="M12 2v2"/>
+              <path d="M12 20v2"/>
+              <path d="m4.93 4.93 1.41 1.41"/>
+              <path d="m17.66 17.66 1.41 1.41"/>
+              <path d="M2 12h2"/>
+              <path d="M20 12h2"/>
+              <path d="m6.34 17.66-1.41 1.41"/>
+              <path d="m19.07 4.93-1.41 1.41"/>
+            </svg>
+          </div>
+          {/* Dropdown Arrow */}
+          <div className="absolute right-1 top-1/2 -translate-y-1/2 pointer-events-none">
+            <svg className="w-3 h-3 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
+            </svg>
+          </div>
+        </div>
       </div>
     </div>
   )
