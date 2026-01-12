@@ -15,12 +15,25 @@ interface GMBGridHeatmapProps {
 }
 
 /**
- * Generate Google Maps Static API URL with colored markers for heatmap
- * @param grid - The aggregated grid data
- * @param centerLat - Center latitude
- * @param centerLng - Center longitude
- * @param mapType - Type of map (previous, current, or change)
- * @param comparison - Optional comparison data for change map
+ * Get marker color based on position
+ */
+function getPositionColor(position: number): string {
+  if (position <= 3) return 'green'
+  if (position <= 10) return 'yellow'
+  if (position <= 20) return 'orange'
+  return 'red'
+}
+
+/**
+ * Get marker color for change map
+ */
+function getChangeColor(change: number | null, prevPos: number | null): string {
+  if (change === null) return prevPos === null ? 'blue' : 'gray'
+  return change < 0 ? 'green' : change > 0 ? 'red' : 'gray'
+}
+
+/**
+ * Generate Google Maps Static API URL
  */
 function generateMapUrl(
   grid: AggregatedGrid | null,
@@ -30,93 +43,62 @@ function generateMapUrl(
   comparison?: GridComparison[]
 ): string {
   const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY
+  if (!apiKey) return ''
   
-  // Debug logging
-  console.log(`[Map URL] Generating ${mapType} map...`)
-  console.log(`[Map URL] API Key available: ${apiKey ? 'YES' : 'NO'}`)
-  console.log(`[Map URL] Center: ${centerLat}, ${centerLng}`)
-  console.log(`[Map URL] Grid cells: ${grid?.cells.length ?? 0}`)
-  
-  if (!apiKey) {
-    console.error('[Map URL] ❌ NEXT_PUBLIC_GOOGLE_MAPS_API_KEY is not set!')
-    return '' // Return empty string if no API key
-  }
-  
-  const baseUrl = 'https://maps.googleapis.com/maps/api/staticmap'
-  
-  // Map dimensions
-  const width = 600
-  const height = 450
-  const zoom = 13
-  
-  // Build marker strings
   const markers: string[] = []
   
+  // Build markers based on map type
   if (mapType === 'change' && comparison) {
-    // For change map, color code based on improvement/worsening
-    for (const comp of comparison) {
-      if (comp.currentPosition === null) continue // Skip lost positions
-      
-      let color = 'gray' // unchanged
-      if (comp.change !== null) {
-        if (comp.change < 0) {
-          // Improved (negative change) - Green
-          color = 'green'
-        } else if (comp.change > 0) {
-          // Worsened (positive change) - Red
-          color = 'red'
-        }
-      } else if (comp.previousPosition === null) {
-        // New position - Blue
-        color = 'blue'
+    comparison.forEach(comp => {
+      if (comp.currentPosition !== null) {
+        const color = getChangeColor(comp.change, comp.previousPosition)
+        const label = comp.currentPosition <= 9 ? comp.currentPosition : ''
+        markers.push(`color:${color}|label:${label}|${comp.lat},${comp.lng}`)
       }
-      
-      const label = comp.currentPosition <= 9 ? comp.currentPosition.toString() : ''
-      markers.push(`color:${color}|label:${label}|${comp.lat},${comp.lng}`)
-    }
+    })
   } else if (grid) {
-    // For previous/current maps, color code based on position quality
-    for (const cell of grid.cells) {
-      let color = 'red' // default for poor positions
-      
-      if (cell.position <= 3) {
-        color = 'green' // Top 3 - excellent
-      } else if (cell.position <= 10) {
-        color = 'yellow' // Top 10 - good
-      } else if (cell.position <= 20) {
-        color = 'orange' // Top 20 - moderate
-      }
-      
-      const label = cell.position <= 9 ? cell.position.toString() : ''
+    grid.cells.forEach(cell => {
+      const color = getPositionColor(cell.position)
+      const label = cell.position <= 9 ? cell.position : ''
       markers.push(`color:${color}|label:${label}|${cell.lat},${cell.lng}`)
-    }
+    })
   }
   
-  // Build URL
+  if (markers.length === 0) return ''
+  
+  // Build URL with markers (limit to 100 per Google Maps restriction)
   const params = new URLSearchParams({
     center: `${centerLat},${centerLng}`,
-    zoom: zoom.toString(),
-    size: `${width}x${height}`,
+    zoom: '13',
+    size: '600x450',
     maptype: 'roadmap',
-    key: apiKey,
+    key: apiKey
   })
   
-  // Add markers (max ~100 markers per request for Google Static Maps)
-  const markerString = markers.slice(0, 100).join('&markers=')
-  
-  let finalUrl = ''
-  if (markerString) {
-    finalUrl = `${baseUrl}?${params.toString()}&markers=${markerString}`
-  } else {
-    finalUrl = `${baseUrl}?${params.toString()}`
-  }
-  
-  // Debug: Show generated URL (without API key for security)
-  const debugUrl = finalUrl.replace(/key=[^&]+/, 'key=***')
-  console.log(`[Map URL] Generated ${mapType} URL (${markers.length} markers):`)
-  console.log(`[Map URL] ${debugUrl.substring(0, 150)}...`)
-  
-  return finalUrl
+  return `https://maps.googleapis.com/maps/api/staticmap?${params}&markers=${markers.slice(0, 100).join('&markers=')}`
+}
+
+/**
+ * Reusable Map Image Component
+ */
+function MapImage({ url, alt, onError }: { url: string; alt: string; onError?: () => void }) {
+  return (
+    <div className="relative aspect-[4/3] bg-muted rounded-lg overflow-hidden border">
+      <img 
+        src={url} 
+        alt={alt}
+        className="w-full h-full object-cover"
+        onError={(e) => {
+          e.currentTarget.style.display = 'none'
+          e.currentTarget.nextElementSibling?.classList.remove('hidden')
+          onError?.()
+        }}
+      />
+      <div className="hidden absolute inset-0 flex items-center justify-center bg-muted">
+        <p className="text-sm text-red-500">Failed to load map</p>
+      </div>
+    </div>
+  )
 }
 
 export function GMBGridHeatmap({
@@ -128,21 +110,20 @@ export function GMBGridHeatmap({
   previousMonthLabel,
   currentMonthLabel
 }: GMBGridHeatmapProps) {
-  // Determine center point (use current month if available, otherwise previous)
   const centerLat = currentMonthGrid?.centerLat ?? previousMonthGrid?.centerLat ?? 0
   const centerLng = currentMonthGrid?.centerLng ?? previousMonthGrid?.centerLng ?? 0
   
   const previousMapUrl = previousMonthGrid 
     ? generateMapUrl(previousMonthGrid, centerLat, centerLng, 'previous')
-    : null
+    : ''
   
   const currentMapUrl = currentMonthGrid
     ? generateMapUrl(currentMonthGrid, centerLat, centerLng, 'current')
-    : null
+    : ''
   
   const changeMapUrl = (currentMonthGrid || previousMonthGrid)
     ? generateMapUrl(currentMonthGrid ?? previousMonthGrid, centerLat, centerLng, 'change', gridComparison)
-    : null
+    : ''
   
   return (
     <Card className="w-full">
@@ -187,47 +168,14 @@ export function GMBGridHeatmap({
           <div className="space-y-2">
             <h3 className="text-sm font-semibold text-center">{previousMonthLabel}</h3>
             {previousMapUrl ? (
-              <div className="relative aspect-[4/3] bg-muted rounded-lg overflow-hidden border">
-                <img 
-                  src={previousMapUrl} 
-                  alt={`${previousMonthLabel} Grid Heatmap`}
-                  className="w-full h-full object-cover"
-                  onLoad={() => {
-                    console.log('[Map Image] ✅ Previous month map loaded successfully!')
-                  }}
-                  onError={(e) => {
-                    console.error('[Map Image] ❌ Failed to load previous month map')
-                    console.error('[Map Image] URL:', previousMapUrl)
-                    
-                    // Fetch to see error
-                    fetch(previousMapUrl)
-                      .then(res => res.text())
-                      .then(text => {
-                        console.error('[Map Image] Google Maps Error Response:', text)
-                      })
-                      .catch(err => console.error('[Map Image] Fetch failed:', err))
-                    
-                    e.currentTarget.style.display = 'none'
-                    if (e.currentTarget.nextElementSibling) {
-                      e.currentTarget.nextElementSibling.classList.remove('hidden')
-                    }
-                  }}
-                />
-                <div className="hidden absolute inset-0 flex flex-col items-center justify-center bg-muted p-4">
-                  <p className="text-sm text-red-500 font-semibold">Failed to load map</p>
-                  <p className="text-xs text-muted-foreground mt-2 text-center">Check console for error details</p>
-                </div>
-              </div>
+              <MapImage url={previousMapUrl} alt={`${previousMonthLabel} Grid Heatmap`} />
             ) : (
-              <div className="aspect-[4/3] bg-muted rounded-lg flex flex-col items-center justify-center border">
+              <div className="aspect-[4/3] bg-muted rounded-lg flex items-center justify-center border">
                 <p className="text-sm text-muted-foreground">No data</p>
-                {!process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY && (
-                  <p className="text-xs text-red-500 mt-2">API key not configured</p>
-                )}
               </div>
             )}
             <div className="text-xs text-center text-muted-foreground">
-              {previousMonthGrid ? `${previousMonthGrid.cells.length} grid cells` : 'No scans'}
+              {previousMonthGrid ? `${previousMonthGrid.cells.length} cells` : 'No scans'}
             </div>
           </div>
 
@@ -235,56 +183,14 @@ export function GMBGridHeatmap({
           <div className="space-y-2">
             <h3 className="text-sm font-semibold text-center">{currentMonthLabel}</h3>
             {currentMapUrl ? (
-              <div className="relative aspect-[4/3] bg-muted rounded-lg overflow-hidden border">
-                <img 
-                  src={currentMapUrl} 
-                  alt={`${currentMonthLabel} Grid Heatmap`}
-                  className="w-full h-full object-cover"
-                  onLoad={() => {
-                    console.log('[Map Image] ✅ Current month map loaded successfully!')
-                  }}
-                  onError={(e) => {
-                    console.error('[Map Image] ❌ Failed to load current month map')
-                    console.error('[Map Image] URL:', currentMapUrl)
-                    console.error('[Map Image] Error event:', e)
-                    
-                    // Try to fetch the URL to see the actual error
-                    fetch(currentMapUrl)
-                      .then(res => res.text())
-                      .then(text => {
-                        console.error('[Map Image] Google Maps Error Response:', text)
-                        // Try to parse as JSON if possible
-                        try {
-                          const json = JSON.parse(text)
-                          console.error('[Map Image] Error details:', json)
-                        } catch (parseError) {
-                          // Not JSON, log as text
-                          console.error('[Map Image] Error is not JSON, raw response above')
-                        }
-                      })
-                      .catch(err => console.error('[Map Image] Failed to fetch error details:', err))
-                    
-                    e.currentTarget.style.display = 'none'
-                    if (e.currentTarget.nextElementSibling) {
-                      e.currentTarget.nextElementSibling.classList.remove('hidden')
-                    }
-                  }}
-                />
-                <div className="hidden absolute inset-0 flex flex-col items-center justify-center bg-muted p-4">
-                  <p className="text-sm text-red-500 font-semibold">Failed to load map</p>
-                  <p className="text-xs text-muted-foreground mt-2 text-center">Check console for error details</p>
-                </div>
-              </div>
+              <MapImage url={currentMapUrl} alt={`${currentMonthLabel} Grid Heatmap`} />
             ) : (
-              <div className="aspect-[4/3] bg-muted rounded-lg flex flex-col items-center justify-center border">
+              <div className="aspect-[4/3] bg-muted rounded-lg flex items-center justify-center border">
                 <p className="text-sm text-muted-foreground">No data</p>
-                {!process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY && (
-                  <p className="text-xs text-red-500 mt-2">API key not configured</p>
-                )}
               </div>
             )}
             <div className="text-xs text-center text-muted-foreground">
-              {currentMonthGrid ? `${currentMonthGrid.cells.length} grid cells` : 'No scans'}
+              {currentMonthGrid ? `${currentMonthGrid.cells.length} cells` : 'No scans'}
             </div>
           </div>
 
@@ -292,54 +198,21 @@ export function GMBGridHeatmap({
           <div className="space-y-2">
             <h3 className="text-sm font-semibold text-center">Change</h3>
             {changeMapUrl ? (
-              <div className="relative aspect-[4/3] bg-muted rounded-lg overflow-hidden border">
-                <img 
-                  src={changeMapUrl} 
-                  alt="Grid Change Comparison"
-                  className="w-full h-full object-cover"
-                  onLoad={() => {
-                    console.log('[Map Image] ✅ Change map loaded successfully!')
-                  }}
-                  onError={(e) => {
-                    console.error('[Map Image] ❌ Failed to load change map')
-                    console.error('[Map Image] URL:', changeMapUrl)
-                    
-                    // Fetch to see error
-                    fetch(changeMapUrl)
-                      .then(res => res.text())
-                      .then(text => {
-                        console.error('[Map Image] Google Maps Error Response:', text)
-                      })
-                      .catch(err => console.error('[Map Image] Fetch failed:', err))
-                    
-                    e.currentTarget.style.display = 'none'
-                    if (e.currentTarget.nextElementSibling) {
-                      e.currentTarget.nextElementSibling.classList.remove('hidden')
-                    }
-                  }}
-                />
-                <div className="hidden absolute inset-0 flex flex-col items-center justify-center bg-muted p-4">
-                  <p className="text-sm text-red-500 font-semibold">Failed to load map</p>
-                  <p className="text-xs text-muted-foreground mt-2 text-center">Check console for error details</p>
-                </div>
-              </div>
+              <MapImage url={changeMapUrl} alt="Grid Change Comparison" />
             ) : (
-              <div className="aspect-[4/3] bg-muted rounded-lg flex flex-col items-center justify-center border">
+              <div className="aspect-[4/3] bg-muted rounded-lg flex items-center justify-center border">
                 <p className="text-sm text-muted-foreground">No data</p>
-                {!process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY && (
-                  <p className="text-xs text-red-500 mt-2">API key not configured</p>
-                )}
               </div>
             )}
-            <div className="text-xs text-center space-y-1">
+            <div className="text-xs text-center">
               <div className="flex justify-center gap-3">
                 <span className="flex items-center gap-1">
                   <span className="w-2 h-2 bg-green-500 rounded-full"></span>
-                  <span className="text-muted-foreground">Improved</span>
+                  <span className="text-muted-foreground text-xs">Improved</span>
                 </span>
                 <span className="flex items-center gap-1">
                   <span className="w-2 h-2 bg-red-500 rounded-full"></span>
-                  <span className="text-muted-foreground">Worsened</span>
+                  <span className="text-muted-foreground text-xs">Worsened</span>
                 </span>
               </div>
             </div>

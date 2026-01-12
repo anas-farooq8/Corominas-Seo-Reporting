@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react"
 import { LoadingSpinner } from "@/components/ui/loading-spinner"
 import { ErrorDisplay } from "@/components/ui/error-display"
-import { GMBGridMatrixSimple } from "./gmb-grid-matrix-simple"
+import { GMBGridHeatmap } from "./gmb-grid-heatmap"
 import type { GMBGridDashboardData } from "@/lib/actions/gmb-dashboard"
 
 interface GMBGridDashboardPageProps {
@@ -168,14 +168,14 @@ export function GMBGridDashboardPage({
         </div>
       )}
 
-      {/* Best Keyword Grid Matrix (Simple Visualization) */}
-      {data.bestKeyword && (
-        <GMBGridMatrixSimple
-          keyword={data.bestKeyword.keyword}
-          previousMonthGrid={data.bestKeyword.previousMonthGrid}
-          currentMonthGrid={data.bestKeyword.lastMonthGrid}
-          gridComparison={data.bestKeyword.gridComparison}
-          gridStats={data.bestKeyword.gridStats}
+      {/* Best Keyword Grid Heatmap (Google Maps) */}
+      {bestKeyword && (
+        <GMBGridHeatmap
+          keyword={bestKeyword.keyword}
+          previousMonthGrid={bestKeyword.previousMonthGrid}
+          currentMonthGrid={bestKeyword.lastMonthGrid}
+          gridComparison={bestKeyword.gridComparison}
+          gridStats={bestKeyword.gridStats}
           previousMonthLabel={data.monthLabels.previous}
           currentMonthLabel={data.monthLabels.last}
         />
