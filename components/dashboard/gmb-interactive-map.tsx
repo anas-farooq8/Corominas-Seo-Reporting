@@ -39,36 +39,69 @@ function getHeatmapColor(position: number): { background: string; text: string }
   return { background: '#ef4444', text: '#ffffff' } // Red (20+)
 }
 
-// Global flag to track if script is loaded
-let isGoogleMapsLoaded = false
-let googleMapsLoadPromise: Promise<void> | null = null
+// Global state for Google Maps script loading
+declare global {
+  interface Window {
+    googleMapsLoadPromise?: Promise<void>
+    google?: any
+  }
+}
 
+/**
+ * Load Google Maps script only once globally
+ * Uses window object to ensure single instance across all components
+ */
 function loadGoogleMapsScript(apiKey: string): Promise<void> {
-  if (isGoogleMapsLoaded) {
+  // If already loaded, return immediately
+  if (typeof window.google !== 'undefined' && window.google.maps) {
     return Promise.resolve()
   }
 
-  if (googleMapsLoadPromise) {
-    return googleMapsLoadPromise
+  // If currently loading, return existing promise
+  if (window.googleMapsLoadPromise) {
+    return window.googleMapsLoadPromise
   }
 
-  googleMapsLoadPromise = new Promise((resolve, reject) => {
+  // Check if script tag already exists
+  const existingScript = document.querySelector(
+    'script[src*="maps.googleapis.com/maps/api/js"]'
+  )
+  
+  if (existingScript) {
+    // Script exists, wait for it to load
+    window.googleMapsLoadPromise = new Promise((resolve, reject) => {
+      const checkInterval = setInterval(() => {
+        if (typeof window.google !== 'undefined' && window.google.maps) {
+          clearInterval(checkInterval)
+          resolve()
+        }
+      }, 100)
+      
+      setTimeout(() => {
+        clearInterval(checkInterval)
+        reject(new Error('Timeout waiting for Google Maps to load'))
+      }, 10000)
+    })
+    return window.googleMapsLoadPromise
+  }
+
+  // Create new script tag
+  window.googleMapsLoadPromise = new Promise((resolve, reject) => {
     const script = document.createElement('script')
-    script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&libraries=marker&v=weekly`
+    script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&v=weekly`
     script.async = true
     script.defer = true
     script.onload = () => {
-      isGoogleMapsLoaded = true
       resolve()
     }
     script.onerror = () => {
-      googleMapsLoadPromise = null
+      window.googleMapsLoadPromise = undefined
       reject(new Error('Failed to load Google Maps script'))
     }
     document.head.appendChild(script)
   })
 
-  return googleMapsLoadPromise
+  return window.googleMapsLoadPromise
 }
 
 export function GMBInteractiveMap({
