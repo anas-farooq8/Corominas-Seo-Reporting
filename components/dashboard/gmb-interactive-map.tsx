@@ -18,6 +18,15 @@ interface GMBInteractiveMapProps {
     east: number
     west: number
   }
+  gridSize?: number // 3x3, 7x7, etc.
+}
+
+type BrightnessLevel = 'low' | 'medium' | 'high'
+
+const BRIGHTNESS_VALUES: Record<BrightnessLevel, number> = {
+  low: 75,
+  medium: 100,
+  high: 125
 }
 
 /**
@@ -67,16 +76,24 @@ export function GMBInteractiveMap({
   centerLng,
   markers,
   mapType,
-  gridBounds
+  gridBounds,
+  gridSize = 3
 }: GMBInteractiveMapProps) {
   const mapRef = useRef<HTMLDivElement>(null)
   const mapInstanceRef = useRef<google.maps.Map | null>(null)
-  const markersRef = useRef<google.maps.marker.AdvancedMarkerElement[]>([])
+  const markersRef = useRef<google.maps.Marker[]>([])
   const rectangleRef = useRef<google.maps.Rectangle | null>(null)
   
-  const [brightness, setBrightness] = useState(100)
+  const [brightness, setBrightness] = useState<BrightnessLevel>('medium')
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  
+  // Calculate zoom level based on grid size
+  const getZoomLevel = (size: number): number => {
+    if (size <= 3) return 14  // 3x3 grid - closer zoom
+    if (size <= 5) return 13  // 5x5 grid - medium zoom
+    return 12                  // 7x7 or larger - wider zoom
+  }
 
   useEffect(() => {
     const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY
@@ -97,25 +114,66 @@ export function GMBInteractiveMap({
         // Create map
         const { Map } = await google.maps.importLibrary('maps') as google.maps.MapsLibrary
         
+        const brightnessValue = BRIGHTNESS_VALUES[brightness]
+        
         const map = new Map(mapRef.current, {
           center: { lat: centerLat, lng: centerLng },
-          zoom: 13,
+          zoom: getZoomLevel(gridSize),
           mapTypeId: 'roadmap',
-          mapTypeControl: true,
+          mapTypeControl: false, // Hide default map type control
           streetViewControl: false,
-          fullscreenControl: true,
-          zoomControl: true,
+          fullscreenControl: false, // Custom controls will be added
+          zoomControl: false, // Custom zoom control at bottom right
           gestureHandling: 'greedy', // Allow dragging
           styles: [
             {
               featureType: 'all',
               elementType: 'all',
-              stylers: [{ lightness: (brightness - 100) / 5 }]
+              stylers: [{ lightness: (brightnessValue - 100) / 5 }]
             }
-          ]
+          ],
+          // Position default controls at bottom right
+          zoomControlOptions: {
+            position: google.maps.ControlPosition.RIGHT_BOTTOM
+          }
         })
 
         mapInstanceRef.current = map
+        
+        // Add custom zoom controls at bottom right
+        const zoomInButton = document.createElement('button')
+        zoomInButton.textContent = '+'
+        zoomInButton.className = 'bg-white hover:bg-gray-100 border border-gray-300 shadow-md text-gray-700 font-bold text-xl w-10 h-10 rounded cursor-pointer mb-2'
+        zoomInButton.style.display = 'block'
+        zoomInButton.onclick = () => {
+          const currentZoom = map.getZoom()
+          if (currentZoom !== undefined) map.setZoom(currentZoom + 1)
+        }
+        
+        const zoomOutButton = document.createElement('button')
+        zoomOutButton.textContent = '−'
+        zoomOutButton.className = 'bg-white hover:bg-gray-100 border border-gray-300 shadow-md text-gray-700 font-bold text-xl w-10 h-10 rounded cursor-pointer mb-2'
+        zoomOutButton.style.display = 'block'
+        zoomOutButton.onclick = () => {
+          const currentZoom = map.getZoom()
+          if (currentZoom !== undefined) map.setZoom(currentZoom - 1)
+        }
+        
+        const myLocationButton = document.createElement('button')
+        myLocationButton.innerHTML = '⌖'
+        myLocationButton.className = 'bg-white hover:bg-gray-100 border border-gray-300 shadow-md text-gray-700 font-bold text-xl w-10 h-10 rounded cursor-pointer'
+        myLocationButton.onclick = () => {
+          map.setCenter({ lat: centerLat, lng: centerLng })
+          map.setZoom(getZoomLevel(gridSize))
+        }
+        
+        const zoomControlDiv = document.createElement('div')
+        zoomControlDiv.style.margin = '10px'
+        zoomControlDiv.appendChild(zoomInButton)
+        zoomControlDiv.appendChild(zoomOutButton)
+        zoomControlDiv.appendChild(myLocationButton)
+        
+        map.controls[google.maps.ControlPosition.RIGHT_BOTTOM].push(zoomControlDiv)
 
         // Draw grid outline if bounds provided
         if (gridBounds) {
@@ -131,31 +189,35 @@ export function GMBInteractiveMap({
           rectangleRef.current = rectangle
         }
 
-        // Add markers
-        const { AdvancedMarkerElement, PinElement } = await google.maps.importLibrary('marker') as google.maps.MarkerLibrary
-        
-        const newMarkers: google.maps.marker.AdvancedMarkerElement[] = []
+        // Add markers using standard Marker with custom icons
+        const newMarkers: google.maps.Marker[] = []
 
         for (const marker of markers) {
           const colors = getHeatmapColor(marker.position)
+          const label = marker.position <= 20 ? marker.position.toString() : '20+'
           
-          // Create custom pin with number
-          const pinElement = new PinElement({
-            background: colors.background,
-            borderColor: '#ffffff',
-            glyphColor: colors.text,
-            glyph: marker.position <= 20 ? marker.position.toString() : '20+',
-            scale: 1.2
-          })
-
-          const advancedMarker = new AdvancedMarkerElement({
+          // Create custom marker with colored background and number
+          const googleMarker = new google.maps.Marker({
             map,
             position: { lat: marker.lat, lng: marker.lng },
-            content: pinElement.element,
-            title: `Position: ${marker.position}`
+            title: `Position: ${marker.position}`,
+            label: {
+              text: label,
+              color: colors.text,
+              fontSize: '14px',
+              fontWeight: 'bold'
+            },
+            icon: {
+              path: google.maps.SymbolPath.CIRCLE,
+              fillColor: colors.background,
+              fillOpacity: 1,
+              strokeColor: '#ffffff',
+              strokeWeight: 3,
+              scale: 18
+            }
           })
 
-          newMarkers.push(advancedMarker)
+          newMarkers.push(googleMarker)
         }
 
         markersRef.current = newMarkers
@@ -171,21 +233,22 @@ export function GMBInteractiveMap({
 
     return () => {
       // Cleanup
-      markersRef.current.forEach(marker => marker.map = null)
+      markersRef.current.forEach(marker => marker.setMap(null))
       rectangleRef.current?.setMap(null)
       mapInstanceRef.current = null
     }
   }, [centerLat, centerLng, markers, gridBounds, brightness])
 
-  // Update brightness
+  // Update brightness when changed
   useEffect(() => {
     if (mapInstanceRef.current) {
+      const brightnessValue = BRIGHTNESS_VALUES[brightness]
       mapInstanceRef.current.setOptions({
         styles: [
           {
             featureType: 'all',
             elementType: 'all',
-            stylers: [{ lightness: (brightness - 100) / 5 }]
+            stylers: [{ lightness: (brightnessValue - 100) / 5 }]
           }
         ]
       })
@@ -217,17 +280,17 @@ export function GMBInteractiveMap({
         style={{ minHeight: '450px' }}
       />
 
-      {/* Brightness Control */}
-      <div className="absolute top-3 right-3 bg-white dark:bg-gray-800 rounded-lg shadow-lg p-3 z-10">
-        <label className="text-xs font-medium block mb-2">Brightness</label>
-        <input
-          type="range"
-          min="50"
-          max="150"
+      {/* Brightness Dropdown - Top Left */}
+      <div className="absolute top-3 left-3 bg-white dark:bg-gray-800 rounded shadow-md z-10">
+        <select
           value={brightness}
-          onChange={(e) => setBrightness(Number(e.target.value))}
-          className="w-24 h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer"
-        />
+          onChange={(e) => setBrightness(e.target.value as BrightnessLevel)}
+          className="px-3 py-2 text-sm font-medium border-0 rounded cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200"
+        >
+          <option value="low">Low Brightness</option>
+          <option value="medium">Medium Brightness</option>
+          <option value="high">High Brightness</option>
+        </select>
       </div>
     </div>
   )

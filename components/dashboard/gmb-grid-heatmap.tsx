@@ -96,6 +96,7 @@ export function GMBGridHeatmap({
 }: GMBGridHeatmapProps) {
   const centerLat = currentMonthGrid?.centerLat ?? previousMonthGrid?.centerLat ?? 0
   const centerLng = currentMonthGrid?.centerLng ?? previousMonthGrid?.centerLng ?? 0
+  const gridSize = currentMonthGrid?.gridSize ?? previousMonthGrid?.gridSize ?? 3
   
   // Prepare markers for each map
   const previousMarkers = prepareMarkers(previousMonthGrid, 'previous')
@@ -159,6 +160,7 @@ export function GMBGridHeatmap({
                   markers={previousMarkers}
                   mapType="previous"
                   gridBounds={gridBounds ?? undefined}
+                  gridSize={gridSize}
                 />
               ) : (
                 <div className="w-full h-full bg-muted rounded-lg flex items-center justify-center border">
@@ -182,6 +184,7 @@ export function GMBGridHeatmap({
                   markers={currentMarkers}
                   mapType="current"
                   gridBounds={gridBounds ?? undefined}
+                  gridSize={gridSize}
                 />
               ) : (
                 <div className="w-full h-full bg-muted rounded-lg flex items-center justify-center border">
@@ -205,6 +208,7 @@ export function GMBGridHeatmap({
                   markers={changeMarkers}
                   mapType="change"
                   gridBounds={gridBounds ?? undefined}
+                  gridSize={gridSize}
                 />
               ) : (
                 <div className="w-full h-full bg-muted rounded-lg flex items-center justify-center border">
