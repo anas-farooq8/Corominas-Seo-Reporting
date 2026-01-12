@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useMemo } from "react"
 import { LoadingSpinner } from "@/components/ui/loading-spinner"
 import { ErrorDisplay } from "@/components/ui/error-display"
 import type { GBPDashboardData } from "@/lib/actions/gbp-dashboard"
@@ -65,6 +65,36 @@ export function CombinedPage4Dashboard({ gbpId, gmbId }: CombinedPage4DashboardP
     }
   }, [gbpId, gmbId])
 
+  // Determine metadata display (similar to page 1 pattern)
+  const metadata = useMemo(() => {
+    if (!gbpData && !gmbData) return null
+    
+    // Priority: GBP business name > GMB business name
+    let title = gbpData?.businessName || gmbData?.businessName || ''
+    let subtitle: string | undefined = undefined
+    
+    // Build subtitle based on what's connected
+    const subtitleParts: string[] = []
+    
+    // If GBP is primary title, add GMB business name and address to subtitle
+    if (gbpData?.businessName && gmbData?.businessName && gbpData.businessName !== gmbData.businessName) {
+      subtitleParts.push(gmbData.businessName)
+    }
+    
+    // Add address if available
+    const address = gmbData?.address || ''
+    if (address) {
+      subtitleParts.push(address)
+    }
+    
+    subtitle = subtitleParts.length > 0 ? subtitleParts.join(' • ') : undefined
+    
+    return {
+      title,
+      subtitle
+    }
+  }, [gbpData, gmbData])
+
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-[600px]">
@@ -105,39 +135,38 @@ export function CombinedPage4Dashboard({ gbpId, gmbId }: CombinedPage4DashboardP
     )
   }
 
-  // Both are available - show combined layout
+  // Both are available - show combined layout without section headings
   return (
-    <div className="space-y-6 sm:space-y-8">
-      {/* GBP Section */}
+    <div className="space-y-4 sm:space-y-6 p-3 sm:p-4 md:p-6 lg:p-8">
+      {/* Unified Metadata - Similar to Page 1 */}
+      {metadata && (
+        <div>
+          <h2 className="text-lg sm:text-xl md:text-2xl font-bold text-foreground">
+            {metadata.title}
+          </h2>
+          {metadata.subtitle && (
+            <p className="text-sm text-muted-foreground mt-1">
+              {metadata.subtitle}
+            </p>
+          )}
+        </div>
+      )}
+
+      {/* GBP Section - No heading, just content */}
       {gbpData && (
-        <div>
-          <h3 className="text-base sm:text-lg font-semibold mb-3 sm:mb-4 px-3 sm:px-4 md:px-6 lg:px-8">
-            Google Business Profile Activity
-          </h3>
-          <GBPDashboardPage 
-            data={gbpData} 
-            showMetadata={true} 
-            showKPIs={true} 
-          />
-        </div>
+        <GBPDashboardPage 
+          data={gbpData} 
+          showMetadata={false}  // Hide metadata since it's shown above
+          showKPIs={true} 
+        />
       )}
 
-      {/* Divider */}
-      {gbpData && gmbData && (
-        <div className="border-t mx-3 sm:mx-4 md:mx-6 lg:mx-8"></div>
-      )}
-
-      {/* GMB Section */}
+      {/* GMB Section - No heading, just content */}
       {gmbData && (
-        <div>
-          <h3 className="text-base sm:text-lg font-semibold mb-3 sm:mb-4 px-3 sm:px-4 md:px-6 lg:px-8">
-            Grid My Business - Keyword Rankings
-          </h3>
-          <GMBKeywordsDashboardPage 
-            data={gmbData} 
-            showMetadata={true} 
-          />
-        </div>
+        <GMBKeywordsDashboardPage 
+          data={gmbData} 
+          showMetadata={false}  // Hide metadata since it's shown above
+        />
       )}
     </div>
   )
