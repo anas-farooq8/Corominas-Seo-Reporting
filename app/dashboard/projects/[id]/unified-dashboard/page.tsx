@@ -9,8 +9,8 @@ import { ArrowLeft } from "lucide-react"
 import type { getDataSourcesWithRespectiveData } from "@/lib/supabase/types"
 import { CombinedPage1Dashboard } from "@/components/dashboard/combined-page1-dashboard"
 import { CombinedPage3Dashboard } from "@/components/dashboard/combined-page3-dashboard"
+import { CombinedPage4Dashboard } from "@/components/dashboard/combined-page4-dashboard"
 import { MangoolsDashboardPage } from "@/components/dashboard/mangools-dashboard-page"
-import { GBPDashboardPage } from "@/components/dashboard/gbp-dashboard-page"
 
 interface PageConfig {
   id: string
@@ -49,6 +49,7 @@ export default function UnifiedDashboardPage({ params }: { params: Promise<{ id:
       const semrushDatasource = data.datasources?.find((ds: any) => ds.type === "semrush")
       const mangoolsDatasource = data.datasources?.find((ds: any) => ds.type === "mangools")
       const gbpDatasource = data.datasources?.find((ds: any) => ds.type === "gbp")
+      const gmbDatasource = data.datasources?.find((ds: any) => ds.type === "gmb")
       
       // Page 1: Google Analytics + SEMrush + GBP (show if any is connected)
       if (googleAnalyticsDatasource || semrushDatasource || gbpDatasource) {
@@ -81,13 +82,13 @@ export default function UnifiedDashboardPage({ params }: { params: Promise<{ id:
         })
       }
       
-      // Page 4: Google Business Profile Activity
-      if (gbpDatasource) {
+      // Page 4: Google Business Profile + Grid My Business (show if any is connected)
+      if (gbpDatasource || gmbDatasource) {
         connectedPages.push({
           id: "page-4",
           label: "Page 4",
-          datasourceType: "gbp",
-          datasourceId: gbpDatasource.id
+          datasourceType: "combined_page4",
+          datasourceId: gbpDatasource?.id || gmbDatasource?.id || ""
         })
       }
       
@@ -196,9 +197,17 @@ export default function UnifiedDashboardPage({ params }: { params: Promise<{ id:
                 />
               )
             })()}
-            {activePageConfig?.datasourceType === "gbp" && (
-              <GBPDashboardPage datasourceId={activePageConfig.datasourceId} />
-            )}
+            {activePageConfig?.datasourceType === "combined_page4" && (() => {
+              const gbpDs = datasources.find((ds: any) => ds.type === "gbp")
+              const gmbDs = datasources.find((ds: any) => ds.type === "gmb")
+              
+              return (
+                <CombinedPage4Dashboard 
+                  gbpId={gbpDs?.id}
+                  gmbId={gmbDs?.id}
+                />
+              )
+            })()}
           </>
         )}
       </div>

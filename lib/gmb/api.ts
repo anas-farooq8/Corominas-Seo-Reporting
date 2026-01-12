@@ -12,68 +12,27 @@ const GMB_API_BASE = "https://gmb-main-sb7q6jfhda-uc.a.run.app"
 // ============================================
 
 export interface GMBAuthResponse {
-  kind: string
-  localId: string
   email: string
   displayName: string
-  idToken: string
-  profilePicture?: string
   refreshToken: string
-  expiresIn: string
 }
 
 export interface GMBTokenResponse {
   access_token: string
-  expires_in: string
-  token_type: string
-  refresh_token: string
-  id_token: string
-  user_id: string
-  project_id: string
 }
 
 export interface GMBProfile {
   _id: string
-  workspaceId: string
-  source: string
-  google: {
-    tokenObjectId: string
-    accountId: string
-    locationId: string
-  }
-  profileUrl?: string
   location: {
-    languageCode?: string
-    description?: string
-    place_id?: string
     structured_formatting: {
       main_text: string
       secondary_text?: string
     }
-    geometry?: {
-      type: string
-      coordinates: number[]
-    }
-    countryCode?: string
-    formatted_address?: string
-    locationTriplets?: string
-    googleDescription?: string
-    websiteUri?: string | null
-    nationalPhoneNumber?: string
   }
   totalReviews?: number
   rating?: number
   gmbScore?: number
-  avgPosition?: {
-    last30Days: number
-  }
-  settings?: {
-    enableProtection: boolean
-  }
   active: boolean
-  tags: string[]
-  createdAt: string
-  updatedAt: string
 }
 
 export interface GMBProfilesResponse {
@@ -82,6 +41,29 @@ export interface GMBProfilesResponse {
     profiles: GMBProfile[]
     total: number
     tags: string[]
+  }
+}
+
+export interface GMBScanId {
+  _id: string
+  dateAdded: number // Unix timestamp in milliseconds
+}
+
+export interface GMBKeyword {
+  keyword: string
+  profileId: string // This is the keyword ID
+  profileIds: GMBScanId[] // These are the scan IDs with timestamps
+}
+
+export interface GMBKeywordsResponse {
+  success: boolean
+  data: {
+    keywords: Array<{
+      keyword: string
+      profileId: string
+      profileIds: GMBScanId[]
+    }>
+    total: number
   }
 }
 
@@ -301,7 +283,14 @@ export async function listProfiles(): Promise<GMBProfile[]> {
         throw new Error("GMB_WORKSPACE_ID environment variable is not set")
       }
 
-      const url = `${GMB_API_BASE}/workspace/current/profiles`
+      // Build URL with query parameters
+      const params = new URLSearchParams({
+        pageIndex: "0",
+        pageLimit: "100",
+        sortBy: "alphabetical",
+        sortDirection: "desc"
+      })
+      const url = `${GMB_API_BASE}/workspace/current/profiles?${params.toString()}`
 
       const headers = {
         "accept": "application/json, text/plain, */*",
@@ -374,4 +363,114 @@ export async function listProfiles(): Promise<GMBProfile[]> {
 
   // This should never be reached due to the throw in the last attempt
   throw new Error("Failed to fetch Grid My Business profiles")
+}
+
+/**
+ * List all keywords for a specific profile
+ * Returns keywords with their scan history
+ * Automatically retries up to 3 times with 1 second delay if authentication fails
+ */
+export async function listKeywords(profileId: string): Promise<GMBKeyword[]> {
+  const maxRetries = 3
+  const retryDelay = 1000 // 1 second
+
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    try {
+      console.log(`[GMB API] Fetching keywords for profile ${profileId} (attempt ${attempt}/${maxRetries})`)
+      
+      const accessToken = await getAccessToken()
+      const workspaceId = process.env.GMB_WORKSPACE_ID
+
+      if (!workspaceId) {
+        throw new Error("GMB_WORKSPACE_ID environment variable is not set")
+      }
+
+      // Build URL with query parameters
+      const params = new URLSearchParams({
+        pageIndex: "0",
+        pageLimit: "100",
+        showMonitoringOnly: "true",
+        sortBy: "alphabetical",
+        sortDirection: "asc"
+      })
+      const url = `${GMB_API_BASE}/profile/${profileId}/keyword?${params.toString()}`
+
+      const headers = {
+        "accept": "application/json, text/plain, */*",
+        "accept-language": "en-US,en;q=0.9",
+        "authorization": `Bearer ${accessToken}`,
+        "content-type": "application/json",
+        "origin": "https://app.gridmybusiness.com",
+        "referer": "https://app.gridmybusiness.com/",
+        "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36",
+        "workspace": workspaceId
+      }
+
+      // Create abort controller with 30 second timeout
+      const controller = new AbortController()
+      const timeoutId = setTimeout(() => controller.abort(), 30000)
+
+      try {
+        const response = await fetch(url, {
+          method: "GET",
+          headers,
+          signal: controller.signal,
+        })
+        clearTimeout(timeoutId)
+
+        if (!response.ok) {
+          const errorText = await response.text()
+          console.error("[GMB API] Error response:", errorText)
+          
+          // If 401/403, the token might be invalid - retry
+          if ((response.status === 401 || response.status === 403) && attempt < maxRetries) {
+            console.log(`[GMB API] Authentication error, will retry after ${retryDelay}ms...`)
+            await new Promise(resolve => setTimeout(resolve, retryDelay))
+            continue // Retry
+          }
+          
+          throw new Error(`GMB API error: ${response.status} ${response.statusText}`)
+        }
+
+        const data = await response.json() as GMBKeywordsResponse
+
+        if (!data.success) {
+          throw new Error("GMB API returned unsuccessful response")
+        }
+
+        // Extract only the fields we need
+        const keywords: GMBKeyword[] = data.data.keywords.map(kw => ({
+          keyword: kw.keyword,
+          profileId: kw.profileId,
+          profileIds: kw.profileIds
+        }))
+
+        console.log(`[GMB API] Successfully fetched ${keywords.length} keywords`)
+        return keywords
+      } catch (fetchError: any) {
+        clearTimeout(timeoutId)
+        if (fetchError.name === 'AbortError') {
+          throw new Error('GMB API request timed out after 30 seconds')
+        }
+        throw fetchError
+      }
+    } catch (error: any) {
+      console.error(`[GMB API] Attempt ${attempt}/${maxRetries} failed:`, error)
+
+      // If this was the last attempt, throw the error
+      if (attempt === maxRetries) {
+        if (error.message?.includes("token refresh failed") || error.message?.includes("Authentication failed")) {
+          throw new Error("Authentication failed after 3 attempts. Please check your credentials.")
+        }
+        throw new Error("Failed to fetch Grid My Business keywords after 3 attempts")
+      }
+
+      // Wait before retrying
+      console.log(`[GMB API] Waiting ${retryDelay}ms before retry...`)
+      await new Promise(resolve => setTimeout(resolve, retryDelay))
+    }
+  }
+
+  // This should never be reached due to the throw in the last attempt
+  throw new Error("Failed to fetch Grid My Business keywords")
 }

@@ -1,5 +1,6 @@
 import type { MangoolsApiDomain } from "@/lib/supabase/types"
 import { cache } from "react"
+import { getLast2CompletedMonthsForAPI } from "@/lib/utils/date-ranges"
 
 const MANGOOLS_API_BASE = "https://api.mangools.com/v3"
 
@@ -229,41 +230,6 @@ export async function fetchTrackingDetail(trackingId: string): Promise<MangoolsT
   }
 }
 
-/**
- * Get last 2 completed months date range
- * Examples:
- * - If today = 31 Dec 2024 → Retrieve Oct 1 - Nov 30
- * - If today = 2 Jan 2025 → Retrieve Nov 1 - Dec 31
- * - If today = 15 Mar 2025 → Retrieve Jan 1 - Feb 28
- */
-export function getLast2CompletedMonths(): { monthAStart: string, monthAEnd: string, monthBStart: string, monthBEnd: string } {
-  const now = new Date()
-  
-  // Get first day of current month
-  const currentMonthStart = new Date(now.getFullYear(), now.getMonth(), 1)
-  
-  // Month B (previous month)
-  const monthBEnd = new Date(currentMonthStart.getTime() - 1) // Last day of previous month
-  const monthBStart = new Date(monthBEnd.getFullYear(), monthBEnd.getMonth(), 1)
-  
-  // Month A (2 months ago)
-  const monthAEnd = new Date(monthBStart.getTime() - 1) // Last day of 2 months ago
-  const monthAStart = new Date(monthAEnd.getFullYear(), monthAEnd.getMonth(), 1)
-  
-  const formatDate = (date: Date) => {
-    const year = date.getFullYear()
-    const month = String(date.getMonth() + 1).padStart(2, '0')
-    const day = String(date.getDate()).padStart(2, '0')
-    return `${year}-${month}-${day}`
-  }
-  
-  return {
-    monthAStart: formatDate(monthAStart),
-    monthAEnd: formatDate(monthAEnd),
-    monthBStart: formatDate(monthBStart),
-    monthBEnd: formatDate(monthBEnd),
-  }
-}
 
 /**
  * Fetch stats for a tracking ID within a date range
@@ -345,9 +311,9 @@ export async function fetchTrackingStats(
 export async function fetchLast2MonthsStats(trackingId: string): Promise<{
   monthA: MangoolsStatsResponse
   monthB: MangoolsStatsResponse
-  dateRanges: ReturnType<typeof getLast2CompletedMonths>
+  dateRanges: ReturnType<typeof getLast2CompletedMonthsForAPI>
 }> {
-  const dateRanges = getLast2CompletedMonths()
+  const dateRanges = getLast2CompletedMonthsForAPI()
   
   const [monthA, monthB] = await Promise.all([
     fetchTrackingStats(trackingId, dateRanges.monthAStart, dateRanges.monthAEnd),
