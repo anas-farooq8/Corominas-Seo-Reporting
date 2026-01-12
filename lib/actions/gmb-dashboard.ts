@@ -4,8 +4,25 @@
  */
 
 import { createClient } from "@/lib/supabase/server"
-import { listKeywords, type GMBKeyword, type GMBScanId } from "@/lib/gmb/api"
+import { 
+  listKeywords, 
+  getFreshAccessToken, 
+  getGridReportWithToken, 
+  type GMBKeyword, 
+  type GMBScanId 
+} from "@/lib/gmb/api"
 import { getLast2CompletedMonths, filterByMonth } from "@/lib/utils/date-ranges"
+import { 
+  aggregateGridScans, 
+  compareGrids, 
+  calculateGridStats, 
+  fetchGridReportsParallel,
+  selectBestKeyword,
+  type AggregatedGrid,
+  type GridComparison,
+  type GridStats,
+  type KeywordWithGrid
+} from "@/lib/gmb/grid-utils"
 
 // ============================================
 // Type Definitions
@@ -20,11 +37,19 @@ export interface GMBKeywordData {
   previousMonthCount: number
 }
 
-export interface GMBDashboardData {
+export interface GMBKeywordGridData extends GMBKeywordData {
+  previousMonthGrid: AggregatedGrid | null
+  lastMonthGrid: AggregatedGrid | null
+  gridComparison: GridComparison[]
+  gridStats: GridStats
+}
+
+export interface GMBGridDashboardData {
   profileId: string
   businessName: string
   address: string
-  keywords: GMBKeywordData[]
+  keywords: GMBKeywordGridData[]
+  bestKeyword: GMBKeywordGridData | null
   monthLabels: {
     last: string
     previous: string
@@ -139,14 +164,19 @@ function processKeywordData(keywords: GMBKeyword[]): {
 // ============================================
 
 /**
- * Fetch all data needed for the GMB keywords dashboard
+ * Fetch GMB Grid Dashboard Data with aggregated grid heatmaps
+ * This includes fetching all grid reports for each keyword's scans
+ * and aggregating them into monthly grids
+ * 
  * @param datasourceId - The datasource ID
+ * @param concurrency - Number of parallel requests (default: 5)
  */
-export async function fetchGMBDashboardData(
-  datasourceId: string
-): Promise<GMBDashboardData | null> {
+export async function fetchGMBGridDashboardData(
+  datasourceId: string,
+  concurrency: number = 5
+): Promise<GMBGridDashboardData | null> {
   try {
-    console.log('[GMB Dashboard] Fetching dashboard data for datasource:', datasourceId)
+    console.log('[GMB Grid Dashboard] Fetching grid dashboard data for datasource:', datasourceId)
     
     // Get the profile info from database
     const supabase = await createClient()
@@ -161,28 +191,130 @@ export async function fetchGMBDashboardData(
       return null
     }
     
-    console.log('[GMB Dashboard] Profile found:', profile.profile_id, profile.business_name)
+    console.log('[GMB Grid Dashboard] Profile found:', profile.profile_id, profile.business_name)
     
     // Fetch keywords from GMB API
     const keywords = await listKeywords(profile.profile_id)
     
-    console.log('[GMB Dashboard] Fetched', keywords.length, 'keywords')
+    console.log('[GMB Grid Dashboard] Fetched', keywords.length, 'keywords')
     
     // Process keyword data and filter by months
     const { keywordData, monthLabels } = processKeywordData(keywords)
     
-    console.log('[GMB Dashboard] Processed keywords:', keywordData.length)
-    console.log('[GMB Dashboard] Month labels:', monthLabels)
+    console.log('[GMB Grid Dashboard] Processing grid data for', keywordData.length, 'keywords')
+    
+    // Collect all scan IDs by month across all keywords
+    console.log('[GMB Grid Dashboard] Collecting scan IDs by month...')
+    const allLastMonthScanIds: string[] = []
+    const allPreviousMonthScanIds: string[] = []
+    
+    for (const kw of keywordData) {
+      allLastMonthScanIds.push(...kw.lastMonthScans.map(s => s._id))
+      allPreviousMonthScanIds.push(...kw.previousMonthScans.map(s => s._id))
+    }
+    
+    console.log(`[GMB Grid Dashboard] Total last month scans: ${allLastMonthScanIds.length}`)
+    console.log(`[GMB Grid Dashboard] Total previous month scans: ${allPreviousMonthScanIds.length}`)
+    
+    // Fetch all last month reports first (in parallel batches)
+    console.log('[GMB Grid Dashboard] 📅 Fetching LAST MONTH reports...')
+    const lastMonthReportsAll = await fetchGridReportsParallel(
+      allLastMonthScanIds,
+      getFreshAccessToken,
+      getGridReportWithToken,
+      concurrency
+    )
+    
+    // Then fetch all previous month reports (in parallel batches)
+    console.log('[GMB Grid Dashboard] 📅 Fetching PREVIOUS MONTH reports...')
+    const previousMonthReportsAll = await fetchGridReportsParallel(
+      allPreviousMonthScanIds,
+      getFreshAccessToken,
+      getGridReportWithToken,
+      concurrency
+    )
+    
+    // Create maps for quick lookup by scan ID
+    const lastMonthReportsMap = new Map<string, typeof lastMonthReportsAll[0]>()
+    for (const report of lastMonthReportsAll) {
+      lastMonthReportsMap.set(report._id, report)
+    }
+    
+    const previousMonthReportsMap = new Map<string, typeof previousMonthReportsAll[0]>()
+    for (const report of previousMonthReportsAll) {
+      previousMonthReportsMap.set(report._id, report)
+    }
+    
+    // Process each keyword with the fetched reports
+    const keywordGridData: GMBKeywordGridData[] = []
+    
+    for (const kw of keywordData) {
+      console.log(`[GMB Grid Dashboard] Processing keyword: ${kw.keyword}`)
+      
+      // Get reports for this keyword's scans
+      const lastMonthReports = kw.lastMonthScans
+        .map(s => lastMonthReportsMap.get(s._id))
+        .filter((r): r is NonNullable<typeof r> => r !== undefined)
+      
+      const previousMonthReports = kw.previousMonthScans
+        .map(s => previousMonthReportsMap.get(s._id))
+        .filter((r): r is NonNullable<typeof r> => r !== undefined)
+      
+      console.log(`  - Last month reports fetched: ${lastMonthReports.length}/${kw.lastMonthScans.length}`)
+      console.log(`  - Previous month reports fetched: ${previousMonthReports.length}/${kw.previousMonthScans.length}`)
+      
+      // Aggregate grids
+      const lastMonthGrid = aggregateGridScans(lastMonthReports)
+      const previousMonthGrid = aggregateGridScans(previousMonthReports)
+      
+      // Compare grids
+      const gridComparison = compareGrids(previousMonthGrid, lastMonthGrid)
+      
+      // Calculate stats
+      const gridStats = calculateGridStats(lastMonthGrid, gridComparison)
+      
+      console.log(`  - Grid stats:`, {
+        totalCells: gridStats.totalCells,
+        improved: gridStats.improved,
+        worsened: gridStats.worsened,
+        avgPosition: gridStats.averagePosition?.toFixed(1)
+      })
+      
+      keywordGridData.push({
+        ...kw,
+        previousMonthGrid,
+        lastMonthGrid,
+        gridComparison,
+        gridStats
+      })
+    }
+    
+    console.log('[GMB Grid Dashboard] Successfully processed all keyword grids')
+    
+    // Select the best keyword to display
+    const bestKeywordSelection = selectBestKeyword(keywordGridData)
+    
+    // Find the matching full keyword data
+    const bestKeyword = bestKeywordSelection 
+      ? keywordGridData.find(kw => kw.keywordId === bestKeywordSelection.keywordId) ?? null
+      : null
+    
+    if (bestKeyword) {
+      console.log(`[GMB Grid Dashboard] 🏆 Best keyword: "${bestKeyword.keyword}"`)
+    } else {
+      console.log('[GMB Grid Dashboard] ⚠️ No best keyword could be selected (no grid data)')
+    }
     
     return {
       profileId: profile.profile_id,
       businessName: profile.business_name,
       address: profile.address || '',
-      keywords: keywordData,
+      keywords: keywordGridData,
+      bestKeyword,
       monthLabels
     }
   } catch (error) {
-    console.error("[GMB Dashboard] Error fetching dashboard data:", error)
+    console.error("[GMB Grid Dashboard] Error fetching grid dashboard data:", error)
     throw error
   }
 }

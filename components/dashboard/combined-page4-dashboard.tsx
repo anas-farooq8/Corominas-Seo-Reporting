@@ -4,9 +4,9 @@ import { useState, useEffect, useMemo } from "react"
 import { LoadingSpinner } from "@/components/ui/loading-spinner"
 import { ErrorDisplay } from "@/components/ui/error-display"
 import type { GBPDashboardData } from "@/lib/actions/gbp-dashboard"
-import type { GMBDashboardData } from "@/lib/actions/gmb-dashboard"
+import type { GMBGridDashboardData } from "@/lib/actions/gmb-dashboard"
 import { GBPDashboardPage } from "./gbp-dashboard-page"
-import { GMBKeywordsDashboardPage } from "./gmb-keywords-dashboard-page"
+import { GMBGridDashboardPage } from "./gmb-grid-dashboard-page"
 
 interface CombinedPage4DashboardProps {
   gbpId?: string
@@ -15,7 +15,7 @@ interface CombinedPage4DashboardProps {
 
 export function CombinedPage4Dashboard({ gbpId, gmbId }: CombinedPage4DashboardProps) {
   const [gbpData, setGBPData] = useState<GBPDashboardData | null>(null)
-  const [gmbData, setGMBData] = useState<GMBDashboardData | null>(null)
+  const [gmbData, setGMBData] = useState<GMBGridDashboardData | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
@@ -39,7 +39,7 @@ export function CombinedPage4Dashboard({ gbpId, gmbId }: CombinedPage4DashboardP
         
         if (gmbId) {
           promises.push(
-            fetch(`/api/gmb/keywords/${gmbId}`)
+            fetch(`/api/gmb/grid-dashboard/${gmbId}`)
               .then(res => res.json())
               .then(data => isMounted && setGMBData(data))
           )
@@ -125,10 +125,10 @@ export function CombinedPage4Dashboard({ gbpId, gmbId }: CombinedPage4DashboardP
     )
   }
 
-  // If only GMB data is available, show native GMB layout
+  // If only GMB data is available, show native GMB grid layout
   if (gmbData && !gbpData) {
     return (
-      <GMBKeywordsDashboardPage 
+      <GMBGridDashboardPage 
         data={gmbData} 
         showMetadata={true} 
       />
@@ -161,9 +161,9 @@ export function CombinedPage4Dashboard({ gbpId, gmbId }: CombinedPage4DashboardP
         />
       )}
 
-      {/* GMB Section - No heading, just content */}
+      {/* GMB Grid Section - No heading, just content */}
       {gmbData && (
-        <GMBKeywordsDashboardPage 
+        <GMBGridDashboardPage 
           data={gmbData} 
           showMetadata={false}  // Hide metadata since it's shown above
         />

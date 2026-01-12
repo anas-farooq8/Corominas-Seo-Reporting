@@ -67,6 +67,24 @@ export interface GMBKeywordsResponse {
   }
 }
 
+export interface GMBGridCoord {
+  coord: {
+    lat: number
+    lng: number
+  }
+  position: number
+}
+
+export interface GMBGridReportResponse {
+  _id: string
+  keyword: string
+  gridSize: number
+  distance: number
+  distanceUnit: string
+  dateAdded: number
+  coords: GMBGridCoord[]
+}
+
 // ============================================
 // Authentication Functions
 // ============================================
@@ -473,4 +491,81 @@ export async function listKeywords(profileId: string): Promise<GMBKeyword[]> {
 
   // This should never be reached due to the throw in the last attempt
   throw new Error("Failed to fetch Grid My Business keywords")
+}
+
+/**
+ * Get grid report data for a specific scan ID with a provided access token
+ * Returns grid positioning data with coordinates and rankings
+ * @param scanId - The scan ID to fetch
+ * @param accessToken - Pre-fetched access token to use for this request
+ */
+export async function getGridReportWithToken(
+  scanId: string,
+  accessToken: string
+): Promise<GMBGridReportResponse> {
+  const workspaceId = process.env.GMB_WORKSPACE_ID
+
+  if (!workspaceId) {
+    throw new Error("GMB_WORKSPACE_ID environment variable is not set")
+  }
+
+  const url = `${GMB_API_BASE}/monitoring/reports/list/view`
+
+  const headers = {
+    "accept": "application/json, text/plain, */*",
+    "accept-language": "en-US,en;q=0.9",
+    "authorization": `Bearer ${accessToken}`,
+    "content-type": "application/json",
+    "origin": "https://app.gridmybusiness.com",
+    "referer": "https://app.gridmybusiness.com/",
+    "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36",
+    "workspace": workspaceId
+  }
+
+  const payload = {
+    pid: scanId
+  }
+
+  // Create abort controller with 30 second timeout
+  const controller = new AbortController()
+  const timeoutId = setTimeout(() => controller.abort(), 30000)
+
+  try {
+    const response = await fetch(url, {
+      method: "POST",
+      headers,
+      body: JSON.stringify(payload),
+      signal: controller.signal,
+    })
+    clearTimeout(timeoutId)
+
+    if (!response.ok) {
+      const errorText = await response.text()
+      console.error(`[GMB API] Grid report error for scan ${scanId}:`, errorText)
+      throw new Error(`GMB API error: ${response.status} ${response.statusText}`)
+    }
+
+    const data = await response.json() as GMBGridReportResponse
+
+    // Validate required fields
+    if (!data._id || !data.coords || !Array.isArray(data.coords)) {
+      throw new Error("Invalid grid report response: missing required fields")
+    }
+
+    console.log(`[GMB API] ✓ Fetched grid report for scan ${scanId}: ${data.coords.length} coords, keyword: ${data.keyword}`)
+    return data
+  } catch (fetchError: any) {
+    clearTimeout(timeoutId)
+    if (fetchError.name === 'AbortError') {
+      throw new Error('GMB API request timed out after 30 seconds')
+    }
+    throw fetchError
+  }
+}
+
+/**
+ * Get a fresh access token (exported for use in batch operations)
+ */
+export async function getFreshAccessToken(): Promise<string> {
+  return getAccessToken()
 }
