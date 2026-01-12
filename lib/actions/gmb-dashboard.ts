@@ -3,7 +3,7 @@
  * Fetch and process keyword ranking data for dashboard display
  */
 
-import { createClient } from "@/lib/db/supabase-server"
+import { createClient } from "@/lib/supabase/server"
 import { listKeywords, type GMBKeyword, type GMBScanId } from "@/lib/gmb/api"
 import { getLast2CompletedMonths, filterByMonth } from "@/lib/utils/date-ranges"
 
