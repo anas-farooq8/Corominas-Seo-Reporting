@@ -98,7 +98,7 @@ export function CombinedPage4Dashboard({ gbpId, gmbId }: CombinedPage4DashboardP
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-[600px]">
-        <LoadingSpinner message="Loading Google Business data..." />
+        <LoadingSpinner message="Loading SEO dashboard data..." />
       </div>
     )
   }

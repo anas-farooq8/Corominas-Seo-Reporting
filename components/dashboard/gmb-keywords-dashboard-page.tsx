@@ -66,7 +66,7 @@ export function GMBKeywordsDashboardPage({
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-[600px]">
-        <LoadingSpinner message="Loading GMB keywords data..." />
+        <LoadingSpinner message="Loading SEO dashboard data..." />
       </div>
     )
   }
