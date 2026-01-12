@@ -2,6 +2,7 @@
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
+import { GMBInteractiveMap } from "./gmb-interactive-map"
 import type { AggregatedGrid, GridComparison, GridStats } from "@/lib/gmb/grid-utils"
 
 interface GMBGridHeatmapProps {
@@ -15,90 +16,73 @@ interface GMBGridHeatmapProps {
 }
 
 /**
- * Get marker color based on position
+ * Prepare markers for interactive map
  */
-function getPositionColor(position: number): string {
-  if (position <= 3) return 'green'
-  if (position <= 10) return 'yellow'
-  if (position <= 20) return 'orange'
-  return 'red'
-}
-
-/**
- * Get marker color for change map
- */
-function getChangeColor(change: number | null, prevPos: number | null): string {
-  if (change === null) return prevPos === null ? 'blue' : 'gray'
-  return change < 0 ? 'green' : change > 0 ? 'red' : 'gray'
-}
-
-/**
- * Generate Google Maps Static API URL
- */
-function generateMapUrl(
+function prepareMarkers(
   grid: AggregatedGrid | null,
-  centerLat: number,
-  centerLng: number,
   mapType: 'previous' | 'current' | 'change',
   comparison?: GridComparison[]
-): string {
-  const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY
-  if (!apiKey) return ''
+): Array<{ lat: number; lng: number; position: number; color: string }> {
+  const markers: Array<{ lat: number; lng: number; position: number; color: string }> = []
   
-  const markers: string[] = []
-  
-  // Build markers based on map type
   if (mapType === 'change' && comparison) {
+    // Change map: Show current positions with change colors
     comparison.forEach(comp => {
       if (comp.currentPosition !== null) {
-        const color = getChangeColor(comp.change, comp.previousPosition)
-        const label = comp.currentPosition <= 9 ? comp.currentPosition : ''
-        markers.push(`color:${color}|label:${label}|${comp.lat},${comp.lng}`)
+        let color = 'gray'
+        if (comp.change !== null) {
+          color = comp.change < 0 ? 'green' : comp.change > 0 ? 'red' : 'gray'
+        } else if (comp.previousPosition === null) {
+          color = 'blue' // New position
+        }
+        markers.push({ 
+          lat: comp.lat, 
+          lng: comp.lng, 
+          position: comp.currentPosition, 
+          color 
+        })
       }
     })
   } else if (grid) {
+    // Regular map: Color by position quality
     grid.cells.forEach(cell => {
-      const color = getPositionColor(cell.position)
-      const label = cell.position <= 9 ? cell.position : ''
-      markers.push(`color:${color}|label:${label}|${cell.lat},${cell.lng}`)
+      let color = 'red'
+      if (cell.position <= 3) color = 'green'
+      else if (cell.position <= 10) color = 'yellow'
+      else if (cell.position <= 20) color = 'orange'
+      
+      markers.push({ 
+        lat: cell.lat, 
+        lng: cell.lng, 
+        position: cell.position, 
+        color 
+      })
     })
   }
   
-  if (markers.length === 0) return ''
-  
-  // Build URL with markers (limit to 100 per Google Maps restriction)
-  const params = new URLSearchParams({
-    center: `${centerLat},${centerLng}`,
-    zoom: '13',
-    size: '600x450',
-    maptype: 'roadmap',
-    key: apiKey
-  })
-  
-  return `https://maps.googleapis.com/maps/api/staticmap?${params}&markers=${markers.slice(0, 100).join('&markers=')}`
+  return markers
 }
 
 /**
- * Reusable Map Image Component
+ * Calculate grid bounds for outline rectangle
  */
-function MapImage({ url, alt, onError }: { url: string; alt: string; onError?: () => void }) {
-  return (
-    <div className="relative aspect-[4/3] bg-muted rounded-lg overflow-hidden border">
-      <img 
-        src={url} 
-        alt={alt}
-        className="w-full h-full object-cover"
-        onError={(e) => {
-          e.currentTarget.style.display = 'none'
-          e.currentTarget.nextElementSibling?.classList.remove('hidden')
-          onError?.()
-        }}
-      />
-      <div className="hidden absolute inset-0 flex items-center justify-center bg-muted">
-        <p className="text-sm text-red-500">Failed to load map</p>
-      </div>
-    </div>
-  )
+function calculateGridBounds(cells: Array<{ lat: number; lng: number }>): {
+  north: number
+  south: number
+  east: number
+  west: number
+} | null {
+  if (cells.length === 0) return null
+  
+  const lats = cells.map(c => c.lat)
+  const lngs = cells.map(c => c.lng)
+  
+  return {
+    north: Math.max(...lats) + 0.001, // Add small padding
+    south: Math.min(...lats) - 0.001,
+    east: Math.max(...lngs) + 0.001,
+    west: Math.min(...lngs) - 0.001
+  }
 }
 
 export function GMBGridHeatmap({
@@ -113,17 +97,17 @@ export function GMBGridHeatmap({
   const centerLat = currentMonthGrid?.centerLat ?? previousMonthGrid?.centerLat ?? 0
   const centerLng = currentMonthGrid?.centerLng ?? previousMonthGrid?.centerLng ?? 0
   
-  const previousMapUrl = previousMonthGrid 
-    ? generateMapUrl(previousMonthGrid, centerLat, centerLng, 'previous')
-    : ''
+  // Prepare markers for each map
+  const previousMarkers = prepareMarkers(previousMonthGrid, 'previous')
+  const currentMarkers = prepareMarkers(currentMonthGrid, 'current')
+  const changeMarkers = prepareMarkers(currentMonthGrid ?? previousMonthGrid, 'change', gridComparison)
   
-  const currentMapUrl = currentMonthGrid
-    ? generateMapUrl(currentMonthGrid, centerLat, centerLng, 'current')
-    : ''
-  
-  const changeMapUrl = (currentMonthGrid || previousMonthGrid)
-    ? generateMapUrl(currentMonthGrid ?? previousMonthGrid, centerLat, centerLng, 'change', gridComparison)
-    : ''
+  // Calculate grid bounds for outline
+  const gridBounds = currentMonthGrid 
+    ? calculateGridBounds(currentMonthGrid.cells)
+    : previousMonthGrid
+      ? calculateGridBounds(previousMonthGrid.cells)
+      : null
   
   return (
     <Card className="w-full">
@@ -162,18 +146,26 @@ export function GMBGridHeatmap({
           </div>
         </div>
 
-        {/* Maps Grid */}
+        {/* Interactive Maps Grid */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
           {/* Previous Month Map */}
           <div className="space-y-2">
             <h3 className="text-sm font-semibold text-center">{previousMonthLabel}</h3>
-            {previousMapUrl ? (
-              <MapImage url={previousMapUrl} alt={`${previousMonthLabel} Grid Heatmap`} />
-            ) : (
-              <div className="aspect-[4/3] bg-muted rounded-lg flex items-center justify-center border">
-                <p className="text-sm text-muted-foreground">No data</p>
-              </div>
-            )}
+            <div className="h-[450px]">
+              {previousMonthGrid ? (
+                <GMBInteractiveMap
+                  centerLat={centerLat}
+                  centerLng={centerLng}
+                  markers={previousMarkers}
+                  mapType="previous"
+                  gridBounds={gridBounds ?? undefined}
+                />
+              ) : (
+                <div className="w-full h-full bg-muted rounded-lg flex items-center justify-center border">
+                  <p className="text-sm text-muted-foreground">No data</p>
+                </div>
+              )}
+            </div>
             <div className="text-xs text-center text-muted-foreground">
               {previousMonthGrid ? `${previousMonthGrid.cells.length} cells` : 'No scans'}
             </div>
@@ -182,13 +174,21 @@ export function GMBGridHeatmap({
           {/* Current Month Map */}
           <div className="space-y-2">
             <h3 className="text-sm font-semibold text-center">{currentMonthLabel}</h3>
-            {currentMapUrl ? (
-              <MapImage url={currentMapUrl} alt={`${currentMonthLabel} Grid Heatmap`} />
-            ) : (
-              <div className="aspect-[4/3] bg-muted rounded-lg flex items-center justify-center border">
-                <p className="text-sm text-muted-foreground">No data</p>
-              </div>
-            )}
+            <div className="h-[450px]">
+              {currentMonthGrid ? (
+                <GMBInteractiveMap
+                  centerLat={centerLat}
+                  centerLng={centerLng}
+                  markers={currentMarkers}
+                  mapType="current"
+                  gridBounds={gridBounds ?? undefined}
+                />
+              ) : (
+                <div className="w-full h-full bg-muted rounded-lg flex items-center justify-center border">
+                  <p className="text-sm text-muted-foreground">No data</p>
+                </div>
+              )}
+            </div>
             <div className="text-xs text-center text-muted-foreground">
               {currentMonthGrid ? `${currentMonthGrid.cells.length} cells` : 'No scans'}
             </div>
@@ -196,14 +196,22 @@ export function GMBGridHeatmap({
 
           {/* Change Map */}
           <div className="space-y-2">
-            <h3 className="text-sm font-semibold text-center">Change</h3>
-            {changeMapUrl ? (
-              <MapImage url={changeMapUrl} alt="Grid Change Comparison" />
-            ) : (
-              <div className="aspect-[4/3] bg-muted rounded-lg flex items-center justify-center border">
-                <p className="text-sm text-muted-foreground">No data</p>
-              </div>
-            )}
+            <h3 className="text-sm font-semibold text-center">Change ({currentMonthLabel} vs {previousMonthLabel})</h3>
+            <div className="h-[450px]">
+              {(currentMonthGrid || previousMonthGrid) ? (
+                <GMBInteractiveMap
+                  centerLat={centerLat}
+                  centerLng={centerLng}
+                  markers={changeMarkers}
+                  mapType="change"
+                  gridBounds={gridBounds ?? undefined}
+                />
+              ) : (
+                <div className="w-full h-full bg-muted rounded-lg flex items-center justify-center border">
+                  <p className="text-sm text-muted-foreground">No data</p>
+                </div>
+              )}
+            </div>
             <div className="text-xs text-center">
               <div className="flex justify-center gap-3">
                 <span className="flex items-center gap-1">
@@ -213,6 +221,10 @@ export function GMBGridHeatmap({
                 <span className="flex items-center gap-1">
                   <span className="w-2 h-2 bg-red-500 rounded-full"></span>
                   <span className="text-muted-foreground text-xs">Worsened</span>
+                </span>
+                <span className="flex items-center gap-1">
+                  <span className="w-2 h-2 bg-blue-500 rounded-full"></span>
+                  <span className="text-muted-foreground text-xs">New</span>
                 </span>
               </div>
             </div>

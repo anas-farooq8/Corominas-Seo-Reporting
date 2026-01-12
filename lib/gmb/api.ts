@@ -304,7 +304,7 @@ export async function listProfiles(): Promise<GMBProfile[]> {
       // Build URL with query parameters
       const params = new URLSearchParams({
         pageIndex: "0",
-        pageLimit: "100",
+        pageLimit: "1000",
         sortBy: "alphabetical",
         sortDirection: "desc"
       })
@@ -406,7 +406,7 @@ export async function listKeywords(profileId: string): Promise<GMBKeyword[]> {
       // Build URL with query parameters
       const params = new URLSearchParams({
         pageIndex: "0",
-        pageLimit: "100",
+        pageLimit: "10",
         showMonitoringOnly: "true",
         sortBy: "alphabetical",
         sortDirection: "asc"
