@@ -83,27 +83,49 @@ function debugVisualizeGridMatrix(report: GMBGridReportResponse): void {
     return a.coord.lng - b.coord.lng // Lower lng first (left to right)
   })
   
-  // Group by latitude (rows)
-  const rows = new Map<string, typeof coords>()
-  for (const coord of sortedCoords) {
-    const latKey = coord.coord.lat.toFixed(5)
-    if (!rows.has(latKey)) {
-      rows.set(latKey, [])
-    }
-    rows.get(latKey)!.push(coord)
-  }
+  // Display as proper grid based on gridSize
+  const reportGridSize = report.gridSize
   
-  // Print each row
-  const rowKeys = Array.from(rows.keys()).sort((a, b) => parseFloat(b) - parseFloat(a))
-  for (const latKey of rowKeys) {
-    const rowCoords = rows.get(latKey)!.sort((a, b) => a.coord.lng - b.coord.lng)
-    const positions = rowCoords.map(c => {
-      const pos = c.position !== null && c.position !== undefined 
-        ? c.position.toString().padStart(2, ' ') 
-        : 'XX'
-      return `[${pos}]`
-    }).join(' ')
-    console.log(`     ${positions}`)
+  if (sortedCoords.length === reportGridSize * reportGridSize) {
+    // Perfect square grid - display as gridSize × gridSize
+    console.log(`   Displaying as ${reportGridSize}×${reportGridSize} grid:\n`)
+    
+    for (let row = 0; row < reportGridSize; row++) {
+      const rowStart = row * reportGridSize
+      const rowEnd = rowStart + reportGridSize
+      const rowCoords = sortedCoords.slice(rowStart, rowEnd)
+      
+      const positions = rowCoords.map(c => {
+        const pos = c.position !== null && c.position !== undefined 
+          ? c.position.toString().padStart(2, ' ') 
+          : 'XX'
+        return `[${pos}]`
+      }).join(' ')
+      console.log(`     ${positions}`)
+    }
+  } else {
+    // Not a perfect square - group by latitude as before
+    const rows = new Map<string, typeof coords>()
+    for (const coord of sortedCoords) {
+      const latKey = coord.coord.lat.toFixed(5)
+      if (!rows.has(latKey)) {
+        rows.set(latKey, [])
+      }
+      rows.get(latKey)!.push(coord)
+    }
+    
+    // Print each row
+    const rowKeys = Array.from(rows.keys()).sort((a, b) => parseFloat(b) - parseFloat(a))
+    for (const latKey of rowKeys) {
+      const rowCoords = rows.get(latKey)!.sort((a, b) => a.coord.lng - b.coord.lng)
+      const positions = rowCoords.map(c => {
+        const pos = c.position !== null && c.position !== undefined 
+          ? c.position.toString().padStart(2, ' ') 
+          : 'XX'
+        return `[${pos}]`
+      }).join(' ')
+      console.log(`     ${positions}`)
+    }
   }
   console.log('')
 }
@@ -198,27 +220,48 @@ export function aggregateGridScans(reports: GMBGridReportResponse[]): Aggregated
     return a.lng - b.lng
   })
   
-  // Group by latitude
-  const aggRows = new Map<string, typeof cells>()
-  for (const cell of sortedCells) {
-    const latKey = cell.lat.toFixed(5)
-    if (!aggRows.has(latKey)) {
-      aggRows.set(latKey, [])
-    }
-    aggRows.get(latKey)!.push(cell)
-  }
+  const templateGridSize = template.gridSize
   
-  // Print each row
-  const aggRowKeys = Array.from(aggRows.keys()).sort((a, b) => parseFloat(b) - parseFloat(a))
-  for (const latKey of aggRowKeys) {
-    const rowCells = aggRows.get(latKey)!.sort((a, b) => a.lng - b.lng)
-    const positions = rowCells.map(c => {
-      const pos = c.position !== null && c.position !== undefined
-        ? c.position.toString().padStart(2, ' ')
-        : 'XX'
-      return `[${pos}]`
-    }).join(' ')
-    console.log(`   ${positions}`)
+  if (sortedCells.length === templateGridSize * templateGridSize) {
+    // Perfect square grid - display as gridSize × gridSize
+    console.log(`   (${templateGridSize}×${templateGridSize} grid)\n`)
+    
+    for (let row = 0; row < templateGridSize; row++) {
+      const rowStart = row * templateGridSize
+      const rowEnd = rowStart + templateGridSize
+      const rowCells = sortedCells.slice(rowStart, rowEnd)
+      
+      const positions = rowCells.map(c => {
+        const pos = c.position !== null && c.position !== undefined
+          ? c.position.toString().padStart(2, ' ')
+          : 'XX'
+        return `[${pos}]`
+      }).join(' ')
+      console.log(`   ${positions}`)
+    }
+  } else {
+    // Not a perfect square - group by latitude
+    const aggRows = new Map<string, typeof cells>()
+    for (const cell of sortedCells) {
+      const latKey = cell.lat.toFixed(5)
+      if (!aggRows.has(latKey)) {
+        aggRows.set(latKey, [])
+      }
+      aggRows.get(latKey)!.push(cell)
+    }
+    
+    // Print each row
+    const aggRowKeys = Array.from(aggRows.keys()).sort((a, b) => parseFloat(b) - parseFloat(a))
+    for (const latKey of aggRowKeys) {
+      const rowCells = aggRows.get(latKey)!.sort((a, b) => a.lng - b.lng)
+      const positions = rowCells.map(c => {
+        const pos = c.position !== null && c.position !== undefined
+          ? c.position.toString().padStart(2, ' ')
+          : 'XX'
+        return `[${pos}]`
+      }).join(' ')
+      console.log(`   ${positions}`)
+    }
   }
   
   // Calculate statistics
