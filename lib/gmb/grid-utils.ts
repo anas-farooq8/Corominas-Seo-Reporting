@@ -43,6 +43,73 @@ export interface MonthlyGridData {
 }
 
 // ============================================
+// Grid Visualization Utilities (Deduplication)
+// ============================================
+
+/**
+ * Sort grid cells for proper visualization (top-left to bottom-right)
+ */
+function sortGridCells<T extends { lat: number; lng: number }>(cells: T[]): T[] {
+  return [...cells].sort((a, b) => {
+    if (Math.abs(a.lat - b.lat) > 0.0001) {
+      return b.lat - a.lat // Higher lat first (top to bottom)
+    }
+    return a.lng - b.lng // Lower lng first (left to right)
+  })
+}
+
+/**
+ * Format position for display (handles null/undefined)
+ */
+function formatPosition(position: number | null | undefined): string {
+  return position !== null && position !== undefined
+    ? position.toString().padStart(2, ' ')
+    : 'XX'
+}
+
+/**
+ * Visualize grid as matrix (centralized visualization logic)
+ * Used by both debug functions and aggregation display
+ */
+function visualizeGridMatrix<T extends { lat: number; lng: number; position: number }>(
+  cells: T[],
+  gridSize: number,
+  prefix: string = '   '
+): void {
+  const sortedCells = sortGridCells(cells)
+  
+  if (sortedCells.length === gridSize * gridSize) {
+    // Perfect square grid - display as gridSize × gridSize
+    for (let row = 0; row < gridSize; row++) {
+      const rowStart = row * gridSize
+      const rowEnd = rowStart + gridSize
+      const rowCells = sortedCells.slice(rowStart, rowEnd)
+      
+      const positions = rowCells.map(c => `[${formatPosition(c.position)}]`).join(' ')
+      console.log(`${prefix}${positions}`)
+    }
+  } else {
+    // Not a perfect square - group by latitude
+    const rows = new Map<string, T[]>()
+    for (const cell of sortedCells) {
+      const latKey = cell.lat.toFixed(5)
+      if (!rows.has(latKey)) {
+        rows.set(latKey, [])
+      }
+      rows.get(latKey)!.push(cell)
+    }
+    
+    // Print each row
+    const rowKeys = Array.from(rows.keys()).sort((a, b) => parseFloat(b) - parseFloat(a))
+    for (const latKey of rowKeys) {
+      const rowCells = rows.get(latKey)!.sort((a, b) => a.lng - b.lng)
+      const positions = rowCells.map(c => `[${formatPosition(c.position)}]`).join(' ')
+      console.log(`${prefix}${positions}`)
+    }
+  }
+}
+
+// ============================================
 // Grid Debugging Functions
 // ============================================
 
@@ -55,78 +122,21 @@ function debugVisualizeGridMatrix(report: GMBGridReportResponse): void {
   console.log(`\n🔍 DEBUG: Grid Matrix for scan ${_id.substring(0, 8)}... (keyword: "${keyword}")`)
   console.log(`   Grid Size: ${gridSize}x${gridSize}`)
   
-  // Find min/max coordinates to determine grid layout
+  // Find min/max coordinates
   const lats = coords.map(c => c.coord.lat)
   const lngs = coords.map(c => c.coord.lng)
   
-  const minLat = Math.min(...lats)
-  const maxLat = Math.max(...lats)
-  const minLng = Math.min(...lngs)
-  const maxLng = Math.max(...lngs)
-  
-  // Create a map of coordinate to position
-  const posMap = new Map<string, number>()
-  for (const coord of coords) {
-    const key = `${coord.coord.lat.toFixed(6)},${coord.coord.lng.toFixed(6)}`
-    posMap.set(key, coord.position)
-  }
-  
-  // Build matrix visualization
-  console.log(`   Coordinates: lat [${minLat.toFixed(4)} to ${maxLat.toFixed(4)}], lng [${minLng.toFixed(4)} to ${maxLng.toFixed(4)}]`)
+  console.log(`   Coordinates: lat [${Math.min(...lats).toFixed(4)} to ${Math.max(...lats).toFixed(4)}], lng [${Math.min(...lngs).toFixed(4)} to ${Math.max(...lngs).toFixed(4)}]`)
   console.log(`   Matrix (${coords.length} cells):`)
   
-  // Sort coords by lat (desc) and lng (asc) for proper grid layout
-  const sortedCoords = [...coords].sort((a, b) => {
-    if (Math.abs(a.coord.lat - b.coord.lat) > 0.0001) {
-      return b.coord.lat - a.coord.lat // Higher lat first (top to bottom)
-    }
-    return a.coord.lng - b.coord.lng // Lower lng first (left to right)
-  })
+  // Convert to GridCell format
+  const cells = coords.map(c => ({
+    lat: c.coord.lat,
+    lng: c.coord.lng,
+    position: c.position !== null && c.position !== undefined ? c.position : NULL_POSITION_VALUE
+  }))
   
-  // Display as proper grid based on gridSize
-  const reportGridSize = report.gridSize
-  
-  if (sortedCoords.length === reportGridSize * reportGridSize) {
-    // Perfect square grid - display as gridSize × gridSize
-    console.log(`   Displaying as ${reportGridSize}×${reportGridSize} grid:\n`)
-    
-    for (let row = 0; row < reportGridSize; row++) {
-      const rowStart = row * reportGridSize
-      const rowEnd = rowStart + reportGridSize
-      const rowCoords = sortedCoords.slice(rowStart, rowEnd)
-      
-      const positions = rowCoords.map(c => {
-        const pos = c.position !== null && c.position !== undefined 
-          ? c.position.toString().padStart(2, ' ') 
-          : 'XX'
-        return `[${pos}]`
-      }).join(' ')
-      console.log(`     ${positions}`)
-    }
-  } else {
-    // Not a perfect square - group by latitude as before
-    const rows = new Map<string, typeof coords>()
-    for (const coord of sortedCoords) {
-      const latKey = coord.coord.lat.toFixed(5)
-      if (!rows.has(latKey)) {
-        rows.set(latKey, [])
-      }
-      rows.get(latKey)!.push(coord)
-    }
-    
-    // Print each row
-    const rowKeys = Array.from(rows.keys()).sort((a, b) => parseFloat(b) - parseFloat(a))
-    for (const latKey of rowKeys) {
-      const rowCoords = rows.get(latKey)!.sort((a, b) => a.coord.lng - b.coord.lng)
-      const positions = rowCoords.map(c => {
-        const pos = c.position !== null && c.position !== undefined 
-          ? c.position.toString().padStart(2, ' ') 
-          : 'XX'
-        return `[${pos}]`
-      }).join(' ')
-      console.log(`     ${positions}`)
-    }
-  }
+  visualizeGridMatrix(cells, gridSize, '     ')
   console.log('')
 }
 
@@ -199,7 +209,7 @@ export function aggregateGridScans(reports: GMBGridReportResponse[]): Aggregated
   console.log(`\n✅ [Grid Aggregation] Aggregated ${reports.length} scans into ${cells.length} grid cells`)
   console.log(`   Center: ${centerLat.toFixed(6)}, ${centerLng.toFixed(6)}`)
   
-  // Debug: Show final aggregated grid
+  // Build aggregated grid
   const aggregatedGrid = {
     keyword: template.keyword,
     gridSize: template.gridSize,
@@ -210,65 +220,17 @@ export function aggregateGridScans(reports: GMBGridReportResponse[]): Aggregated
     centerLng
   }
   
-  console.log(`\n🎯 FINAL AGGREGATED GRID (keyword: "${template.keyword}"):`)
-  
-  // Sort cells for visualization
-  const sortedCells = [...cells].sort((a, b) => {
-    if (Math.abs(a.lat - b.lat) > 0.0001) {
-      return b.lat - a.lat
-    }
-    return a.lng - b.lng
-  })
-  
-  const templateGridSize = template.gridSize
-  
-  if (sortedCells.length === templateGridSize * templateGridSize) {
-    // Perfect square grid - display as gridSize × gridSize
-    console.log(`   (${templateGridSize}×${templateGridSize} grid)\n`)
-    
-    for (let row = 0; row < templateGridSize; row++) {
-      const rowStart = row * templateGridSize
-      const rowEnd = rowStart + templateGridSize
-      const rowCells = sortedCells.slice(rowStart, rowEnd)
-      
-      const positions = rowCells.map(c => {
-        const pos = c.position !== null && c.position !== undefined
-          ? c.position.toString().padStart(2, ' ')
-          : 'XX'
-        return `[${pos}]`
-      }).join(' ')
-      console.log(`   ${positions}`)
-    }
-  } else {
-    // Not a perfect square - group by latitude
-    const aggRows = new Map<string, typeof cells>()
-    for (const cell of sortedCells) {
-      const latKey = cell.lat.toFixed(5)
-      if (!aggRows.has(latKey)) {
-        aggRows.set(latKey, [])
-      }
-      aggRows.get(latKey)!.push(cell)
-    }
-    
-    // Print each row
-    const aggRowKeys = Array.from(aggRows.keys()).sort((a, b) => parseFloat(b) - parseFloat(a))
-    for (const latKey of aggRowKeys) {
-      const rowCells = aggRows.get(latKey)!.sort((a, b) => a.lng - b.lng)
-      const positions = rowCells.map(c => {
-        const pos = c.position !== null && c.position !== undefined
-          ? c.position.toString().padStart(2, ' ')
-          : 'XX'
-        return `[${pos}]`
-      }).join(' ')
-      console.log(`   ${positions}`)
-    }
-  }
-  
   // Calculate statistics
   const positions = cells.map(c => c.position)
   const avgPos = positions.reduce((a, b) => a + b, 0) / positions.length
   const bestPos = Math.min(...positions)
   const worstPos = Math.max(...positions)
+  
+  // Display final aggregated grid
+  console.log(`\n🎯 FINAL AGGREGATED GRID (keyword: "${template.keyword}"):`)
+  console.log(`   (${template.gridSize}×${template.gridSize} grid)\n`)
+  
+  visualizeGridMatrix(cells, template.gridSize, '   ')
   
   console.log(`\n   Stats: Best=${bestPos}, Worst=${worstPos}, Avg=${avgPos.toFixed(1)}`)
   console.log(`   ════════════════════════════════════════\n`)
@@ -496,11 +458,81 @@ export function selectBestKeyword(keywords: KeywordWithGrid[]): KeywordWithGrid 
   return best.keyword
 }
 
+// ============================================
+// Parallel Fetch Utilities (Deduplication)
+// ============================================
+
+const PARALLEL_MAX_RETRIES = 3
+const PARALLEL_RETRY_DELAY = 1000 // 1 second
+
+/**
+ * Result from a single grid report fetch
+ */
+type FetchResult = 
+  | { success: true; data: GMBGridReportResponse }
+  | { success: false; scanId: string; error: any; isAuthError: boolean }
+
+/**
+ * Check if error is auth-related
+ */
+function isAuthError(error: any): boolean {
+  return error.message?.includes('401') || error.message?.includes('403')
+}
+
+/**
+ * Fetch a single batch of grid reports
+ */
+async function fetchBatch(
+  batch: string[],
+  accessToken: string,
+  getGridReportWithTokenFn: (scanId: string, token: string) => Promise<GMBGridReportResponse>
+): Promise<FetchResult[]> {
+  const promises = batch.map(async (scanId): Promise<FetchResult> => {
+    try {
+      const report = await getGridReportWithTokenFn(scanId, accessToken)
+      return { success: true, data: report }
+    } catch (error: any) {
+      return { success: false, scanId, error, isAuthError: isAuthError(error) }
+    }
+  })
+  
+  return Promise.all(promises)
+}
+
+/**
+ * Process batch results and extract successful/failed items
+ */
+function processBatchResults(results: FetchResult[]): {
+  successful: GMBGridReportResponse[]
+  failed: Array<{ scanId: string; error: any }>
+  authErrorCount: number
+} {
+  const successful: GMBGridReportResponse[] = []
+  const failed: Array<{ scanId: string; error: any }> = []
+  let authErrorCount = 0
+  
+  for (const result of results) {
+    if (result.success) {
+      successful.push(result.data)
+    } else {
+      failed.push({ scanId: result.scanId, error: result.error })
+      if (result.isAuthError) {
+        authErrorCount++
+      }
+    }
+  }
+  
+  return { successful, failed, authErrorCount }
+}
+
 /**
  * Fetch multiple grid reports in parallel with controlled concurrency
- * OPTIMIZED: Uses ONE cached access token for ALL batches
- * Only fetches a new token if an auth error occurs
- * Implements retry logic with automatic re-authentication if token expires
+ * 
+ * OPTIMIZED:
+ * - Uses ONE cached access token for ALL batches
+ * - Only fetches new token on auth errors
+ * - Automatic retry with re-authentication
+ * - Centralized error handling
  */
 export async function fetchGridReportsParallel(
   scanIds: string[],
@@ -513,98 +545,75 @@ export async function fetchGridReportsParallel(
   console.log(`[Grid Parallel Fetch] Fetching ${scanIds.length} grid reports with concurrency ${concurrency}`)
   
   const results: GMBGridReportResponse[] = []
-  const errors: Array<{ scanId: string, error: any }> = []
-  
-  const maxRetries = 3
-  const retryDelay = 1000 // 1 second
+  const allErrors: Array<{ scanId: string; error: any }> = []
   
   // Get access token ONCE at the start (uses cached token if available)
   console.log(`[Grid Parallel Fetch] 🔑 Getting access token for all batches...`)
   let accessToken = await getFreshTokenFn()
   
   // Process in batches
+  const totalBatches = Math.ceil(scanIds.length / concurrency)
+  
   for (let i = 0; i < scanIds.length; i += concurrency) {
     const batch = scanIds.slice(i, i + concurrency)
     const batchNum = Math.floor(i / concurrency) + 1
-    const totalBatches = Math.ceil(scanIds.length / concurrency)
     
     console.log(`\n[Grid Parallel Fetch] 📦 Batch ${batchNum}/${totalBatches} (${batch.length} scans)`)
     
     // Retry logic for this batch
-    let batchSuccess = false
+    let batchComplete = false
     
-    for (let attempt = 1; attempt <= maxRetries && !batchSuccess; attempt++) {
+    for (let attempt = 1; attempt <= PARALLEL_MAX_RETRIES && !batchComplete; attempt++) {
       try {
-        // Only get a new token if this is a retry after auth error
+        // Get fresh token only on retry attempts (after auth errors)
         if (attempt > 1) {
-          console.log(`[Grid Parallel Fetch] 🔄 Getting fresh token for batch ${batchNum} retry (attempt ${attempt}/${maxRetries})`)
+          console.log(`[Grid Parallel Fetch] 🔄 Getting fresh token for retry (attempt ${attempt}/${PARALLEL_MAX_RETRIES})`)
           accessToken = await getFreshTokenFn()
         } else {
-          console.log(`[Grid Parallel Fetch] Using existing token for batch ${batchNum} (attempt ${attempt}/${maxRetries})`)
+          console.log(`[Grid Parallel Fetch] Using cached token (attempt ${attempt}/${PARALLEL_MAX_RETRIES})`)
         }
         
-        // Process all requests in this batch with the same token
-        const batchPromises = batch.map(async (scanId) => {
-          try {
-            const report = await getGridReportWithTokenFn(scanId, accessToken)
-            return { success: true as const, data: report }
-          } catch (error: any) {
-            // Check if it's an auth error
-            const isAuthError = error.message?.includes('401') || error.message?.includes('403')
-            return { success: false as const, scanId, error, isAuthError }
-          }
-        })
+        // Fetch all reports in this batch
+        const batchResults = await fetchBatch(batch, accessToken, getGridReportWithTokenFn)
+        const { successful, failed, authErrorCount } = processBatchResults(batchResults)
         
-        const batchResults = await Promise.all(batchPromises)
-        
-        // Check if any auth errors occurred
-        const authErrors = batchResults.filter(r => !r.success && r.isAuthError)
-        
-        if (authErrors.length > 0 && attempt < maxRetries) {
-          // Token is expired/invalid - retry with fresh token
-          console.log(`[Grid Parallel Fetch] ⚠️ Auth errors detected (${authErrors.length}/${batch.length})`)
-          console.log(`[Grid Parallel Fetch] Token expired/invalid, will get fresh token and retry batch ${batchNum} after ${retryDelay}ms...`)
-          await new Promise(resolve => setTimeout(resolve, retryDelay))
-          continue // Retry the batch
+        // If auth errors occurred and we can retry, do so
+        if (authErrorCount > 0 && attempt < PARALLEL_MAX_RETRIES) {
+          console.log(`[Grid Parallel Fetch] ⚠️ Auth errors: ${authErrorCount}/${batch.length} - retrying after ${PARALLEL_RETRY_DELAY}ms...`)
+          await new Promise(resolve => setTimeout(resolve, PARALLEL_RETRY_DELAY))
+          continue
         }
         
-        // Process results
-        for (const result of batchResults) {
-          if (result.success) {
-            results.push(result.data)
-          } else {
-            errors.push({ scanId: result.scanId, error: result.error })
-          }
-        }
+        // Add results
+        results.push(...successful)
+        allErrors.push(...failed)
         
-        batchSuccess = true
-        console.log(`[Grid Parallel Fetch] ✓ Batch ${batchNum} completed: ${batchResults.filter(r => r.success).length}/${batch.length} successful`)
+        batchComplete = true
+        console.log(`[Grid Parallel Fetch] ✓ Batch ${batchNum}: ${successful.length}/${batch.length} successful`)
         
       } catch (error: any) {
         console.error(`[Grid Parallel Fetch] Batch ${batchNum} attempt ${attempt} failed:`, error)
         
-        // Check if it's a token/auth error
-        if ((error.message?.includes('token') || error.message?.includes('Authentication')) && attempt < maxRetries) {
-          console.log(`[Grid Parallel Fetch] Token error, will retry batch ${batchNum} after ${retryDelay}ms...`)
-          await new Promise(resolve => setTimeout(resolve, retryDelay))
+        // Retry on token/auth errors
+        if (isAuthError(error) && attempt < PARALLEL_MAX_RETRIES) {
+          console.log(`[Grid Parallel Fetch] Token error - retrying after ${PARALLEL_RETRY_DELAY}ms...`)
+          await new Promise(resolve => setTimeout(resolve, PARALLEL_RETRY_DELAY))
           continue
         }
         
-        // If last attempt, record all scans in batch as failed
-        if (attempt === maxRetries) {
-          for (const scanId of batch) {
-            errors.push({ scanId, error })
-          }
-          batchSuccess = true // Mark as "complete" to move to next batch
+        // Last attempt - record all as failed
+        if (attempt === PARALLEL_MAX_RETRIES) {
+          allErrors.push(...batch.map(scanId => ({ scanId, error })))
+          batchComplete = true
         }
       }
     }
   }
   
-  console.log(`\n[Grid Parallel Fetch] 📊 Final Results: ${results.length}/${scanIds.length} successful, ${errors.length} failed`)
+  console.log(`\n[Grid Parallel Fetch] 📊 Final: ${results.length}/${scanIds.length} successful, ${allErrors.length} failed`)
   
-  if (errors.length > 0) {
-    console.warn(`[Grid Parallel Fetch] ⚠️ Failed scans:`, errors.map(e => e.scanId).join(', '))
+  if (allErrors.length > 0) {
+    console.warn(`[Grid Parallel Fetch] ⚠️ Failed scans:`, allErrors.map(e => e.scanId.substring(0, 8)).join(', '))
   }
   
   return results

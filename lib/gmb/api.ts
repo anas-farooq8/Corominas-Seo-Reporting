@@ -7,6 +7,21 @@ import { getKVS, setKVS } from "@/lib/db/kvs"
 const GMB_REFRESH_TOKEN_KEY = "gmb-refresh-token"
 const GMB_API_BASE = "https://gmb-main-sb7q6jfhda-uc.a.run.app"
 
+// Retry configuration
+const MAX_RETRIES = 3
+const RETRY_DELAY = 1000 // 1 second
+const REQUEST_TIMEOUT = 30000 // 30 seconds
+
+// Common headers for GMB API requests
+const COMMON_HEADERS = {
+  "accept": "application/json, text/plain, */*",
+  "accept-language": "en-US,en;q=0.9",
+  "content-type": "application/json",
+  "origin": "https://app.gridmybusiness.com",
+  "referer": "https://app.gridmybusiness.com/",
+  "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36",
+} as const
+
 // ============================================
 // Access Token Cache
 // ============================================
@@ -164,49 +179,35 @@ export async function signInWithPassword(): Promise<GMBAuthResponse> {
       "origin": "https://app.gridmybusiness.com",
     }
 
-    // Create abort controller with 30 second timeout
-    const controller = new AbortController()
-    const timeoutId = setTimeout(() => controller.abort(), 30000)
+    const response = await fetchWithTimeout(url, {
+      method: "POST",
+      headers,
+      body: JSON.stringify(payload),
+    })
 
-    try {
-      const response = await fetch(url, {
-        method: "POST",
-        headers,
-        body: JSON.stringify(payload),
-        signal: controller.signal,
-      })
-      clearTimeout(timeoutId)
+    console.log("[GMB Auth] Response status:", response.status)
 
-      console.log("[GMB Auth] Response status:", response.status)
-
-      if (!response.ok) {
-        let errorDetails = ""
-        try {
-          const errorData = await response.json()
-          errorDetails = JSON.stringify(errorData, null, 2)
-          console.error("[GMB Auth] Error response (JSON):", errorDetails)
-        } catch {
-          errorDetails = await response.text()
-          console.error("[GMB Auth] Error response (text):", errorDetails)
-        }
-        throw new Error(`GMB authentication failed: ${response.status} ${response.statusText}\nDetails: ${errorDetails}`)
+    if (!response.ok) {
+      let errorDetails = ""
+      try {
+        const errorData = await response.json()
+        errorDetails = JSON.stringify(errorData, null, 2)
+        console.error("[GMB Auth] Error response (JSON):", errorDetails)
+      } catch {
+        errorDetails = await response.text()
+        console.error("[GMB Auth] Error response (text):", errorDetails)
       }
-
-      const data = await response.json() as GMBAuthResponse
-
-      // Store refresh token in KVS (will be encrypted by KVS layer)
-      if (data.refreshToken) {
-        await setKVS(GMB_REFRESH_TOKEN_KEY, data.refreshToken)
-      }
-
-      return data
-    } catch (fetchError: any) {
-      clearTimeout(timeoutId)
-      if (fetchError.name === 'AbortError') {
-        throw new Error('GMB authentication request timed out after 30 seconds')
-      }
-      throw fetchError
+      throw new Error(`GMB authentication failed: ${response.status} ${response.statusText}\nDetails: ${errorDetails}`)
     }
+
+    const data = await response.json() as GMBAuthResponse
+
+    // Store refresh token in KVS (will be encrypted by KVS layer)
+    if (data.refreshToken) {
+      await setKVS(GMB_REFRESH_TOKEN_KEY, data.refreshToken)
+    }
+
+    return data
   } catch (error) {
     console.error("[GMB Auth] Sign-in failed:", error)
     throw error
@@ -270,53 +271,39 @@ async function getAccessToken(forceRefresh: boolean = false): Promise<string> {
       "Referer": "https://app.gridmybusiness.com/"
     }
 
-    // Create abort controller with 30 second timeout
-    const controller = new AbortController()
-    const timeoutId = setTimeout(() => controller.abort(), 30000)
+    // Convert payload to URL-encoded format
+    const body = new URLSearchParams(payload).toString()
 
-    try {
-      // Convert payload to URL-encoded format
-      const body = new URLSearchParams(payload).toString()
+    const response = await fetchWithTimeout(url, {
+      method: "POST",
+      headers,
+      body,
+    })
 
-      const response = await fetch(url, {
-        method: "POST",
-        headers,
-        body,
-        signal: controller.signal,
-      })
-      clearTimeout(timeoutId)
-
-      if (!response.ok) {
-        const errorText = await response.text()
-        console.error("[GMB Token] Error response:", errorText)
-        
-        // If refresh token is invalid, try to re-authenticate
-        if (response.status === 400) {
-          console.log("[GMB Token] Refresh token invalid/expired, re-authenticating...")
-          clearTokenCache()
-          await signInWithPassword()
-          // Recursively call to get token with new refresh token
-          return getAccessToken(true) // Force refresh since we just authenticated
-        }
-        
-        throw new Error(`GMB token refresh failed: ${response.status} ${response.statusText}`)
+    if (!response.ok) {
+      const errorText = await response.text()
+      console.error("[GMB Token] Error response:", errorText)
+      
+      // If refresh token is invalid, try to re-authenticate
+      if (response.status === 400) {
+        console.log("[GMB Token] Refresh token invalid/expired, re-authenticating...")
+        clearTokenCache()
+        await signInWithPassword()
+        // Recursively call to get token with new refresh token
+        return getAccessToken(true) // Force refresh since we just authenticated
       }
-
-      const data = await response.json() as GMBTokenResponse
-
-      // Cache the new token
-      cachedAccessToken = data.access_token
-      tokenExpiryTime = Date.now() + TOKEN_CACHE_DURATION
-      console.log("[GMB Token Cache] New token cached (valid for 55 minutes)")
-
-      return data.access_token
-    } catch (fetchError: any) {
-      clearTimeout(timeoutId)
-      if (fetchError.name === 'AbortError') {
-        throw new Error('GMB token refresh request timed out after 30 seconds')
-      }
-      throw fetchError
+      
+      throw new Error(`GMB token refresh failed: ${response.status} ${response.statusText}`)
     }
+
+    const data = await response.json() as GMBTokenResponse
+
+    // Cache the new token
+    cachedAccessToken = data.access_token
+    tokenExpiryTime = Date.now() + TOKEN_CACHE_DURATION
+    console.log("[GMB Token Cache] New token cached (valid for 55 minutes)")
+
+    return data.access_token
   } catch (error) {
     console.error("[GMB Token] Failed to get access token:", error)
     throw error
@@ -337,6 +324,92 @@ export async function hasRefreshToken(): Promise<boolean> {
 }
 
 // ============================================
+// Utility Functions (Deduplication)
+// ============================================
+
+/**
+ * Make HTTP request with timeout handling
+ * Centralized timeout logic to avoid duplication
+ */
+async function fetchWithTimeout(
+  url: string,
+  options: RequestInit,
+  timeoutMs: number = REQUEST_TIMEOUT
+): Promise<Response> {
+  const controller = new AbortController()
+  const timeoutId = setTimeout(() => controller.abort(), timeoutMs)
+
+  try {
+    const response = await fetch(url, {
+      ...options,
+      signal: controller.signal,
+    })
+    return response
+  } catch (error: any) {
+    if (error.name === 'AbortError') {
+      throw new Error(`Request timed out after ${timeoutMs / 1000} seconds`)
+    }
+    throw error
+  } finally {
+    clearTimeout(timeoutId)
+  }
+}
+
+/**
+ * Build headers for GMB API requests
+ * Centralized header construction to avoid duplication
+ */
+function buildGMBHeaders(accessToken: string, workspaceId: string): HeadersInit {
+  return {
+    ...COMMON_HEADERS,
+    "authorization": `Bearer ${accessToken}`,
+    "workspace": workspaceId,
+  }
+}
+
+/**
+ * Generic retry wrapper for GMB API calls with authentication
+ * Eliminates duplicate retry logic in listProfiles() and listKeywords()
+ */
+async function withRetry<T>(
+  operation: (accessToken: string, attempt: number) => Promise<T>,
+  operationName: string
+): Promise<T> {
+  for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
+    try {
+      console.log(`[GMB API] ${operationName} (attempt ${attempt}/${MAX_RETRIES})`)
+      
+      // Only force refresh if this is a retry after auth error (attempt > 1)
+      const forceRefresh = attempt > 1
+      if (forceRefresh) {
+        console.log(`[GMB API] Forcing fresh token due to previous auth error`)
+        clearTokenCache()
+      }
+      
+      const accessToken = await getAccessToken(forceRefresh)
+      return await operation(accessToken, attempt)
+      
+    } catch (error: any) {
+      console.error(`[GMB API] ${operationName} attempt ${attempt}/${MAX_RETRIES} failed:`, error)
+
+      // On last attempt, throw with context
+      if (attempt === MAX_RETRIES) {
+        if (error.message?.includes("token refresh failed") || error.message?.includes("Authentication failed")) {
+          throw new Error(`${operationName} failed: Authentication error after ${MAX_RETRIES} attempts`)
+        }
+        throw new Error(`${operationName} failed after ${MAX_RETRIES} attempts`)
+      }
+
+      // Wait before retrying
+      console.log(`[GMB API] Waiting ${RETRY_DELAY}ms before retry...`)
+      await new Promise(resolve => setTimeout(resolve, RETRY_DELAY))
+    }
+  }
+
+  throw new Error(`${operationName} failed after ${MAX_RETRIES} attempts`)
+}
+
+// ============================================
 // GMB API Functions
 // ============================================
 
@@ -348,108 +421,47 @@ export async function hasRefreshToken(): Promise<boolean> {
  * OPTIMIZED: Reuses cached access token and only refreshes on auth errors
  */
 export async function listProfiles(): Promise<GMBProfile[]> {
-  const maxRetries = 3
-  const retryDelay = 1000 // 1 second
-
-  for (let attempt = 1; attempt <= maxRetries; attempt++) {
-    try {
-      console.log(`[GMB API] Fetching profiles (attempt ${attempt}/${maxRetries})`)
-      
-      // Only force refresh if this is a retry after auth error (attempt > 1)
-      const forceRefresh = attempt > 1
-      if (forceRefresh) {
-        console.log(`[GMB API] Forcing fresh token due to previous auth error`)
-        clearTokenCache()
-      }
-      
-      const accessToken = await getAccessToken(forceRefresh)
-      const workspaceId = process.env.GMB_WORKSPACE_ID
-
-      if (!workspaceId) {
-        throw new Error("GMB_WORKSPACE_ID environment variable is not set")
-      }
-
-      // Build URL with query parameters
-      const params = new URLSearchParams({
-        pageIndex: "0",
-        pageLimit: "1000",
-        sortBy: "alphabetical",
-        sortDirection: "desc"
-      })
-      const url = `${GMB_API_BASE}/workspace/current/profiles?${params.toString()}`
-
-      const headers = {
-        "accept": "application/json, text/plain, */*",
-        "accept-language": "en-US,en;q=0.9",
-        "authorization": `Bearer ${accessToken}`,
-        "content-type": "application/json",
-        "origin": "https://app.gridmybusiness.com",
-        "referer": "https://app.gridmybusiness.com/",
-        "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36",
-        "workspace": workspaceId
-      }
-
-      // Create abort controller with 30 second timeout
-      const controller = new AbortController()
-      const timeoutId = setTimeout(() => controller.abort(), 30000)
-
-      try {
-        const response = await fetch(url, {
-          method: "GET",
-          headers,
-          signal: controller.signal,
-        })
-        clearTimeout(timeoutId)
-
-        if (!response.ok) {
-          const errorText = await response.text()
-          console.error("[GMB API] Error response:", errorText)
-          
-          // If 401/403, the token is invalid - clear cache and retry
-          if ((response.status === 401 || response.status === 403) && attempt < maxRetries) {
-            console.log(`[GMB API] Authentication error (${response.status}), clearing token cache and retrying after ${retryDelay}ms...`)
-            clearTokenCache()
-            await new Promise(resolve => setTimeout(resolve, retryDelay))
-            continue // Retry
-          }
-          
-          throw new Error(`GMB API error: ${response.status} ${response.statusText}`)
-        }
-
-        const data = await response.json() as GMBProfilesResponse
-
-        if (!data.success) {
-          throw new Error("GMB API returned unsuccessful response")
-        }
-
-        console.log(`[GMB API] Successfully fetched ${data.data.profiles.length} profiles`)
-        return data.data.profiles
-      } catch (fetchError: any) {
-        clearTimeout(timeoutId)
-        if (fetchError.name === 'AbortError') {
-          throw new Error('GMB API request timed out after 30 seconds')
-        }
-        throw fetchError
-      }
-    } catch (error: any) {
-      console.error(`[GMB API] Attempt ${attempt}/${maxRetries} failed:`, error)
-
-      // If this was the last attempt, throw the error
-      if (attempt === maxRetries) {
-        if (error.message?.includes("token refresh failed") || error.message?.includes("Authentication failed")) {
-          throw new Error("Authentication failed after 3 attempts. Please check your credentials.")
-        }
-        throw new Error("Failed to fetch Grid My Business profiles after 3 attempts")
-      }
-
-      // Wait before retrying
-      console.log(`[GMB API] Waiting ${retryDelay}ms before retry...`)
-      await new Promise(resolve => setTimeout(resolve, retryDelay))
-    }
+  const workspaceId = process.env.GMB_WORKSPACE_ID
+  if (!workspaceId) {
+    throw new Error("GMB_WORKSPACE_ID environment variable is not set")
   }
 
-  // This should never be reached due to the throw in the last attempt
-  throw new Error("Failed to fetch Grid My Business profiles")
+  return withRetry(async (accessToken, attempt) => {
+    const params = new URLSearchParams({
+      pageIndex: "0",
+      pageLimit: "1000",
+      sortBy: "alphabetical",
+      sortDirection: "desc",
+    })
+    const url = `${GMB_API_BASE}/workspace/current/profiles?${params}`
+    const headers = buildGMBHeaders(accessToken, workspaceId)
+
+    const response = await fetchWithTimeout(url, { method: "GET", headers })
+
+    if (!response.ok) {
+      const errorText = await response.text()
+      console.error("[GMB API] Error response:", errorText)
+      
+      // If 401/403, the token is invalid - clear cache and retry
+      if ((response.status === 401 || response.status === 403) && attempt < MAX_RETRIES) {
+        console.log(`[GMB API] Authentication error (${response.status}), clearing cache and retrying after ${RETRY_DELAY}ms...`)
+        clearTokenCache()
+        await new Promise(resolve => setTimeout(resolve, RETRY_DELAY))
+        throw new Error("AUTH_ERROR_RETRY") // Signal to retry
+      }
+      
+      throw new Error(`GMB API error: ${response.status} ${response.statusText}`)
+    }
+
+    const data = await response.json() as GMBProfilesResponse
+
+    if (!data.success) {
+      throw new Error("GMB API returned unsuccessful response")
+    }
+
+    console.log(`[GMB API] Successfully fetched ${data.data.profiles.length} profiles`)
+    return data.data.profiles
+  }, "Fetching profiles")
 }
 
 /**
@@ -460,116 +472,55 @@ export async function listProfiles(): Promise<GMBProfile[]> {
  * OPTIMIZED: Reuses cached access token and only refreshes on auth errors
  */
 export async function listKeywords(profileId: string): Promise<GMBKeyword[]> {
-  const maxRetries = 3
-  const retryDelay = 1000 // 1 second
-
-  for (let attempt = 1; attempt <= maxRetries; attempt++) {
-    try {
-      console.log(`[GMB API] Fetching keywords for profile ${profileId} (attempt ${attempt}/${maxRetries})`)
-      
-      // Only force refresh if this is a retry after auth error (attempt > 1)
-      const forceRefresh = attempt > 1
-      if (forceRefresh) {
-        console.log(`[GMB API] Forcing fresh token due to previous auth error`)
-        clearTokenCache()
-      }
-      
-      const accessToken = await getAccessToken(forceRefresh)
-      const workspaceId = process.env.GMB_WORKSPACE_ID
-
-      if (!workspaceId) {
-        throw new Error("GMB_WORKSPACE_ID environment variable is not set")
-      }
-
-      // Build URL with query parameters
-      const params = new URLSearchParams({
-        pageIndex: "0",
-        pageLimit: "10",
-        showMonitoringOnly: "true",
-        sortBy: "alphabetical",
-        sortDirection: "asc"
-      })
-      const url = `${GMB_API_BASE}/profile/${profileId}/keyword?${params.toString()}`
-
-      const headers = {
-        "accept": "application/json, text/plain, */*",
-        "accept-language": "en-US,en;q=0.9",
-        "authorization": `Bearer ${accessToken}`,
-        "content-type": "application/json",
-        "origin": "https://app.gridmybusiness.com",
-        "referer": "https://app.gridmybusiness.com/",
-        "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36",
-        "workspace": workspaceId
-      }
-
-      // Create abort controller with 30 second timeout
-      const controller = new AbortController()
-      const timeoutId = setTimeout(() => controller.abort(), 30000)
-
-      try {
-        const response = await fetch(url, {
-          method: "GET",
-          headers,
-          signal: controller.signal,
-        })
-        clearTimeout(timeoutId)
-
-        if (!response.ok) {
-          const errorText = await response.text()
-          console.error("[GMB API] Error response:", errorText)
-          
-          // If 401/403, the token is invalid - clear cache and retry
-          if ((response.status === 401 || response.status === 403) && attempt < maxRetries) {
-            console.log(`[GMB API] Authentication error (${response.status}), clearing token cache and retrying after ${retryDelay}ms...`)
-            clearTokenCache()
-            await new Promise(resolve => setTimeout(resolve, retryDelay))
-            continue // Retry
-          }
-          
-          throw new Error(`GMB API error: ${response.status} ${response.statusText}`)
-        }
-
-        const data = await response.json() as GMBKeywordsResponse
-
-        if (!data.success) {
-          throw new Error("GMB API returned unsuccessful response")
-        }
-
-        // Extract only the fields we need
-        const keywords: GMBKeyword[] = data.data.keywords.map(kw => ({
-          keyword: kw.keyword,
-          profileId: kw.profileId,
-          profileIds: kw.profileIds
-        }))
-
-        console.log(`[GMB API] Successfully fetched ${keywords.length} keywords`)
-        return keywords
-      } catch (fetchError: any) {
-        clearTimeout(timeoutId)
-        if (fetchError.name === 'AbortError') {
-          throw new Error('GMB API request timed out after 30 seconds')
-        }
-        throw fetchError
-      }
-    } catch (error: any) {
-      console.error(`[GMB API] Attempt ${attempt}/${maxRetries} failed:`, error)
-
-      // If this was the last attempt, throw the error
-      if (attempt === maxRetries) {
-        if (error.message?.includes("token refresh failed") || error.message?.includes("Authentication failed")) {
-          throw new Error("Authentication failed after 3 attempts. Please check your credentials.")
-        }
-        throw new Error("Failed to fetch Grid My Business keywords after 3 attempts")
-      }
-
-      // Wait before retrying
-      console.log(`[GMB API] Waiting ${retryDelay}ms before retry...`)
-      await new Promise(resolve => setTimeout(resolve, retryDelay))
-    }
+  const workspaceId = process.env.GMB_WORKSPACE_ID
+  if (!workspaceId) {
+    throw new Error("GMB_WORKSPACE_ID environment variable is not set")
   }
 
-  // This should never be reached due to the throw in the last attempt
-  throw new Error("Failed to fetch Grid My Business keywords")
+  return withRetry(async (accessToken, attempt) => {
+    const params = new URLSearchParams({
+      pageIndex: "0",
+      pageLimit: "5",
+      showMonitoringOnly: "true",
+      sortBy: "lastScanned",
+      sortDirection: "desc",
+    })
+    const url = `${GMB_API_BASE}/profile/${profileId}/keyword?${params}`
+    const headers = buildGMBHeaders(accessToken, workspaceId)
+
+    const response = await fetchWithTimeout(url, { method: "GET", headers })
+
+    if (!response.ok) {
+      const errorText = await response.text()
+      console.error("[GMB API] Error response:", errorText)
+      
+      // If 401/403, the token is invalid - clear cache and retry
+      if ((response.status === 401 || response.status === 403) && attempt < MAX_RETRIES) {
+        console.log(`[GMB API] Authentication error (${response.status}), clearing cache and retrying after ${RETRY_DELAY}ms...`)
+        clearTokenCache()
+        await new Promise(resolve => setTimeout(resolve, RETRY_DELAY))
+        throw new Error("AUTH_ERROR_RETRY") // Signal to retry
+      }
+      
+      throw new Error(`GMB API error: ${response.status} ${response.statusText}`)
+    }
+
+    const data = await response.json() as GMBKeywordsResponse
+
+    if (!data.success) {
+      throw new Error("GMB API returned unsuccessful response")
+    }
+
+    // Extract only the fields we need
+    const keywords: GMBKeyword[] = data.data.keywords.map(kw => ({
+      keyword: kw.keyword,
+      profileId: kw.profileId,
+      profileIds: kw.profileIds,
+    }))
+
+    console.log(`[GMB API] Successfully fetched ${keywords.length} keywords`)
+    return keywords
+  }, `Fetching keywords for profile ${profileId.substring(0, 8)}...`)
 }
 
 /**
@@ -589,57 +540,30 @@ export async function getGridReportWithToken(
   }
 
   const url = `${GMB_API_BASE}/monitoring/reports/list/view`
+  const headers = buildGMBHeaders(accessToken, workspaceId)
+  const payload = { pid: scanId }
 
-  const headers = {
-    "accept": "application/json, text/plain, */*",
-    "accept-language": "en-US,en;q=0.9",
-    "authorization": `Bearer ${accessToken}`,
-    "content-type": "application/json",
-    "origin": "https://app.gridmybusiness.com",
-    "referer": "https://app.gridmybusiness.com/",
-    "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36",
-    "workspace": workspaceId
+  const response = await fetchWithTimeout(url, {
+    method: "POST",
+    headers,
+    body: JSON.stringify(payload),
+  })
+
+  if (!response.ok) {
+    const errorText = await response.text()
+    console.error(`[GMB API] Grid report error for scan ${scanId}:`, errorText)
+    throw new Error(`GMB API error: ${response.status} ${response.statusText}`)
   }
 
-  const payload = {
-    pid: scanId
+  const data = await response.json() as GMBGridReportResponse
+
+  // Validate required fields
+  if (!data._id || !data.coords || !Array.isArray(data.coords)) {
+    throw new Error("Invalid grid report response: missing required fields")
   }
 
-  // Create abort controller with 30 second timeout
-  const controller = new AbortController()
-  const timeoutId = setTimeout(() => controller.abort(), 30000)
-
-  try {
-    const response = await fetch(url, {
-      method: "POST",
-      headers,
-      body: JSON.stringify(payload),
-      signal: controller.signal,
-    })
-    clearTimeout(timeoutId)
-
-    if (!response.ok) {
-      const errorText = await response.text()
-      console.error(`[GMB API] Grid report error for scan ${scanId}:`, errorText)
-      throw new Error(`GMB API error: ${response.status} ${response.statusText}`)
-    }
-
-    const data = await response.json() as GMBGridReportResponse
-
-    // Validate required fields
-    if (!data._id || !data.coords || !Array.isArray(data.coords)) {
-      throw new Error("Invalid grid report response: missing required fields")
-    }
-
-    console.log(`[GMB API] ✓ Fetched grid report for scan ${scanId}: ${data.coords.length} coords, keyword: ${data.keyword}`)
-    return data
-  } catch (fetchError: any) {
-    clearTimeout(timeoutId)
-    if (fetchError.name === 'AbortError') {
-      throw new Error('GMB API request timed out after 30 seconds')
-    }
-    throw fetchError
-  }
+  console.log(`[GMB API] ✓ Fetched grid report for scan ${scanId}: ${data.coords.length} coords, keyword: ${data.keyword}`)
+  return data
 }
 
 /**
