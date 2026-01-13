@@ -22,10 +22,41 @@ const navigation = [
   },
 ]
 
+const SIDEBAR_STORAGE_KEY = 'sidebar-collapsed-state'
+
 export function Sidebar() {
   const pathname = usePathname()
   const [isMobileOpen, setIsMobileOpen] = useState(false)
   const [isDesktopCollapsed, setIsDesktopCollapsed] = useState(false)
+  const [isMounted, setIsMounted] = useState(false)
+
+  // Load sidebar state from localStorage on mount
+  useEffect(() => {
+    setIsMounted(true)
+    const savedState = localStorage.getItem(SIDEBAR_STORAGE_KEY)
+    if (savedState !== null) {
+      setIsDesktopCollapsed(savedState === 'true')
+    }
+  }, [])
+
+  // Save sidebar state to localStorage when it changes
+  useEffect(() => {
+    if (isMounted) {
+      localStorage.setItem(SIDEBAR_STORAGE_KEY, String(isDesktopCollapsed))
+    }
+  }, [isDesktopCollapsed, isMounted])
+
+  // Sync sidebar state across tabs
+  useEffect(() => {
+    const handleStorageChange = (e: StorageEvent) => {
+      if (e.key === SIDEBAR_STORAGE_KEY && e.newValue !== null) {
+        setIsDesktopCollapsed(e.newValue === 'true')
+      }
+    }
+
+    window.addEventListener('storage', handleStorageChange)
+    return () => window.removeEventListener('storage', handleStorageChange)
+  }, [])
 
   // Close mobile menu when route changes
   useEffect(() => {
