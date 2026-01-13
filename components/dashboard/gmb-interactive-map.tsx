@@ -91,11 +91,21 @@ function loadGoogleMapsScript(apiKey: string): Promise<void> {
     script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&v=weekly`
     script.async = true
     script.defer = true
+    
+    // Add error listener for API errors
+    const errorHandler = (event: ErrorEvent) => {
+      if (event.message.includes('Google Maps')) {
+        console.error('Google Maps API Error:', event.message)
+      }
+    }
+    window.addEventListener('error', errorHandler)
+    
     script.onload = () => {
       resolve()
     }
     script.onerror = () => {
       window.googleMapsLoadPromise = undefined
+      window.removeEventListener('error', errorHandler)
       reject(new Error('Failed to load Google Maps script'))
     }
     document.head.appendChild(script)
@@ -144,12 +154,20 @@ export function GMBInteractiveMap({
         
         if (!mapRef.current) return
 
-        // Create map
-        const { Map } = await google.maps.importLibrary('maps') as google.maps.MapsLibrary
-        
+        // Listen for Google Maps API errors
+        const handleGoogleError = (event: ErrorEvent) => {
+          if (event.message && event.message.includes('Google Maps')) {
+            console.error('Google Maps runtime error:', event.message)
+            setError('Google Maps API error. Please check API key restrictions.')
+            setIsLoading(false)
+          }
+        }
+        window.addEventListener('error', handleGoogleError)
+
+        // Create map using classic approach (not importLibrary)
         const brightnessValue = BRIGHTNESS_VALUES[brightness]
         
-        const map = new Map(mapRef.current, {
+        const map = new google.maps.Map(mapRef.current, {
           center: { lat: centerLat, lng: centerLng },
           zoom: getZoomLevel(gridSize),
           mapTypeId: 'roadmap',
@@ -291,8 +309,16 @@ export function GMBInteractiveMap({
   if (error) {
     return (
       <div className="w-full h-full flex items-center justify-center bg-muted rounded-lg border">
-        <div className="text-center">
-          <p className="text-sm text-red-500">{error}</p>
+        <div className="text-center max-w-md p-6">
+          <div className="mb-2">
+            <svg className="w-12 h-12 mx-auto text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+            </svg>
+          </div>
+          <p className="text-sm font-semibold text-red-600 dark:text-red-400 mb-1">{error}</p>
+          <p className="text-xs text-muted-foreground">
+            If you see "ApiTargetBlockedMapError", add your domain to the API key restrictions in Google Cloud Console.
+          </p>
         </div>
       </div>
     )
@@ -315,15 +341,16 @@ export function GMBInteractiveMap({
 
       {/* Brightness Dropdown - Top Left with Icon */}
       <div className="absolute top-3 left-3 z-10">
-        <div className="relative">
+        <div className="relative group">
           <select
             value={brightness}
             onChange={(e) => setBrightness(e.target.value as BrightnessLevel)}
-            className="appearance-none bg-white dark:bg-gray-800 rounded shadow-md cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-700 dark:text-gray-200 pl-3 pr-8 py-2 border-0"
-            style={{ width: '44px', height: '40px' }}
+            title="Set Brightness"
+            className="appearance-none bg-white dark:bg-gray-800 rounded-lg shadow-lg cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-700 dark:text-gray-200 transition-all hover:shadow-xl hover:scale-105 border border-gray-200 dark:border-gray-700"
+            style={{ width: '44px', height: '44px', paddingLeft: '12px' }}
           >
             <option value="low">Low</option>
-            <option value="medium">Med</option>
+            <option value="medium">Medium</option>
             <option value="high">High</option>
           </select>
           {/* Brightness Icon (Sun) */}
@@ -336,7 +363,7 @@ export function GMBInteractiveMap({
               strokeWidth="2" 
               strokeLinecap="round" 
               strokeLinejoin="round"
-              className="w-5 h-5 text-gray-600 dark:text-gray-300"
+              className="w-5 h-5 text-amber-500 dark:text-amber-400"
             >
               <circle cx="12" cy="12" r="4"/>
               <path d="M12 2v2"/>
@@ -349,11 +376,11 @@ export function GMBInteractiveMap({
               <path d="m19.07 4.93-1.41 1.41"/>
             </svg>
           </div>
-          {/* Dropdown Arrow */}
-          <div className="absolute right-1 top-1/2 -translate-y-1/2 pointer-events-none">
-            <svg className="w-3 h-3 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
-            </svg>
+          {/* Tooltip on hover */}
+          <div className="absolute left-full ml-2 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap">
+            <div className="bg-gray-900 dark:bg-gray-700 text-white text-xs px-2 py-1 rounded shadow-lg">
+              Set Brightness
+            </div>
           </div>
         </div>
       </div>
