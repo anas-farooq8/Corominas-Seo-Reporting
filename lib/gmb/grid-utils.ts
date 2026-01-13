@@ -389,11 +389,14 @@ export function calculateGridStats(
 
 /**
  * Select the best keyword to display based on performance metrics
- * Criteria (in priority order):
- * 1. Has grid data in current month
- * 2. Best (lowest) average position
- * 3. Most improved cells
- * 4. Most total cells
+ * 
+ * REVISED SCORING FORMULA (without Data Quality Score):
+ * 1. Average Position Score: Rewards lower average positions
+ * 2. Local Pack Coverage Score: % of cells in top 3 positions (most important)
+ * 3. Position Improvement Score: Rewards improvements, especially dramatic ones
+ * 4. Dynamic Weighting: Weights current performance (70%) more than improvements (30%)
+ * 
+ * Note: Data Quality Score removed as all keywords have same grid size/radius
  */
 export function selectBestKeyword(keywords: KeywordWithGrid[]): KeywordWithGrid | null {
   if (keywords.length === 0) return null
@@ -409,50 +412,114 @@ export function selectBestKeyword(keywords: KeywordWithGrid[]): KeywordWithGrid 
   }
   
   // Score each keyword
-  console.log(`\n📊 [Keyword Scoring] Analyzing ${keywordsWithData.length} keywords...\n`)
+  console.log(`\n📊 [Keyword Scoring] Analyzing ${keywordsWithData.length} keywords with REVISED formula...\n`)
   
   const scored = keywordsWithData.map((kw, index) => {
     const stats = kw.gridStats
+    const lastMonthCells = kw.lastMonthGrid?.cells ?? []
     
-    // Calculate score (lower is better)
-    const avgPositionScore = stats.averagePosition ?? 100 // Lower position is better
-    const improvementScore = -stats.improved * 2 // More improvements is better (negative to subtract)
-    const cellScore = -stats.totalCells * 0.1 // More cells is slightly better
+    // 1. AVERAGE POSITION SCORE (0-100 scale)
+    // Lower position = better, normalized and inverted
+    const avgPosition = stats.averagePosition ?? 21
+    const avgPositionScore = (21 - avgPosition) * 5 // 0-100 range
     
-    const totalScore = avgPositionScore + improvementScore + cellScore
+    // 2. LOCAL PACK COVERAGE SCORE (0-200 scale, most important)
+    // % of cells in top 3 positions
+    const localPackCount = lastMonthCells.filter(cell => cell.position <= 3).length
+    const localPackCoverage = lastMonthCells.length > 0 
+      ? (localPackCount / lastMonthCells.length) * 100 
+      : 0
+    const localPackScore = localPackCoverage * 2 // 0-200 range
+    
+    // 3. POSITION IMPROVEMENT SCORE
+    // Calculate total improvement magnitude (sum of squared improvements)
+    // This rewards dramatic improvements more: 12→8 = 16 points, 18→9 = 81 points
+    let totalImprovementMagnitude = 0
+    let improvementDetails: Array<{from: number, to: number, magnitude: number}> = []
+    
+    if (kw.previousMonthGrid && kw.lastMonthGrid) {
+      const prevCellsMap = new Map<string, number>()
+      kw.previousMonthGrid.cells.forEach(cell => {
+        const key = `${cell.lat.toFixed(6)},${cell.lng.toFixed(6)}`
+        prevCellsMap.set(key, cell.position)
+      })
+      
+      kw.lastMonthGrid.cells.forEach(cell => {
+        const key = `${cell.lat.toFixed(6)},${cell.lng.toFixed(6)}`
+        const prevPosition = prevCellsMap.get(key)
+        
+        if (prevPosition !== undefined && prevPosition !== 21 && cell.position !== 21) {
+          const improvement = prevPosition - cell.position // Positive = improved
+          if (improvement > 0) {
+            const magnitude = improvement * improvement // Square it
+            totalImprovementMagnitude += magnitude
+            improvementDetails.push({ from: prevPosition, to: cell.position, magnitude })
+          }
+        }
+      })
+    }
+    const improvementScore = totalImprovementMagnitude * 0.5 // Scale appropriately
+    
+    // 4. DYNAMIC WEIGHTING
+    // Weight current performance (avg + local pack) 70%, improvements 30%
+    const currentPerformanceWeight = 0.7
+    const improvementWeight = 0.3
+    
+    const totalScore = 
+      (avgPositionScore + localPackScore) * currentPerformanceWeight +
+      improvementScore * improvementWeight
     
     // Debug output for this keyword
     console.log(`   ${index + 1}. "${kw.keyword}"`)
-    console.log(`      Avg Position: ${stats.averagePosition?.toFixed(1) ?? 'N/A'} (score: +${avgPositionScore})`)
-    console.log(`      Improved: ${stats.improved} cells (score: ${improvementScore})`)
-    console.log(`      Worsened: ${stats.worsened} cells`)
-    console.log(`      Total Cells: ${stats.totalCells} (score: ${cellScore.toFixed(1)})`)
-    console.log(`      🎯 Total Score: ${totalScore.toFixed(2)} (lower is better)`)
+    console.log(`      ├─ Avg Position: ${avgPosition.toFixed(2)} → Score: ${avgPositionScore.toFixed(1)}`)
+    console.log(`      ├─ Local Pack: ${localPackCoverage.toFixed(1)}% (${localPackCount}/${lastMonthCells.length} cells) → Score: ${localPackScore.toFixed(1)}`)
+    
+    if (improvementDetails.length > 0) {
+      console.log(`      ├─ Improvements (${improvementDetails.length} cells):`)
+      improvementDetails.slice(0, 3).forEach(imp => {
+        console.log(`      │  • ${imp.from}→${imp.to} (magnitude: ${imp.magnitude})`)
+      })
+      if (improvementDetails.length > 3) {
+        console.log(`      │  • ... and ${improvementDetails.length - 3} more`)
+      }
+      console.log(`      ├─ Total Improvement: ${totalImprovementMagnitude.toFixed(1)} → Score: ${improvementScore.toFixed(1)}`)
+    } else {
+      console.log(`      ├─ Improvements: None`)
+    }
+    
+    console.log(`      └─ 🎯 TOTAL SCORE: ${totalScore.toFixed(2)} (higher is better)`)
     console.log('')
     
     return {
       keyword: kw,
       score: totalScore,
-      avgPos: stats.averagePosition,
+      avgPos: avgPosition,
+      localPackCoverage,
+      localPackCount,
+      improvementScore,
+      improvementDetails,
       improved: stats.improved,
       worsened: stats.worsened,
       totalCells: stats.totalCells
     }
   })
   
-  // Sort by score (lowest is best)
-  scored.sort((a, b) => a.score - b.score)
+  // Sort by score (highest is best now)
+  scored.sort((a, b) => b.score - a.score)
   
   // Show ranking
   console.log(`📈 [Keyword Ranking] Results (best to worst):\n`)
   scored.forEach((item, index) => {
     const medal = index === 0 ? '🏆' : index === 1 ? '🥈' : index === 2 ? '🥉' : `${index + 1}.`
-    console.log(`   ${medal} "${item.keyword.keyword}" - Score: ${item.score.toFixed(2)}`)
+    console.log(`   ${medal} "${item.keyword.keyword}" - Score: ${item.score.toFixed(2)} | Avg: ${item.avgPos.toFixed(1)} | Pack: ${item.localPackCoverage.toFixed(0)}%`)
   })
   
   const best = scored[0]
   console.log(`\n✅ [Best Keyword Selected] "${best.keyword.keyword}"`)
-  console.log(`   Final Stats: Avg=${best.avgPos?.toFixed(1)}, Improved=${best.improved}, Cells=${best.totalCells}`)
+  console.log(`   ├─ Average Position: ${best.avgPos.toFixed(2)}`)
+  console.log(`   ├─ Local Pack Coverage: ${best.localPackCoverage.toFixed(1)}% (${best.localPackCount}/${best.totalCells} cells in top 3)`)
+  console.log(`   ├─ Improved Cells: ${best.improved}`)
+  console.log(`   └─ Final Score: ${best.score.toFixed(2)}`)
   console.log(`   ════════════════════════════════════════\n`)
   
   return best.keyword
