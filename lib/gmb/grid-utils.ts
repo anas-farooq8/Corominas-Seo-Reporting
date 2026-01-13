@@ -498,7 +498,8 @@ export function selectBestKeyword(keywords: KeywordWithGrid[]): KeywordWithGrid 
 
 /**
  * Fetch multiple grid reports in parallel with controlled concurrency
- * Uses ONE access token per batch for efficiency
+ * OPTIMIZED: Uses ONE cached access token for ALL batches
+ * Only fetches a new token if an auth error occurs
  * Implements retry logic with automatic re-authentication if token expires
  */
 export async function fetchGridReportsParallel(
@@ -517,6 +518,10 @@ export async function fetchGridReportsParallel(
   const maxRetries = 3
   const retryDelay = 1000 // 1 second
   
+  // Get access token ONCE at the start (uses cached token if available)
+  console.log(`[Grid Parallel Fetch] 🔑 Getting access token for all batches...`)
+  let accessToken = await getFreshTokenFn()
+  
   // Process in batches
   for (let i = 0; i < scanIds.length; i += concurrency) {
     const batch = scanIds.slice(i, i + concurrency)
@@ -530,9 +535,13 @@ export async function fetchGridReportsParallel(
     
     for (let attempt = 1; attempt <= maxRetries && !batchSuccess; attempt++) {
       try {
-        // Get a fresh access token for this batch
-        console.log(`[Grid Parallel Fetch] 🔑 Getting fresh access token for batch ${batchNum} (attempt ${attempt}/${maxRetries})`)
-        const accessToken = await getFreshTokenFn()
+        // Only get a new token if this is a retry after auth error
+        if (attempt > 1) {
+          console.log(`[Grid Parallel Fetch] 🔄 Getting fresh token for batch ${batchNum} retry (attempt ${attempt}/${maxRetries})`)
+          accessToken = await getFreshTokenFn()
+        } else {
+          console.log(`[Grid Parallel Fetch] Using existing token for batch ${batchNum} (attempt ${attempt}/${maxRetries})`)
+        }
         
         // Process all requests in this batch with the same token
         const batchPromises = batch.map(async (scanId) => {
@@ -552,8 +561,9 @@ export async function fetchGridReportsParallel(
         const authErrors = batchResults.filter(r => !r.success && r.isAuthError)
         
         if (authErrors.length > 0 && attempt < maxRetries) {
-          // Token might be expired, retry the entire batch
-          console.log(`[Grid Parallel Fetch] ⚠️ Auth errors detected (${authErrors.length}/${batch.length}), retrying batch ${batchNum}...`)
+          // Token is expired/invalid - retry with fresh token
+          console.log(`[Grid Parallel Fetch] ⚠️ Auth errors detected (${authErrors.length}/${batch.length})`)
+          console.log(`[Grid Parallel Fetch] Token expired/invalid, will get fresh token and retry batch ${batchNum} after ${retryDelay}ms...`)
           await new Promise(resolve => setTimeout(resolve, retryDelay))
           continue // Retry the batch
         }
