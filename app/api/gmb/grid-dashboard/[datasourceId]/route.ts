@@ -28,7 +28,7 @@ export async function GET(
     }
     
     console.log("[API] GMB Grid Dashboard data fetched successfully")
-    console.log("[API] Keywords with grids:", data.keywords.length)
+    console.log("[API] Keyword:", data.keyword, "| Grid cells:", data.heatmapData.length)
     
     return NextResponse.json(data)
   } catch (error) {

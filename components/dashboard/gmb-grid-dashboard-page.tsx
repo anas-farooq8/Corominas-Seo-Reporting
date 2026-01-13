@@ -1,21 +1,27 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useMemo } from "react"
 import { LoadingSpinner } from "@/components/ui/loading-spinner"
 import { ErrorDisplay } from "@/components/ui/error-display"
 import { GMBGridHeatmap } from "./gmb-grid-heatmap"
+import { KPICard } from "./kpi-card"
+import { Target, MapPin } from "lucide-react"
 import type { GMBGridDashboardData } from "@/lib/actions/gmb-dashboard"
 
 interface GMBGridDashboardPageProps {
   datasourceId?: string
   data?: GMBGridDashboardData | null
   showMetadata?: boolean
+  showKPIs?: boolean
+  noPadding?: boolean
 }
 
 export function GMBGridDashboardPage({ 
   datasourceId, 
   data: externalData, 
-  showMetadata = true
+  showMetadata = true,
+  showKPIs = true,
+  noPadding = false
 }: GMBGridDashboardPageProps) {
   const [data, setData] = useState<GMBGridDashboardData | null>(externalData || null)
   const [loading, setLoading] = useState(!externalData)
@@ -45,11 +51,6 @@ export function GMBGridDashboardPage({
         }
         const dashboardData = await response.json()
         
-        console.log('[GMB Grid Dashboard] Data received:', {
-          keywords: dashboardData.keywords?.length,
-          businessName: dashboardData.businessName
-        })
-        
         if (isMounted) {
           setData(dashboardData)
         }
@@ -71,11 +72,50 @@ export function GMBGridDashboardPage({
       isMounted = false
     }
   }, [datasourceId, externalData])
+  
+  // Memoize KPI calculations
+  const localPackKPI = useMemo(() => {
+    if (!data || !data.kpiCards) return null
+    
+    const kpi = data.kpiCards.localPackCoverage
+    
+    return {
+      change: {
+        change: kpi.change,
+        isIncrease: kpi.isIncrease
+      },
+      currentValue: kpi.current,
+      previousValue: kpi.previous,
+      currentLabel: data.monthLabels.last,
+      previousLabel: data.monthLabels.previous,
+      comparisonLabel: kpi.periodLabel,
+      formatValue: (value: number) => `${value.toFixed(1)}%`
+    }
+  }, [data])
+
+  const avgPositionKPI = useMemo(() => {
+    if (!data || !data.kpiCards) return null
+    
+    const kpi = data.kpiCards.averagePosition
+    
+    return {
+      change: {
+        change: kpi.change,
+        isIncrease: !kpi.isIncrease // Invert: improvement (lower position) shows as green
+      },
+      currentValue: kpi.current,
+      previousValue: kpi.previous,
+      currentLabel: data.monthLabels.last,
+      previousLabel: data.monthLabels.previous,
+      comparisonLabel: kpi.periodLabel,
+      formatValue: (value: number) => value.toFixed(2)
+    }
+  }, [data])
 
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-[600px]">
-        <LoadingSpinner message="Loading Grid My Business heatmaps... This may take a minute." />
+        <LoadingSpinner message="Loading Grid My Business heatmaps..." />
       </div>
     )
   }
@@ -91,94 +131,64 @@ export function GMBGridDashboardPage({
     )
   }
 
-  const bestKeyword = data.bestKeyword
-  const totalKeywords = data.keywords.length
-
   return (
-    <div className={`space-y-4 sm:space-y-6 ${showMetadata ? 'p-3 sm:p-4 md:p-6 lg:p-8' : ''}`}>
+    <div className={`space-y-4 sm:space-y-6 ${!noPadding && (showMetadata || showKPIs) ? 'p-3 sm:p-4 md:p-6 lg:p-8' : ''}`}>
       {showMetadata && (
         <div>
           <h2 className="text-lg sm:text-xl md:text-2xl font-bold text-foreground">
-            {data.businessName}
+            {data.businessName || 'Grid My Business'}
           </h2>
-          <p className="text-xs sm:text-sm text-muted-foreground mt-1">
-            Grid My Business - Grid Analysis
-          </p>
           {data.address && (
-            <p className="text-xs text-muted-foreground mt-0.5">
+            <p className="text-xs sm:text-sm text-muted-foreground mt-1">
               {data.address}
-            </p>
-          )}
-          {bestKeyword && totalKeywords > 1 && (
-            <p className="text-xs text-blue-600 dark:text-blue-400 mt-2 font-medium">
-              🏆 Showing best performing keyword out of {totalKeywords} total
             </p>
           )}
         </div>
       )}
 
-      {/* Overview Stats */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
-        <div className="bg-card border rounded-lg p-4 text-center">
-          <div className="text-2xl sm:text-3xl font-bold text-foreground">
-            {totalKeywords}
-          </div>
-          <div className="text-xs sm:text-sm text-muted-foreground mt-1">
-            Total Keywords
-          </div>
+      {/* KPI Cards */}
+      {showKPIs && localPackKPI && avgPositionKPI && (
+        <div className="grid gap-2 sm:gap-3 grid-cols-2">
+          <KPICard
+            title="Local Pack Coverage"
+            icon={<MapPin className="h-3 w-3 sm:h-3.5 sm:w-3.5 flex-shrink-0" />}
+            currentValue={localPackKPI.currentValue}
+            previousValue={localPackKPI.previousValue}
+            currentLabel={localPackKPI.currentLabel}
+            previousLabel={localPackKPI.previousLabel}
+            colorScheme="green"
+            percentageChange={localPackKPI.change}
+            comparisonLabel={localPackKPI.comparisonLabel}
+            formatValue={localPackKPI.formatValue}
+          />
+
+          <KPICard
+            title="Avg Grid Position"
+            icon={<Target className="h-3 w-3 sm:h-3.5 sm:w-3.5 flex-shrink-0" />}
+            currentValue={avgPositionKPI.currentValue}
+            previousValue={avgPositionKPI.previousValue}
+            currentLabel={avgPositionKPI.currentLabel}
+            previousLabel={avgPositionKPI.previousLabel}
+            colorScheme="blue"
+            percentageChange={avgPositionKPI.change}
+            comparisonLabel={avgPositionKPI.comparisonLabel}
+            formatValue={avgPositionKPI.formatValue}
+          />
         </div>
-        
-        <div className="bg-card border rounded-lg p-4 text-center">
-          <div className="text-2xl sm:text-3xl font-bold text-blue-600 dark:text-blue-400">
-            {data.keywords.reduce((sum, kw) => sum + kw.lastMonthCount, 0)}
-          </div>
-          <div className="text-xs sm:text-sm text-muted-foreground mt-1">
-            {data.monthLabels.last} Scans
-          </div>
-        </div>
-        
-        <div className="bg-card border rounded-lg p-4 text-center">
-          <div className="text-2xl sm:text-3xl font-bold text-gray-600 dark:text-gray-400">
-            {data.keywords.reduce((sum, kw) => sum + kw.previousMonthCount, 0)}
-          </div>
-          <div className="text-xs sm:text-sm text-muted-foreground mt-1">
-            {data.monthLabels.previous} Scans
-          </div>
-        </div>
-        
-        <div className="bg-card border rounded-lg p-4 text-center">
-          <div className="text-2xl sm:text-3xl font-bold text-green-600 dark:text-green-400">
-            {bestKeyword?.gridStats.improved ?? 0}
-          </div>
-          <div className="text-xs sm:text-sm text-muted-foreground mt-1">
-            Best Keyword Improved
-          </div>
-        </div>
-      </div>
+      )}
 
       {/* No Data Message */}
-      {!bestKeyword && (
-        <div className="text-center py-12 bg-muted/30 rounded-lg">
+      {!data.heatmapData || data.heatmapData.length === 0 ? (
+        <div className="text-center py-28 bg-muted/30 rounded-lg">
           <p className="text-lg text-muted-foreground">
             No grid data available for monitored keywords
           </p>
           <p className="text-sm text-muted-foreground mt-2">
-            Grid data will appear once scans are available for {data.monthLabels.last} or {data.monthLabels.previous}
+            Grid data will appear once scans are available
           </p>
         </div>
-      )}
-
-      {/* Best Keyword Grid Heatmap (Google Maps) */}
-      {bestKeyword && (
-        <GMBGridHeatmap
-          keyword={bestKeyword.keyword}
-          previousMonthGrid={bestKeyword.previousMonthGrid}
-          currentMonthGrid={bestKeyword.lastMonthGrid}
-          gridComparison={bestKeyword.gridComparison}
-          gridStats={bestKeyword.gridStats}
-          previousMonthLabel={data.monthLabels.previous}
-          currentMonthLabel={data.monthLabels.last}
-        />
+      ) : (
+        <GMBGridHeatmap data={data} />
       )}
     </div>
   )

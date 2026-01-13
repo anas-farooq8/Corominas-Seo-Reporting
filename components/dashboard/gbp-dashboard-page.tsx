@@ -12,13 +12,15 @@ interface GBPDashboardPageProps {
   data?: GBPDashboardData | null
   showMetadata?: boolean
   showKPIs?: boolean
+  noPadding?: boolean
 }
 
 export function GBPDashboardPage({ 
   datasourceId, 
   data: externalData, 
   showMetadata = true,
-  showKPIs = true
+  showKPIs = true,
+  noPadding = false
 }: GBPDashboardPageProps) {
   const [data, setData] = useState<GBPDashboardData | null>(externalData || null)
   const [loading, setLoading] = useState(!externalData)
@@ -142,15 +144,12 @@ export function GBPDashboardPage({
   }
 
   return (
-    <div className={`space-y-4 sm:space-y-6 ${showMetadata || showKPIs ? 'p-3 sm:p-4 md:p-6 lg:p-8' : ''}`}>
+    <div className={`space-y-4 sm:space-y-6 ${!noPadding && (showMetadata || showKPIs) ? 'p-3 sm:p-4 md:p-6 lg:p-8' : ''}`}>
       {showMetadata && (
         <div>
           <h2 className="text-lg sm:text-xl md:text-2xl font-bold text-foreground">
             {data.businessName}
           </h2>
-          <p className="text-xs sm:text-sm text-muted-foreground mt-1">
-            Google Business Profile Activity
-          </p>
         </div>
       )}
 

@@ -130,7 +130,8 @@ export function CombinedPage4Dashboard({ gbpId, gmbId }: CombinedPage4DashboardP
     return (
       <GMBGridDashboardPage 
         data={gmbData} 
-        showMetadata={true} 
+        showMetadata={true}
+        showKPIs={true}
       />
     )
   }
@@ -157,7 +158,8 @@ export function CombinedPage4Dashboard({ gbpId, gmbId }: CombinedPage4DashboardP
         <GBPDashboardPage 
           data={gbpData} 
           showMetadata={false}  // Hide metadata since it's shown above
-          showKPIs={true} 
+          showKPIs={true}
+          noPadding={true}  // No padding since parent already has it
         />
       )}
 
@@ -166,6 +168,8 @@ export function CombinedPage4Dashboard({ gbpId, gmbId }: CombinedPage4DashboardP
         <GMBGridDashboardPage 
           data={gmbData} 
           showMetadata={false}  // Hide metadata since it's shown above
+          showKPIs={true}
+          noPadding={true}  // No padding since parent already has it
         />
       )}
     </div>
