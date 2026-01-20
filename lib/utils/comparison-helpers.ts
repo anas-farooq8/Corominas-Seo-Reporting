@@ -96,7 +96,7 @@ export function calculateWindowDates(
  * Calculate comparison for a specific window
  * @param dailyData - Array of daily data with date field (YYYYMMDD format)
  * @param endDate - End date string (YYYY-MM-DD)
- * @param windowMonths - Number of months in the window (1, 3, or 6)
+ * @param windowMonths - Number of months in the window (1, 3, 6, or 12)
  * @param valueExtractor - Function to extract the value from each daily data point
  * @returns Window comparison with current/previous values and dates
  */

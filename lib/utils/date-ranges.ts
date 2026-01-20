@@ -139,6 +139,39 @@ export function calculateDashboardDateRanges() {
 }
 
 /**
+ * Calculate date ranges for landing pages (12 months of data only)
+ * Used for Google Analytics landing pages on Page 3
+ * Returns last completed month going back 12 months
+ */
+export function calculateLandingPagesDateRanges() {
+  const today = new Date()
+  
+  // Last completed month end date (last day of previous month)
+  const endDate = new Date(today.getFullYear(), today.getMonth(), 0)
+  
+  // Start date: 12 months before the end date (first day of that month)
+  const startDate = new Date(endDate.getFullYear(), endDate.getMonth() - 11, 1)
+  
+  const result = {
+    startDate: formatDateYYYYMMDD(startDate),
+    endDate: formatDateYYYYMMDD(endDate),
+    startDateAPI: formatDateYYYYMMDDCompact(startDate),
+    endDateAPI: formatDateYYYYMMDDCompact(endDate),
+    startDateObj: startDate,
+    endDateObj: endDate
+  }
+  
+  console.log('[Landing Pages Date Ranges]', {
+    today: formatDateYYYYMMDD(today),
+    startDate: result.startDate,
+    endDate: result.endDate,
+    monthsIncluded: 12
+  })
+  
+  return result
+}
+
+/**
  * Calculate date ranges for SEMrush (all data up to last completed month)
  * Only returns end date - Semrush API will return all historical data
  */

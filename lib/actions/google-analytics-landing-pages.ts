@@ -2,7 +2,7 @@
 
 import { fetchGALandingPagesData, type GALandingPagesResponse, type GALandingPageData, type GADailyLandingPageData } from "@/lib/google-analytics/api"
 import { getCachedDashboardData, saveDashboardCache } from "@/lib/cache/dashboard-cache"
-import { calculateDashboardDateRanges } from "@/lib/utils/date-ranges"
+import { calculateLandingPagesDateRanges } from "@/lib/utils/date-ranges"
 import { getGAPropertyDetails, extractPropertyId } from "@/lib/google-analytics/helpers"
 
 export interface GALandingPagesDashboardData {
@@ -32,8 +32,8 @@ export async function fetchGALandingPagesDashboard(
     
     const propertyName = property.name
     
-    // Use the same date calculation as all dashboards for consistency
-    const { startDate: startDateStr, endDate: endDateStr } = calculateDashboardDateRanges()
+    // Use 12-month date range for landing pages (Page 3)
+    const { startDate: startDateStr, endDate: endDateStr } = calculateLandingPagesDateRanges()
     
     // Check cache first (use a different resource ID for landing pages)
     const resourceId = `${propertyName}-landing-pages`

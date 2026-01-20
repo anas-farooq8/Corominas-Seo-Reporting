@@ -1,7 +1,7 @@
 import type { GoogleAnalyticsApiProperty, GAAccount, GAAccountWithProperties } from "@/lib/supabase/types"
 import { cache } from "react"
 import { google } from "googleapis"
-import { calculateDashboardDateRanges } from "@/lib/utils/date-ranges"
+import { calculateDashboardDateRanges, calculateLandingPagesDateRanges } from "@/lib/utils/date-ranges"
 import { createGoogleAuthClient, validateGoogleCredentials } from "@/lib/api/google-auth"
 
 const SCOPES = ["https://www.googleapis.com/auth/analytics.readonly"]
@@ -332,7 +332,7 @@ export async function fetchGALandingPagesData(propertyId: string): Promise<GALan
   
   try {
     const client = getDataClient()
-    const { startDate, endDate } = calculateDashboardDateRanges()
+    const { startDate, endDate } = calculateLandingPagesDateRanges()
     
     // Create abort controller with 30 second timeout
     const controller = new AbortController()
