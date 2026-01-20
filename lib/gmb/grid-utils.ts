@@ -390,18 +390,40 @@ export function calculateGridStats(
 /**
  * Select the best keyword to display based on performance metrics
  * 
- * IMPROVED SCORING FORMULA (Fixed for variable grid sizes):
- * 1. Average Position Score: Rewards lower average positions (0-120 scale)
- * 2. Tiered Position Score: Rewards cells in top 3, top 10, and top 20 (0-200 scale)
- * 3. Position Improvement Score: Rewards improvements & penalizes declines, NORMALIZED by grid size (0-150 scale, capped)
- * 4. Dynamic Weighting: Current performance (75%) more than improvements (25%)
+ * SCORING FORMULA BREAKDOWN:
  * 
- * FIXES APPLIED:
- * - Improvement score normalized by grid size (prevents larger grids from dominating)
- * - Improvement score capped at 150 (prevents overwhelming current performance)
- * - Added penalty for worsening positions (-0.3 weight)
- * - Added tiered scoring (top 3 most important, but top 10 and top 20 have value)
- * - Better balance between local pack and average position (200 vs 120)
+ * 1. AVERAGE POSITION SCORE (0-120 points)
+ *    - Measures overall ranking quality across all grid cells
+ *    - Formula: (21 - avgPosition) × 6
+ *    - Lower average = higher score (position 1 best, 21 worst)
+ * 
+ * 2. TIERED POSITION SCORE (0-275 points max)
+ *    - Rewards cells in valuable ranking tiers with different weights:
+ *      • Top 3 (Local Pack): 2.0× multiplier → max 200 points
+ *      • Top 10 (Page 1): 0.6× multiplier → max 60 points
+ *      • Top 20 (Page 2): 0.15× multiplier → max 15 points
+ *    - Not binary: recognizes that position 4-10 still has value
+ * 
+ * 3. IMPROVEMENT SCORE (-50 to +150 points, normalized)
+ *    - Measures month-over-month position changes
+ *    - Uses squared magnitude to reward dramatic improvements
+ *    - Normalized by grid size for fair comparison (7×7 vs 9×9)
+ *    - Capped to prevent overwhelming current performance
+ *    - Includes penalties for declines (-30% weight)
+ *    - Handles "not ranked" (21) → visible as major win
+ * 
+ * 4. FINAL WEIGHTING (75/25 split)
+ *    - Current performance: 75% (what matters most to clients)
+ *    - Improvement trend: 25% (shows momentum)
+ *    - This prevents volatile keywords from beating stable performers
+ * 
+ * KEY FEATURES:
+ * ✅ Grid size normalized (49 cells vs 81 cells scored fairly)
+ * ✅ Improvement capped (can't overpower current performance)
+ * ✅ Decline penalties (worsening hurts score)
+ * ✅ 21→visible improvements counted (new rankings valued)
+ * ✅ Visible→21 drops penalized (falling out of rankings hurts)
+ * ✅ Deterministic fallback (proper scoring when no current data)
  */
 export function selectBestKeyword(keywords: KeywordWithGrid[]): KeywordWithGrid | null {
   if (keywords.length === 0) return null
@@ -434,7 +456,9 @@ export function selectBestKeyword(keywords: KeywordWithGrid[]): KeywordWithGrid 
       const tier3Coverage = totalCells > 0 ? (tier3Count / totalCells) * 100 : 0
       
       const tieredScore = tier1Coverage * 2.0 + tier2Coverage * 0.6 + tier3Coverage * 0.15
-      const totalScore = avgPositionScore + tieredScore // No improvement component
+      
+      // Apply same 0.75 weighting for consistency (improvement component = 0)
+      const totalScore = (avgPositionScore + tieredScore) * 0.75
       
       console.log(`   ${index + 1}. "${kw.keyword}" - Score: ${totalScore.toFixed(2)} (previous month only)`)
       
@@ -455,30 +479,50 @@ export function selectBestKeyword(keywords: KeywordWithGrid[]): KeywordWithGrid 
     const lastMonthCells = kw.lastMonthGrid?.cells ?? []
     const totalCells = lastMonthCells.length
     
+    // ═══════════════════════════════════════════════════════════════
     // 1. AVERAGE POSITION SCORE (0-120 scale)
-    // Lower position = better, normalized and inverted
+    // ═══════════════════════════════════════════════════════════════
+    // Measures overall ranking quality across all grid cells
+    // Lower average position = better performance
+    // Position 1 = 120 points, Position 10.5 = 63 points, Position 21 = 0 points
     const avgPosition = stats.averagePosition ?? 21
-    const avgPositionScore = (21 - avgPosition) * 6 // 0-120 range
+    const avgPositionScore = (21 - avgPosition) * 6
     
-    // 2. TIERED POSITION SCORE (0-200 scale)
-    // Not just top 3 - also reward top 10 and top 20
-    const tier1Count = lastMonthCells.filter(cell => cell.position <= 3).length   // Local Pack
-    const tier2Count = lastMonthCells.filter(cell => cell.position > 3 && cell.position <= 10).length  // Page 1
+    // ═══════════════════════════════════════════════════════════════
+    // 2. TIERED POSITION SCORE (0-275 scale)
+    // ═══════════════════════════════════════════════════════════════
+    // Rewards cells based on where they rank, with heavy emphasis on Local Pack
+    // Not binary - recognizes that position 4-10 still drives traffic
+    
+    // Count cells in each tier
+    const tier1Count = lastMonthCells.filter(cell => cell.position <= 3).length   // Local Pack (90% of clicks)
+    const tier2Count = lastMonthCells.filter(cell => cell.position > 3 && cell.position <= 10).length  // Rest of Page 1
     const tier3Count = lastMonthCells.filter(cell => cell.position > 10 && cell.position <= 20).length // Page 2
     
+    // Calculate coverage percentages
     const tier1Coverage = totalCells > 0 ? (tier1Count / totalCells) * 100 : 0
     const tier2Coverage = totalCells > 0 ? (tier2Count / totalCells) * 100 : 0
     const tier3Coverage = totalCells > 0 ? (tier3Count / totalCells) * 100 : 0
     
+    // Apply weighted scoring: Top 3 heavily favored, but others count too
     const tieredScore = 
-      tier1Coverage * 2.0 +    // Top 3: max 200 points (most important)
-      tier2Coverage * 0.6 +    // 4-10: max 60 points (still valuable)
-      tier3Coverage * 0.15     // 11-20: max 15 points (some visibility)
-    // Total max: 275 points if 100% in top 3
+      tier1Coverage * 2.0 +    // Top 3: 100% coverage = 200 points (most valuable)
+      tier2Coverage * 0.6 +    // 4-10: 100% coverage = 60 points (still good visibility)
+      tier3Coverage * 0.15     // 11-20: 100% coverage = 15 points (minimal value)
+    // Maximum possible: 275 points if 100% of cells in top 3
     
-    // 3. POSITION IMPROVEMENT SCORE (NORMALIZED & CAPPED)
-    // Calculate improvement/decline magnitude, normalize by grid size, cap to prevent explosion
-    let totalImprovementMagnitude = 0
+    // ═══════════════════════════════════════════════════════════════
+    // 3. POSITION IMPROVEMENT SCORE (Normalized, -50 to +150 scale)
+    // ═══════════════════════════════════════════════════════════════
+    // Measures month-over-month performance changes
+    // Key features:
+    // - Squared magnitude rewards dramatic improvements (15→3 better than 12→9)
+    // - Normalized by grid size (fair comparison between 7×7 and 9×9 grids)
+    // - Capped at ±150 to prevent overwhelming current performance
+    // - Penalties for declines (-30% weight, lighter than improvement rewards)
+    // - Handles 21→visible (breaking into rankings) and visible→21 (falling out)
+    
+    let totalImprovementMagnitude = 0  // Accumulates weighted magnitude across all cells
     let improvementDetails: Array<{from: number, to: number, magnitude: number, type: 'improved' | 'worsened'}> = []
     let improvedCount = 0
     let worsenedCount = 0
@@ -494,21 +538,33 @@ export function selectBestKeyword(keywords: KeywordWithGrid[]): KeywordWithGrid 
         const key = `${cell.lat.toFixed(6)},${cell.lng.toFixed(6)}`
         const prevPosition = prevCellsMap.get(key)
         
-        // FIX #3: Include improvements from "not ranked" (21) to visible positions
-        // This captures important SEO wins when keywords break into rankings
         if (prevPosition !== undefined) {
+          // Skip 21 → 21 (no change, both months not ranked)
+          if (prevPosition === 21 && cell.position === 21) {
+            return
+          }
+          
           const change = prevPosition - cell.position // Positive = improved, negative = worsened
           
           if (change > 0) {
-            // IMPROVED (including 21 → visible)
-            const magnitude = change * change // Square it
+            // IMPROVED (including 21 → visible breakthroughs)
+            // Squared magnitude rewards dramatic improvements (e.g., 18→3 more valuable than 12→9)
+            const magnitude = change * change
             totalImprovementMagnitude += magnitude
             improvementDetails.push({ from: prevPosition, to: cell.position, magnitude, type: 'improved' })
             improvedCount++
-          } else if (change < 0 && prevPosition !== 21 && cell.position !== 21) {
-            // WORSENED - penalize but only for visible → visible declines
-            // Don't penalize visible → 21 (already handled by current performance score drop)
-            const magnitude = change * change * -0.3 // Negative penalty, 30% weight
+          } else if (change < 0) {
+            // WORSENED (including visible → 21 drops)
+            // Apply penalty for all declines, but lighter than improvement rewards
+            // Visible → 21 drops use flat penalty instead of squared to avoid over-penalization
+            let magnitude: number
+            if (cell.position === 21) {
+              // Visible → not ranked: use flat 5-point penalty per starting position
+              magnitude = Math.abs(change) * 5 * -0.3
+            } else {
+              // Visible → visible decline: use squared penalty
+              magnitude = change * change * -0.3
+            }
             totalImprovementMagnitude += magnitude
             improvementDetails.push({ from: prevPosition, to: cell.position, magnitude, type: 'worsened' })
             worsenedCount++
@@ -517,19 +573,44 @@ export function selectBestKeyword(keywords: KeywordWithGrid[]): KeywordWithGrid 
       })
     }
     
-    // NORMALIZE by grid size to make scores comparable across different grid sizes
-    // Max possible improvement per cell: 20 positions → 400 magnitude
-    // For 49 cells (7×7): max = 19,600
-    // For 81 cells (9×9): max = 32,400
-    // Normalize to 0-100 scale, then scale to 0-300 range, then cap at 150
-    const maxPossibleMagnitude = totalCells * (20 * 20) // Max if every cell improved by 20 positions
+    // ─────────────────────────────────────────────────────────────
+    // Normalize improvement by grid size for fair comparison
+    // ─────────────────────────────────────────────────────────────
+    // Without normalization: 9×9 grid (81 cells) would always beat 7×7 (49 cells)
+    // even with identical improvement patterns
+    //
+    // Example: 30 cells improve by 5 positions (magnitude = 25 each)
+    //   7×7 grid: 30/49 = 61% improved, raw = 750
+    //   9×9 grid: 30/81 = 37% improved, raw = 750
+    //   Without normalization: Same score despite 7×7 performing better!
+    //
+    // Max possible per grid:
+    //   Each cell can improve max 20 positions → magnitude 400
+    //   7×7 (49 cells): max = 49 × 400 = 19,600
+    //   9×9 (81 cells): max = 81 × 400 = 32,400
+    //
+    // Normalization: (raw / maxPossible) × 300, then cap at ±150
+    const maxPossibleMagnitude = totalCells * (20 * 20)
     const normalizedImprovement = maxPossibleMagnitude > 0 
       ? (totalImprovementMagnitude / maxPossibleMagnitude) * 300 
       : 0
-    const improvementScore = Math.max(Math.min(normalizedImprovement, 150), -50) // Cap at +150, floor at -50
+    const improvementScore = Math.max(Math.min(normalizedImprovement, 150), -50) // Floor at -50, cap at +150
     
-    // 4. FINAL SCORE WITH ADJUSTED WEIGHTING
-    // Current performance matters more (75%), improvement less (25%)
+    // ═══════════════════════════════════════════════════════════════
+    // 4. FINAL SCORE CALCULATION (75/25 weighted)
+    // ═══════════════════════════════════════════════════════════════
+    // Current performance (75%) weighted higher than improvement (25%)
+    // 
+    // Rationale:
+    // - Clients care most about where you rank TODAY, not just trends
+    // - Prevents volatile keywords from beating stable high-performers
+    // - A keyword consistently at #3 beats one bouncing between #1 and #15
+    // 
+    // Example scores:
+    //   Strong current, no improvement: (300) × 0.75 + (0) × 0.25 = 225
+    //   Weak current, huge improvement: (100) × 0.75 + (150) × 0.25 = 112.5
+    //   → Current performance wins, as intended
+    
     const currentPerformanceWeight = 0.75
     const improvementWeight = 0.25
     
