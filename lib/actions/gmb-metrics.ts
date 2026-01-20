@@ -22,7 +22,6 @@ export interface GMBKPICard {
 }
 
 export interface GMBMetricsDashboardData {
-  profileId: string
   businessName: string
   address: string
   kpiCards: {
@@ -161,7 +160,6 @@ export async function fetchGMBMetricsDashboardData(
     
     // Build dashboard data
     const dashboardData: GMBMetricsDashboardData = {
-      profileId: profile.profile_id,
       businessName: profile.business_name,
       address: profile.address || '',
       kpiCards: {

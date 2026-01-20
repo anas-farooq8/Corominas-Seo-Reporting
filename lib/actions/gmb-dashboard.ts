@@ -53,7 +53,6 @@ export interface GMBGridDashboardCacheData {
 
 // For backward compatibility with UI components
 export type GMBGridDashboardData = GMBGridDashboardCacheData & {
-  profileId?: string
   businessName?: string
 }
 
@@ -205,7 +204,6 @@ export async function fetchGMBGridDashboardData(
       console.log('[GMB Grid Dashboard] ✓ Cache hit - returning cached data')
       return {
         ...cachedData as GMBGridDashboardCacheData,
-        profileId: profile.profile_id,
         businessName: profile.business_name
       }
     }
@@ -350,7 +348,6 @@ export async function fetchGMBGridDashboardData(
     
     return {
       ...dashboardData,
-      profileId: profile.profile_id,
       businessName: profile.business_name
     }
   } catch (error) {
