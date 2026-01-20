@@ -121,7 +121,13 @@ export function GMBGridDashboardPage({
             isIncrease={metricsData.kpiCards.gmbScore.isIncrease}
             colorScheme="purple"
             formatValue={(val) => typeof val === 'number' ? `${val.toFixed(1)}%` : String(val)}
-            subtitle={metricsData.kpiCards.gmbScore.change === 0 ? "No changes" : undefined}
+            subtitle={
+              metricsData.kpiCards.gmbScore.change === 0 
+                ? "No changes"
+                : metricsData.kpiCards.gmbScore.isIncrease
+                  ? `+${Math.abs(metricsData.kpiCards.gmbScore.current - metricsData.kpiCards.gmbScore.previous).toFixed(1)} from last month`
+                  : `-${Math.abs(metricsData.kpiCards.gmbScore.current - metricsData.kpiCards.gmbScore.previous).toFixed(1)} from last month`
+            }
           />
 
           <GMBKPICard
@@ -149,7 +155,13 @@ export function GMBGridDashboardPage({
             isIncrease={metricsData.kpiCards.rating.isIncrease}
             colorScheme="orange"
             formatValue={(val) => typeof val === 'number' ? val.toFixed(1) : String(val)}
-            subtitle={metricsData.kpiCards.rating.change === 0 ? "No changes" : undefined}
+            subtitle={
+              metricsData.kpiCards.rating.change === 0 
+                ? "No changes"
+                : metricsData.kpiCards.rating.isIncrease
+                  ? `+${Math.abs(metricsData.kpiCards.rating.current - metricsData.kpiCards.rating.previous).toFixed(1)} from last month`
+                  : `-${Math.abs(metricsData.kpiCards.rating.current - metricsData.kpiCards.rating.previous).toFixed(1)} from last month`
+            }
           />
 
           <GMBKPICard
@@ -160,7 +172,13 @@ export function GMBGridDashboardPage({
             isIncrease={metricsData.kpiCards.reviews.isIncrease}
             colorScheme="blue"
             formatValue={(val) => typeof val === 'number' ? Math.round(val).toString() : String(val)}
-            subtitle={metricsData.kpiCards.reviews.change === 0 ? "No changes" : undefined}
+            subtitle={
+              metricsData.kpiCards.reviews.change === 0 
+                ? "No changes"
+                : metricsData.kpiCards.reviews.isIncrease
+                  ? `+${Math.abs(metricsData.kpiCards.reviews.current - metricsData.kpiCards.reviews.previous).toFixed(0)} from last month`
+                  : `-${Math.abs(metricsData.kpiCards.reviews.current - metricsData.kpiCards.reviews.previous).toFixed(0)} from last month`
+            }
           />
         </div>
       )}
