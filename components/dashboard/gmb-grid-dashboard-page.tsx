@@ -100,11 +100,11 @@ export function GMBGridDashboardPage({
       {showMetadata && (
         <div>
           <h2 className="text-lg sm:text-xl md:text-2xl font-bold text-foreground">
-            {data.businessName || 'Grid My Business'}
+            {data.businessName || metricsData?.businessName || 'Grid My Business'}
           </h2>
-          {data.address && (
+          {(data.address || metricsData?.address) && (
             <p className="text-xs sm:text-sm text-muted-foreground mt-1">
-              {data.address}
+              {data.address || metricsData?.address}
             </p>
           )}
         </div>
