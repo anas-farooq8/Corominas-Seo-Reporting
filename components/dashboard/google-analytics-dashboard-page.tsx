@@ -462,7 +462,7 @@ export function GoogleAnalyticsDashboardPage({
               />
               {/* Current Period - Solid Lines */}
               <Line
-                type="monotone"
+                type="linear"
                 dataKey="currentTotalTraffic"
                 stroke="#8b5cf6"
                 strokeWidth={2}
@@ -473,7 +473,7 @@ export function GoogleAnalyticsDashboardPage({
                 animationDuration={300}
               />
               <Line
-                type="monotone"
+                type="linear"
                 dataKey="currentOrganicTraffic"
                 stroke="#22c55e"
                 strokeWidth={2}
@@ -485,7 +485,7 @@ export function GoogleAnalyticsDashboardPage({
               />
               {/* Previous Period - Dotted Lines */}
               <Line
-                type="monotone"
+                type="linear"
                 dataKey="previousTotalTraffic"
                 stroke="#8b5cf6"
                 strokeWidth={2}
@@ -497,7 +497,7 @@ export function GoogleAnalyticsDashboardPage({
                 animationDuration={300}
               />
               <Line
-                type="monotone"
+                type="linear"
                 dataKey="previousOrganicTraffic"
                 stroke="#22c55e"
                 strokeWidth={2}
@@ -562,7 +562,7 @@ export function GoogleAnalyticsDashboardPage({
               <Legend content={<CustomGATrafficLegend />} wrapperStyle={{ paddingTop: '20px' }} />
               {/* Current Period - Solid Lines */}
               <Line
-                type="monotone"
+                type="linear"
                 dataKey="currentTotalTraffic"
                 stroke="#8b5cf6"
                 strokeWidth={3}
@@ -573,7 +573,7 @@ export function GoogleAnalyticsDashboardPage({
                 animationDuration={300}
               />
               <Line
-                type="monotone"
+                type="linear"
                 dataKey="currentOrganicTraffic"
                 stroke="#22c55e"
                 strokeWidth={2.5}
@@ -585,7 +585,7 @@ export function GoogleAnalyticsDashboardPage({
               />
               {/* Previous Period - Dotted Lines */}
               <Line
-                type="monotone"
+                type="linear"
                 dataKey="previousTotalTraffic"
                 stroke="#8b5cf6"
                 strokeWidth={3}
@@ -597,7 +597,7 @@ export function GoogleAnalyticsDashboardPage({
                 animationDuration={300}
               />
               <Line
-                type="monotone"
+                type="linear"
                 dataKey="previousOrganicTraffic"
                 stroke="#22c55e"
                 strokeWidth={2.5}
@@ -675,7 +675,7 @@ export function GoogleAnalyticsDashboardPage({
               />
               {/* Current Period - Solid Lines */}
               <Line
-                type="monotone"
+                type="linear"
                 dataKey="currentOrganicSessions"
                 stroke="#22c55e"
                 strokeWidth={2}
@@ -686,7 +686,7 @@ export function GoogleAnalyticsDashboardPage({
                 animationDuration={300}
               />
               <Line
-                type="monotone"
+                type="linear"
                 dataKey="currentOrganicConversions"
                 stroke="#3b82f6"
                 strokeWidth={2}
@@ -698,7 +698,7 @@ export function GoogleAnalyticsDashboardPage({
               />
               {/* Previous Period - Dotted Lines */}
               <Line
-                type="monotone"
+                type="linear"
                 dataKey="previousOrganicSessions"
                 stroke="#22c55e"
                 strokeWidth={2}
@@ -710,7 +710,7 @@ export function GoogleAnalyticsDashboardPage({
                 animationDuration={300}
               />
               <Line
-                type="monotone"
+                type="linear"
                 dataKey="previousOrganicConversions"
                 stroke="#3b82f6"
                 strokeWidth={2}
@@ -775,7 +775,7 @@ export function GoogleAnalyticsDashboardPage({
               <Legend content={<CustomGASessionsLegend />} wrapperStyle={{ paddingTop: '20px' }} />
               {/* Current Period - Solid Lines */}
               <Line
-                type="monotone"
+                type="linear"
                 dataKey="currentOrganicSessions"
                 stroke="#22c55e"
                 strokeWidth={2.5}
@@ -786,7 +786,7 @@ export function GoogleAnalyticsDashboardPage({
                 animationDuration={300}
               />
               <Line
-                type="monotone"
+                type="linear"
                 dataKey="currentOrganicConversions"
                 stroke="#3b82f6"
                 strokeWidth={2.5}
@@ -798,7 +798,7 @@ export function GoogleAnalyticsDashboardPage({
               />
               {/* Previous Period - Dotted Lines */}
               <Line
-                type="monotone"
+                type="linear"
                 dataKey="previousOrganicSessions"
                 stroke="#22c55e"
                 strokeWidth={2.5}
@@ -810,7 +810,7 @@ export function GoogleAnalyticsDashboardPage({
                 animationDuration={300}
               />
               <Line
-                type="monotone"
+                type="linear"
                 dataKey="previousOrganicConversions"
                 stroke="#3b82f6"
                 strokeWidth={2.5}
