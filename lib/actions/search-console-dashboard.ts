@@ -15,7 +15,7 @@ export interface GSCKPICardData {
     previous: number
     change: number
     isIncrease: boolean
-    periodType: '1-month' | '3-month' | '6-month'
+    periodType: '1-month' | '3-month' | '6-month' | '12-month'
     periodLabel: string
   }
   totalImpressions: {
@@ -23,7 +23,7 @@ export interface GSCKPICardData {
     previous: number
     change: number
     isIncrease: boolean
-    periodType: '1-month' | '3-month' | '6-month'
+    periodType: '1-month' | '3-month' | '6-month' | '12-month'
     periodLabel: string
   }
   averageCTR: {
@@ -31,7 +31,7 @@ export interface GSCKPICardData {
     previous: number
     change: number
     isIncrease: boolean
-    periodType: '1-month' | '3-month' | '6-month'
+    periodType: '1-month' | '3-month' | '6-month' | '12-month'
     periodLabel: string
   }
   averagePosition: {
@@ -39,7 +39,7 @@ export interface GSCKPICardData {
     previous: number
     change: number
     isIncrease: boolean
-    periodType: '1-month' | '3-month' | '6-month'
+    periodType: '1-month' | '3-month' | '6-month' | '12-month'
     periodLabel: string
   }
 }
@@ -121,6 +121,7 @@ function calculateMetricComparison(dailyData: GSCDailyData[], endDate: string, m
     { months: 1, label: '1-month' },
     { months: 3, label: '3-month' },
     { months: 6, label: '6-month' },
+    { months: 12, label: '12-month' },
   ]
   
   let mostNeutralNegative: ComparisonWindow | null = null
@@ -140,6 +141,14 @@ function calculateMetricComparison(dailyData: GSCDailyData[], endDate: string, m
     
     const currentTotal = currentData.reduce((sum, d) => sum + d[metric], 0)
     const previousTotal = previousData.reduce((sum, d) => sum + d[metric], 0)
+    
+    // Skip if previous period has no data
+    if (previousData.length === 0 || previousTotal === 0) {
+      const metricName = metric === 'clicks' ? 'GSC Total Clicks' : 'GSC Total Impressions'
+      console.log(`[${metricName}] ${label}: Insufficient data for comparison (previous period has ${previousData.length} days, total: ${previousTotal})`)
+      console.log(`  ✗ Skipping due to insufficient data\n`)
+      continue
+    }
     
     // Calculate days count
     const currentDays = currentData.length
@@ -202,6 +211,7 @@ function calculateCTRComparison(dailyData: GSCDailyData[], endDate: string): Com
     { months: 1, label: '1-month' },
     { months: 3, label: '3-month' },
     { months: 6, label: '6-month' },
+    { months: 12, label: '12-month' },
   ]
   
   let mostNeutralNegative: ComparisonWindow | null = null
@@ -226,6 +236,13 @@ function calculateCTRComparison(dailyData: GSCDailyData[], endDate: string): Com
     const previousClicks = previousData.reduce((sum, d) => sum + d.clicks, 0)
     const previousImpressions = previousData.reduce((sum, d) => sum + d.impressions, 0)
     const previousCTR = previousImpressions > 0 ? (previousClicks / previousImpressions) * 100 : 0
+    
+    // Skip if previous period has no data
+    if (previousData.length === 0 || previousCTR === 0) {
+      console.log(`[GSC Average CTR] ${label}: Insufficient data for comparison (previous period has ${previousData.length} days, CTR: ${previousCTR.toFixed(2)}%)`)
+      console.log(`  ✗ Skipping due to insufficient data\n`)
+      continue
+    }
     
     // Calculate days count
     const currentDays = currentData.length
@@ -264,7 +281,7 @@ function calculateCTRComparison(dailyData: GSCDailyData[], endDate: string): Com
       
       console.log(`  ✗ Negative, trying next window\n`)
       
-      if (label === '6-month') {
+      if (label === '12-month') {
         console.log(`  ✓ Selected ${mostNeutralNegative!.periodType} (most neutral negative)\n`)
         return mostNeutralNegative!
       }
@@ -288,6 +305,7 @@ function calculatePositionComparison(dailyData: GSCDailyData[], endDate: string)
     { months: 1, label: '1-month' },
     { months: 3, label: '3-month' },
     { months: 6, label: '6-month' },
+    { months: 12, label: '12-month' },
   ]
   
   let mostNeutralNegative: ComparisonWindow | null = null
@@ -312,6 +330,13 @@ function calculatePositionComparison(dailyData: GSCDailyData[], endDate: string)
     const previousImpressions = previousData.reduce((sum, d) => sum + d.impressions, 0)
     const previousWeightedPosition = previousData.reduce((sum, d) => sum + (d.position * d.impressions), 0)
     const previousPosition = previousImpressions > 0 ? previousWeightedPosition / previousImpressions : 0
+    
+    // Skip if previous period has no data
+    if (previousData.length === 0 || previousPosition === 0) {
+      console.log(`[GSC Average Position] ${label}: Insufficient data for comparison (previous period has ${previousData.length} days, position: ${previousPosition.toFixed(2)})`)
+      console.log(`  ✗ Skipping due to insufficient data\n`)
+      continue
+    }
     
     // Calculate days count
     const currentDays = currentData.length
@@ -350,7 +375,7 @@ function calculatePositionComparison(dailyData: GSCDailyData[], endDate: string)
       
       console.log(`  ✗ Worsened, trying next window\n`)
       
-      if (label === '6-month') {
+      if (label === '12-month') {
         console.log(`  ✓ Selected ${mostNeutralNegative!.periodType} (most neutral negative)\n`)
         return mostNeutralNegative!
       }

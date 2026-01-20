@@ -15,7 +15,7 @@ export interface GAKPICardData {
     previous: number
     change: number
     isIncrease: boolean
-    periodType: '1-month' | '3-month' | '6-month'
+    periodType: '1-month' | '3-month' | '6-month' | '12-month'
     periodLabel: string
   }
   organicConversions: {
@@ -23,7 +23,7 @@ export interface GAKPICardData {
     previous: number
     change: number
     isIncrease: boolean
-    periodType: '1-month' | '3-month' | '6-month'
+    periodType: '1-month' | '3-month' | '6-month' | '12-month'
     periodLabel: string
   }
 }
@@ -35,8 +35,8 @@ export interface GADashboardData {
   dailyData: GADailyTrafficData[] // Contains both current and previous period data
   kpiCards: GAKPICardData
   chartPeriods: {
-    trafficChart: '1-month' | '3-month' | '6-month'
-    sessionsConversionsChart: '1-month' | '3-month' | '6-month'
+    trafficChart: '1-month' | '3-month' | '6-month' | '12-month'
+    sessionsConversionsChart: '1-month' | '3-month' | '6-month' | '12-month'
   }
   // Date ranges for filtering current/previous periods on frontend
   currentPeriod: {
@@ -145,10 +145,11 @@ export async function fetchGADashboardData(
     )
     
     // Determine which window is larger (more months)
-    const monthsMap: Record<'1-month' | '3-month' | '6-month', number> = { 
+    const monthsMap: Record<'1-month' | '3-month' | '6-month' | '12-month', number> = { 
       '1-month': 1, 
       '3-month': 3, 
-      '6-month': 6 
+      '6-month': 6,
+      '12-month': 12
     }
     const sessionsMonths = monthsMap[sessionsWindow.type]
     const conversionsMonths = monthsMap[conversionsWindow.type]

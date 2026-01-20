@@ -122,10 +122,11 @@ export function GoogleAnalyticsDashboardPage({
     const conversionsPeriod = data.kpiCards.organicConversions.periodType
     
     // Determine which period to use for traffic chart (sessions period)
-    const monthsMap: Record<'1-month' | '3-month' | '6-month', number> = { 
+    const monthsMap: Record<'1-month' | '3-month' | '6-month' | '12-month', number> = { 
       '1-month': 1, 
       '3-month': 3, 
-      '6-month': 6 
+      '6-month': 6,
+      '12-month': 12
     }
     const sessionsMonths = monthsMap[sessionsPeriod]
     const conversionsMonths = monthsMap[conversionsPeriod]
@@ -204,10 +205,11 @@ export function GoogleAnalyticsDashboardPage({
     const conversionsPeriod = data.kpiCards.organicConversions.periodType
     
     // Determine which period to use (conversions period for this chart)
-    const monthsMap: Record<'1-month' | '3-month' | '6-month', number> = { 
+    const monthsMap: Record<'1-month' | '3-month' | '6-month' | '12-month', number> = { 
       '1-month': 1, 
       '3-month': 3, 
-      '6-month': 6 
+      '6-month': 6,
+      '12-month': 12
     }
     const sessionsMonths = monthsMap[sessionsPeriod]
     const conversionsMonths = monthsMap[conversionsPeriod]
@@ -320,10 +322,11 @@ export function GoogleAnalyticsDashboardPage({
       sessionsConversionsChart: 'Past 12 Months'
     }
     
-    const formatPeriod = (period: '1-month' | '3-month' | '6-month') => {
+    const formatPeriod = (period: '1-month' | '3-month' | '6-month' | '12-month') => {
       if (period === '1-month') return 'Past Month'
       if (period === '3-month') return 'Past 3 Months'
-      return 'Past 6 Months'
+      if (period === '6-month') return 'Past 6 Months'
+      return 'Past 12 Months'
     }
     
     return {

@@ -3,7 +3,7 @@
  * Used by Google Analytics, SEMrush, and Google Search Console dashboards
  */
 
-export type PeriodType = '1-month' | '3-month' | '6-month'
+export type PeriodType = '1-month' | '3-month' | '6-month' | '12-month'
 
 export interface ComparisonWindow {
   current: number
@@ -155,7 +155,8 @@ export function calculateWindowComparison<T extends { date: string }>(
  * Select best comparison window using sequential strategy:
  * 1. Try 1-month first - if positive, use it
  * 2. Try 3-month - if positive, use it
- * 3. Use 6-month (even if negative)
+ * 3. Try 6-month - if positive, use it
+ * 4. Use 12-month (even if negative)
  * 
  * If all negative, selects the most neutral (smallest change)
  * 
@@ -175,6 +176,7 @@ export function selectBestComparisonWindow<T extends { date: string }>(
     { months: 1, label: '1-month' },
     { months: 3, label: '3-month' },
     { months: 6, label: '6-month' },
+    { months: 12, label: '12-month' },
   ]
   
   let mostNeutralNegative: WindowResult | null = null
@@ -183,6 +185,23 @@ export function selectBestComparisonWindow<T extends { date: string }>(
   for (const { months, label } of windows) {
     const { current, previous, dates, currentStartYYYYMMDD, currentEndYYYYMMDD } = 
       calculateWindowComparison(dailyData, endDate, months, valueExtractor)
+    
+    // Skip this comparison if we don't have sufficient data for the previous period
+    // Need at least some data points in the previous period to make a valid comparison
+    const prevDates = calculateWindowDates(endDate, months, months)
+    const previousDataPoints = dailyData.filter(d => {
+      const dateNum = parseInt(d.date)
+      return dateNum >= prevDates.startYYYYMMDD && dateNum <= prevDates.endYYYYMMDD
+    })
+    
+    // If previous period has no data, skip this window
+    if (previousDataPoints.length === 0 || previous === 0) {
+      if (metricName) {
+        console.log(`[${metricName}] ${label}: Insufficient data for comparison (previous period has ${previousDataPoints.length} days, total: ${previous})`)
+        console.log(`  ✗ Skipping due to insufficient data\n`)
+      }
+      continue
+    }
     
     const change = previous > 0 ? ((current - previous) / previous) * 100 : 0
     const isIncrease = change >= 0
@@ -239,7 +258,7 @@ export function selectBestComparisonWindow<T extends { date: string }>(
     }
     
     // If this is the last window, return most neutral negative
-    if (label === '6-month') {
+    if (label === '12-month') {
       if (metricName && mostNeutralNegative) {
         console.log(`  ✓ Selected ${mostNeutralNegative.type} (most neutral negative)\n`)
       }
@@ -247,19 +266,32 @@ export function selectBestComparisonWindow<T extends { date: string }>(
     }
   }
   
-  // Fallback (should never reach here)
-  return mostNeutralNegative || {
+  // Fallback - if all windows were skipped or had insufficient data
+  if (mostNeutralNegative) {
+    if (metricName) {
+      console.log(`  ✓ Selected ${mostNeutralNegative.type} (most neutral negative - all periods checked)\n`)
+    }
+    return mostNeutralNegative
+  }
+  
+  // Last resort fallback - use 1-month with whatever data we have
+  if (metricName) {
+    console.log(`  ⚠ Warning: Insufficient data for all comparison periods, using 1-month with available data\n`)
+  }
+  const { current, previous, dates, currentStartYYYYMMDD, currentEndYYYYMMDD } = 
+    calculateWindowComparison(dailyData, endDate, 1, valueExtractor)
+  
+  return {
     type: '1-month',
-    currentPeriodStart: endDate,
-    currentPeriodEnd: endDate,
-    previousPeriodStart: endDate,
-    previousPeriodEnd: endDate,
-    currentValue: 0,
-    previousValue: 0,
+    currentPeriodStart: dates.currentStart,
+    currentPeriodEnd: dates.currentEnd,
+    previousPeriodStart: dates.previousStart,
+    previousPeriodEnd: dates.previousEnd,
+    currentValue: current,
+    previousValue: previous,
     change: 0,
     isIncrease: true,
-    currentStartYYYYMMDD: parseInt(endDate.replace(/-/g, '')),
-    currentEndYYYYMMDD: parseInt(endDate.replace(/-/g, ''))
+    currentStartYYYYMMDD,
+    currentEndYYYYMMDD
   }
 }
-

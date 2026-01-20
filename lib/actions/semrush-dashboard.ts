@@ -32,7 +32,7 @@ export interface SEMrushKPICardData {
     previous: number
     change: number
     isIncrease: boolean
-    periodType: '1-month' | '3-month' | '6-month'
+    periodType: '1-month' | '3-month' | '6-month' | '12-month'
     periodLabel: string
   }
 }

@@ -1,7 +1,8 @@
 /**
  * Unified date range calculation for dashboard data
  * Used by Google Analytics, SEMrush, and other datasources
- * Returns last 12 months of data (last completed month going back 12 months)
+ * Returns last 24 months of data (last completed month going back 24 months)
+ * This allows for 12-month comparisons (current 12 months vs previous 12 months)
  */
 
 // ============================================
@@ -84,8 +85,9 @@ export function getLast2CompletedMonths(): {
 }
 
 /**
- * Calculate date ranges for dashboard reports (12 months of data)
- * Returns last completed month going back 12 months
+ * Calculate date ranges for dashboard reports (24 months of data)
+ * Returns last completed month going back 24 months
+ * This allows for 12-month comparisons (current 12 months vs previous 12 months)
  */
 export function calculateDashboardDateRanges() {
   const today = new Date()
@@ -93,8 +95,8 @@ export function calculateDashboardDateRanges() {
   // Last completed month end date (last day of previous month)
   const endDate = new Date(today.getFullYear(), today.getMonth(), 0)
   
-  // Start date: 12 months before the end date (first day of that month)
-  const startDate = new Date(endDate.getFullYear(), endDate.getMonth() - 11, 1)
+  // Start date: 24 months before the end date (first day of that month)
+  const startDate = new Date(endDate.getFullYear(), endDate.getMonth() - 23, 1)
   
   // Reuse getLast2CompletedMonths for consistency
   const last2Months = getLast2CompletedMonths()
@@ -130,7 +132,7 @@ export function calculateDashboardDateRanges() {
     endDate: result.endDate,
     lastMonth: result.lastMonth.start + ' to ' + result.lastMonth.end,
     previousMonth: result.previousMonth.start + ' to ' + result.previousMonth.end,
-    monthsIncluded: 12
+    monthsIncluded: 24
   })
   
   return result

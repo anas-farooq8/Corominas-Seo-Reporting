@@ -15,7 +15,7 @@ export interface GBPKPICardData {
     previous: number
     change: number
     isIncrease: boolean
-    periodType: '1-month' | '3-month' | '6-month'
+    periodType: '1-month' | '3-month' | '6-month' | '12-month'
     periodLabel: string
   }
   directions: {
@@ -23,7 +23,7 @@ export interface GBPKPICardData {
     previous: number
     change: number
     isIncrease: boolean
-    periodType: '1-month' | '3-month' | '6-month'
+    periodType: '1-month' | '3-month' | '6-month' | '12-month'
     periodLabel: string
   }
   websiteClicks: {
@@ -31,7 +31,7 @@ export interface GBPKPICardData {
     previous: number
     change: number
     isIncrease: boolean
-    periodType: '1-month' | '3-month' | '6-month'
+    periodType: '1-month' | '3-month' | '6-month' | '12-month'
     periodLabel: string
   }
 }
@@ -126,7 +126,7 @@ export interface GBPActionsPage1Data {
     previous: number
     change: number
     isIncrease: boolean
-    periodType: '1-month' | '3-month' | '6-month'
+    periodType: '1-month' | '3-month' | '6-month' | '12-month'
     periodLabel: string
   }
 }
