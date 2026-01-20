@@ -5,17 +5,19 @@ import { LoadingSpinner } from "@/components/ui/loading-spinner"
 import { ErrorDisplay } from "@/components/ui/error-display"
 import type { GBPDashboardData } from "@/lib/actions/gbp-dashboard"
 import type { GMBGridDashboardData } from "@/lib/actions/gmb-dashboard"
+import type { GMBMetricsDashboardData } from "@/lib/actions/gmb-metrics"
 import { GBPDashboardPage } from "./gbp-dashboard-page"
 import { GMBGridDashboardPage } from "./gmb-grid-dashboard-page"
 
 interface CombinedPage4DashboardProps {
   gbpId?: string
-  gmbId?: string
+  gmbId?: string  // This is the datasource ID for GMB
 }
 
 export function CombinedPage4Dashboard({ gbpId, gmbId }: CombinedPage4DashboardProps) {
   const [gbpData, setGBPData] = useState<GBPDashboardData | null>(null)
   const [gmbData, setGMBData] = useState<GMBGridDashboardData | null>(null)
+  const [gmbMetricsData, setGMBMetricsData] = useState<GMBMetricsDashboardData | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
@@ -29,6 +31,7 @@ export function CombinedPage4Dashboard({ gbpId, gmbId }: CombinedPage4DashboardP
 
         const promises = []
         
+        // Fetch GBP data
         if (gbpId) {
           promises.push(
             fetch(`/api/gbp/dashboard/${gbpId}`)
@@ -37,11 +40,27 @@ export function CombinedPage4Dashboard({ gbpId, gmbId }: CombinedPage4DashboardP
           )
         }
         
+        // Fetch GMB grid data (heatmap)
         if (gmbId) {
           promises.push(
             fetch(`/api/gmb/grid-dashboard/${gmbId}`)
               .then(res => res.json())
               .then(data => isMounted && setGMBData(data))
+              .catch(err => {
+                // Grid data is optional - log error but don't fail
+                console.warn('[GMB Grid] Failed to fetch grid data (non-critical):', err)
+              })
+          )
+          
+          // Fetch GMB metrics data (KPI cards) - IN PARALLEL with grid
+          promises.push(
+            fetch(`/api/gmb/metrics/${gmbId}`)
+              .then(res => res.json())
+              .then(data => isMounted && setGMBMetricsData(data))
+              .catch(err => {
+                // Metrics are optional - log error but don't fail
+                console.warn('[GMB Metrics] Failed to fetch metrics (non-critical):', err)
+              })
           )
         }
 
@@ -129,7 +148,8 @@ export function CombinedPage4Dashboard({ gbpId, gmbId }: CombinedPage4DashboardP
   if (gmbData && !gbpData) {
     return (
       <GMBGridDashboardPage 
-        data={gmbData} 
+        data={gmbData}
+        metricsData={gmbMetricsData}  // Pass metrics data directly
         showMetadata={true}
         showKPIs={true}
       />
@@ -166,7 +186,8 @@ export function CombinedPage4Dashboard({ gbpId, gmbId }: CombinedPage4DashboardP
       {/* GMB Grid Section - No heading, just content */}
       {gmbData && (
         <GMBGridDashboardPage 
-          data={gmbData} 
+          data={gmbData}
+          metricsData={gmbMetricsData}  // Pass metrics data directly (already fetched in parallel)
           showMetadata={false}  // Hide metadata since it's shown above
           showKPIs={true}
           noPadding={true}  // No padding since parent already has it

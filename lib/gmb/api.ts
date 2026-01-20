@@ -142,6 +142,30 @@ export interface GMBGridReportResponse {
 }
 
 // ============================================
+// GMB Metrics API
+// ============================================
+
+export interface GMBMetricHistory {
+  timestamp: string  // ISO date string
+  value: number
+}
+
+export interface GMBMetricData {
+  current: number
+  history: GMBMetricHistory[]
+}
+
+export interface GMBMetricsResponse {
+  success: boolean
+  data: {
+    gmbscore?: GMBMetricData
+    rating?: GMBMetricData
+    review?: GMBMetricData
+    engagement?: GMBMetricData
+  }
+}
+
+// ============================================
 // Authentication Functions
 // ============================================
 
@@ -588,3 +612,58 @@ export async function forceRefreshAccessToken(): Promise<string> {
  * Call this when you detect a 401/403 error to force a fresh token on next request
  */
 export { clearTokenCache }
+
+/**
+ * Fetch GMB metrics for a specific profile
+ * @param profileId - The profile ID to fetch metrics for
+ * @param interval - Number of intervals to fetch (default: 1)
+ * @param intervalUnit - Unit of interval: 'week' or 'month' (default: 'month')
+ * @param fields - Comma-separated list of fields to fetch (default: 'gmbscore,rating,review,engagement')
+ */
+export async function fetchGMBMetrics(
+  profileId: string,
+  interval: number = 1,
+  intervalUnit: 'week' | 'month' = 'month',
+  fields: string = 'gmbscore,rating,review,engagement'
+): Promise<GMBMetricsResponse> {
+  const workspaceId = process.env.GMB_WORKSPACE_ID
+  if (!workspaceId) {
+    throw new Error("GMB_WORKSPACE_ID environment variable is not set")
+  }
+
+  return withRetry(async (accessToken, attempt) => {
+    const params = new URLSearchParams({
+      fields,
+      interval: interval.toString(),
+      intervalUnit,
+    })
+    const url = `${GMB_API_BASE}/profile/${profileId}/metrics?${params}`
+    const headers = buildGMBHeaders(accessToken, workspaceId)
+
+    const response = await fetchWithTimeout(url, { method: "GET", headers })
+
+    if (!response.ok) {
+      const errorText = await response.text()
+      console.error("[GMB API] Metrics error response:", errorText)
+      
+      // If 401/403, the token is invalid - clear cache and retry
+      if ((response.status === 401 || response.status === 403) && attempt < MAX_RETRIES) {
+        console.log(`[GMB API] Authentication error (${response.status}), clearing cache and retrying after ${RETRY_DELAY}ms...`)
+        clearTokenCache()
+        await new Promise(resolve => setTimeout(resolve, RETRY_DELAY))
+        throw new Error("AUTH_ERROR_RETRY") // Signal to retry
+      }
+      
+      throw new Error(`GMB API error: ${response.status} ${response.statusText}`)
+    }
+
+    const data = await response.json() as GMBMetricsResponse
+
+    if (!data.success) {
+      throw new Error("GMB API returned unsuccessful response")
+    }
+
+    console.log(`[GMB API] Successfully fetched metrics for profile ${profileId.substring(0, 8)}`)
+    return data
+  }, `Fetching metrics for profile ${profileId.substring(0, 8)}...`)
+}
