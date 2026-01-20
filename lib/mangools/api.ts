@@ -1,6 +1,5 @@
 import type { MangoolsApiDomain } from "@/lib/supabase/types"
 import { cache } from "react"
-import { getLast2CompletedMonthsForAPI } from "@/lib/utils/date-ranges"
 
 const MANGOOLS_API_BASE = "https://api.mangools.com/v3"
 
@@ -16,6 +15,7 @@ export interface MangoolsTrackingDetail {
     location: {
       label: string
     }
+    created_at?: number // Unix timestamp
   }
   keywords: Array<{
     _id: string
@@ -208,7 +208,8 @@ export async function fetchTrackingDetail(trackingId: string): Promise<MangoolsT
           domain: rawData.tracking.domain,
           location: {
             label: rawData.tracking.location.label
-          }
+          },
+          created_at: rawData.tracking.created_at || rawData.tracking.createdAt
         },
         keywords: rawData.keywords.map((kw: any) => ({
           _id: kw._id,
@@ -304,25 +305,3 @@ export async function fetchTrackingStats(
   }
 }
 
-/**
- * Fetch stats for last 2 completed months
- * Automatically calculates date ranges and fetches both months
- */
-export async function fetchLast2MonthsStats(trackingId: string): Promise<{
-  monthA: MangoolsStatsResponse
-  monthB: MangoolsStatsResponse
-  dateRanges: ReturnType<typeof getLast2CompletedMonthsForAPI>
-}> {
-  const dateRanges = getLast2CompletedMonthsForAPI()
-  
-  const [monthA, monthB] = await Promise.all([
-    fetchTrackingStats(trackingId, dateRanges.monthAStart, dateRanges.monthAEnd),
-    fetchTrackingStats(trackingId, dateRanges.monthBStart, dateRanges.monthBEnd),
-  ])
-  
-  return {
-    monthA,
-    monthB,
-    dateRanges,
-  }
-}

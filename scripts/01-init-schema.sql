@@ -48,6 +48,7 @@ CREATE TABLE mangools_domains (
   datasource_id UUID NOT NULL REFERENCES datasources(id) ON DELETE CASCADE,
   tracking_id TEXT NOT NULL UNIQUE,  -- This is the _id from Mangools API
   domain TEXT NOT NULL,
+  tracking_created_at TIMESTAMP WITH TIME ZONE,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );

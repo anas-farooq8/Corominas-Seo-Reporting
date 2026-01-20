@@ -48,7 +48,7 @@ export async function deleteDatasource(id: string): Promise<void> {
 
 /**
  * Attach a domain to a datasource
- * Only stores domain name and tracking_id
+ * Automatically fetches and stores tracking creation date from Mangools
  */
 export async function attachDomain(
   datasourceId: string,

@@ -33,6 +33,7 @@ export interface MangoolsDomain {
   datasource_id: string
   tracking_id: string  // The _id from Mangools API (used for tracking)
   domain: string
+  tracking_created_at: string | null  // When tracking was created in Mangools
   created_at: string
   updated_at: string
 }

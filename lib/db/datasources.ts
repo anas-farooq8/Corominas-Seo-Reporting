@@ -90,20 +90,36 @@ export async function deleteDatasource(id: string): Promise<Datasource> {
 
 /**
  * Attach a domain to a datasource
- * Only stores domain name and tracking_id
+ * Stores domain name, tracking_id, and automatically fetches tracking creation date from Mangools
  */
 export async function attachDomain(
   datasourceId: string,
   trackingId: string,
   domain: string
 ): Promise<MangoolsDomain> {
+  // Import here to avoid circular dependencies
+  const { fetchTrackingDetail } = await import("@/lib/mangools/api")
+  
+  // Fetch tracking creation date from Mangools API
+  let trackingCreatedAt: string | null = null
+  try {
+    const trackingDetail = await fetchTrackingDetail(trackingId)
+    if (trackingDetail.tracking.created_at) {
+      trackingCreatedAt = new Date(trackingDetail.tracking.created_at * 1000).toISOString()
+    }
+  } catch (error) {
+    console.warn("Could not fetch tracking creation date from Mangools:", error)
+    // Continue without creation date - it's not critical
+  }
+  
   const supabase = await createClient()
   const { data, error } = await supabase
     .from("mangools_domains")
     .insert({
       datasource_id: datasourceId,
       tracking_id: trackingId,
-      domain
+      domain,
+      tracking_created_at: trackingCreatedAt
     })
     .select()
     .single()
