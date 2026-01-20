@@ -390,13 +390,18 @@ export function calculateGridStats(
 /**
  * Select the best keyword to display based on performance metrics
  * 
- * REVISED SCORING FORMULA (without Data Quality Score):
- * 1. Average Position Score: Rewards lower average positions
- * 2. Local Pack Coverage Score: % of cells in top 3 positions (most important)
- * 3. Position Improvement Score: Rewards improvements, especially dramatic ones
- * 4. Dynamic Weighting: Weights current performance (70%) more than improvements (30%)
+ * IMPROVED SCORING FORMULA (Fixed for variable grid sizes):
+ * 1. Average Position Score: Rewards lower average positions (0-120 scale)
+ * 2. Tiered Position Score: Rewards cells in top 3, top 10, and top 20 (0-200 scale)
+ * 3. Position Improvement Score: Rewards improvements & penalizes declines, NORMALIZED by grid size (0-150 scale, capped)
+ * 4. Dynamic Weighting: Current performance (75%) more than improvements (25%)
  * 
- * Note: Data Quality Score removed as all keywords have same grid size/radius
+ * FIXES APPLIED:
+ * - Improvement score normalized by grid size (prevents larger grids from dominating)
+ * - Improvement score capped at 150 (prevents overwhelming current performance)
+ * - Added penalty for worsening positions (-0.3 weight)
+ * - Added tiered scoring (top 3 most important, but top 10 and top 20 have value)
+ * - Better balance between local pack and average position (200 vs 120)
  */
 export function selectBestKeyword(keywords: KeywordWithGrid[]): KeywordWithGrid | null {
   if (keywords.length === 0) return null
@@ -412,30 +417,40 @@ export function selectBestKeyword(keywords: KeywordWithGrid[]): KeywordWithGrid 
   }
   
   // Score each keyword
-  console.log(`\n📊 [Keyword Scoring] Analyzing ${keywordsWithData.length} keywords with REVISED formula...\n`)
+  console.log(`\n📊 [Keyword Scoring] Analyzing ${keywordsWithData.length} keywords with IMPROVED formula...\n`)
   
   const scored = keywordsWithData.map((kw, index) => {
     const stats = kw.gridStats
     const lastMonthCells = kw.lastMonthGrid?.cells ?? []
+    const totalCells = lastMonthCells.length
     
-    // 1. AVERAGE POSITION SCORE (0-100 scale)
+    // 1. AVERAGE POSITION SCORE (0-120 scale)
     // Lower position = better, normalized and inverted
     const avgPosition = stats.averagePosition ?? 21
-    const avgPositionScore = (21 - avgPosition) * 5 // 0-100 range
+    const avgPositionScore = (21 - avgPosition) * 6 // 0-120 range
     
-    // 2. LOCAL PACK COVERAGE SCORE (0-200 scale, most important)
-    // % of cells in top 3 positions
-    const localPackCount = lastMonthCells.filter(cell => cell.position <= 3).length
-    const localPackCoverage = lastMonthCells.length > 0 
-      ? (localPackCount / lastMonthCells.length) * 100 
-      : 0
-    const localPackScore = localPackCoverage * 2 // 0-200 range
+    // 2. TIERED POSITION SCORE (0-200 scale)
+    // Not just top 3 - also reward top 10 and top 20
+    const tier1Count = lastMonthCells.filter(cell => cell.position <= 3).length   // Local Pack
+    const tier2Count = lastMonthCells.filter(cell => cell.position > 3 && cell.position <= 10).length  // Page 1
+    const tier3Count = lastMonthCells.filter(cell => cell.position > 10 && cell.position <= 20).length // Page 2
     
-    // 3. POSITION IMPROVEMENT SCORE
-    // Calculate total improvement magnitude (sum of squared improvements)
-    // This rewards dramatic improvements more: 12→8 = 16 points, 18→9 = 81 points
+    const tier1Coverage = totalCells > 0 ? (tier1Count / totalCells) * 100 : 0
+    const tier2Coverage = totalCells > 0 ? (tier2Count / totalCells) * 100 : 0
+    const tier3Coverage = totalCells > 0 ? (tier3Count / totalCells) * 100 : 0
+    
+    const tieredScore = 
+      tier1Coverage * 2.0 +    // Top 3: max 200 points (most important)
+      tier2Coverage * 0.6 +    // 4-10: max 60 points (still valuable)
+      tier3Coverage * 0.15     // 11-20: max 15 points (some visibility)
+    // Total max: 275 points if 100% in top 3
+    
+    // 3. POSITION IMPROVEMENT SCORE (NORMALIZED & CAPPED)
+    // Calculate improvement/decline magnitude, normalize by grid size, cap to prevent explosion
     let totalImprovementMagnitude = 0
-    let improvementDetails: Array<{from: number, to: number, magnitude: number}> = []
+    let improvementDetails: Array<{from: number, to: number, magnitude: number, type: 'improved' | 'worsened'}> = []
+    let improvedCount = 0
+    let worsenedCount = 0
     
     if (kw.previousMonthGrid && kw.lastMonthGrid) {
       const prevCellsMap = new Map<string, number>()
@@ -449,42 +464,80 @@ export function selectBestKeyword(keywords: KeywordWithGrid[]): KeywordWithGrid 
         const prevPosition = prevCellsMap.get(key)
         
         if (prevPosition !== undefined && prevPosition !== 21 && cell.position !== 21) {
-          const improvement = prevPosition - cell.position // Positive = improved
-          if (improvement > 0) {
-            const magnitude = improvement * improvement // Square it
+          const change = prevPosition - cell.position // Positive = improved, negative = worsened
+          
+          if (change > 0) {
+            // IMPROVED
+            const magnitude = change * change // Square it
             totalImprovementMagnitude += magnitude
-            improvementDetails.push({ from: prevPosition, to: cell.position, magnitude })
+            improvementDetails.push({ from: prevPosition, to: cell.position, magnitude, type: 'improved' })
+            improvedCount++
+          } else if (change < 0) {
+            // WORSENED - penalize but less than we reward improvements
+            const magnitude = change * change * -0.3 // Negative penalty, 30% weight
+            totalImprovementMagnitude += magnitude
+            improvementDetails.push({ from: prevPosition, to: cell.position, magnitude, type: 'worsened' })
+            worsenedCount++
           }
         }
       })
     }
-    const improvementScore = totalImprovementMagnitude * 0.5 // Scale appropriately
     
-    // 4. DYNAMIC WEIGHTING
-    // Weight current performance (avg + local pack) 70%, improvements 30%
-    const currentPerformanceWeight = 0.7
-    const improvementWeight = 0.3
+    // NORMALIZE by grid size to make scores comparable across different grid sizes
+    // Max possible improvement per cell: 20 positions → 400 magnitude
+    // For 49 cells (7×7): max = 19,600
+    // For 81 cells (9×9): max = 32,400
+    // Normalize to 0-100 scale, then scale to 0-300 range, then cap at 150
+    const maxPossibleMagnitude = totalCells * (20 * 20) // Max if every cell improved by 20 positions
+    const normalizedImprovement = maxPossibleMagnitude > 0 
+      ? (totalImprovementMagnitude / maxPossibleMagnitude) * 300 
+      : 0
+    const improvementScore = Math.max(Math.min(normalizedImprovement, 150), -50) // Cap at +150, floor at -50
+    
+    // 4. FINAL SCORE WITH ADJUSTED WEIGHTING
+    // Current performance matters more (75%), improvement less (25%)
+    const currentPerformanceWeight = 0.75
+    const improvementWeight = 0.25
     
     const totalScore = 
-      (avgPositionScore + localPackScore) * currentPerformanceWeight +
+      (avgPositionScore + tieredScore) * currentPerformanceWeight +
       improvementScore * improvementWeight
     
     // Debug output for this keyword
-    console.log(`   ${index + 1}. "${kw.keyword}"`)
+    console.log(`   ${index + 1}. "${kw.keyword}" (${totalCells} cells)`)
     console.log(`      ├─ Avg Position: ${avgPosition.toFixed(2)} → Score: ${avgPositionScore.toFixed(1)}`)
-    console.log(`      ├─ Local Pack: ${localPackCoverage.toFixed(1)}% (${localPackCount}/${lastMonthCells.length} cells) → Score: ${localPackScore.toFixed(1)}`)
+    console.log(`      ├─ Tiered Coverage:`)
+    console.log(`      │  • Top 3: ${tier1Coverage.toFixed(1)}% (${tier1Count} cells) → ${(tier1Coverage * 2.0).toFixed(1)} pts`)
+    console.log(`      │  • Top 10: ${tier2Coverage.toFixed(1)}% (${tier2Count} cells) → ${(tier2Coverage * 0.6).toFixed(1)} pts`)
+    console.log(`      │  • Top 20: ${tier3Coverage.toFixed(1)}% (${tier3Count} cells) → ${(tier3Coverage * 0.15).toFixed(1)} pts`)
+    console.log(`      │  • Total Tier Score: ${tieredScore.toFixed(1)}`)
     
-    if (improvementDetails.length > 0) {
-      console.log(`      ├─ Improvements (${improvementDetails.length} cells):`)
-      improvementDetails.slice(0, 3).forEach(imp => {
-        console.log(`      │  • ${imp.from}→${imp.to} (magnitude: ${imp.magnitude})`)
-      })
-      if (improvementDetails.length > 3) {
-        console.log(`      │  • ... and ${improvementDetails.length - 3} more`)
+    if (improvedCount > 0 || worsenedCount > 0) {
+      console.log(`      ├─ Month-over-Month Changes:`)
+      if (improvedCount > 0) {
+        console.log(`      │  ✅ Improved: ${improvedCount} cells`)
+        const topImprovements = improvementDetails.filter(d => d.type === 'improved').slice(0, 3)
+        topImprovements.forEach(imp => {
+          console.log(`      │     • ${imp.from}→${imp.to} (magnitude: ${imp.magnitude})`)
+        })
+        if (improvedCount > 3) {
+          console.log(`      │     • ... and ${improvedCount - 3} more`)
+        }
       }
-      console.log(`      ├─ Total Improvement: ${totalImprovementMagnitude.toFixed(1)} → Score: ${improvementScore.toFixed(1)}`)
+      if (worsenedCount > 0) {
+        console.log(`      │  ❌ Worsened: ${worsenedCount} cells`)
+        const topDeclines = improvementDetails.filter(d => d.type === 'worsened').slice(0, 2)
+        topDeclines.forEach(imp => {
+          console.log(`      │     • ${imp.from}→${imp.to} (penalty: ${imp.magnitude.toFixed(1)})`)
+        })
+        if (worsenedCount > 2) {
+          console.log(`      │     • ... and ${worsenedCount - 2} more`)
+        }
+      }
+      console.log(`      ├─ Raw Improvement: ${totalImprovementMagnitude.toFixed(1)}`)
+      console.log(`      ├─ Normalized & Capped: ${improvementScore.toFixed(1)} (max ±150)`)
     } else {
-      console.log(`      ├─ Improvements: None`)
+      console.log(`      ├─ Month-over-Month: No changes`)
     }
     
     console.log(`      └─ 🎯 TOTAL SCORE: ${totalScore.toFixed(2)} (higher is better)`)
@@ -494,31 +547,38 @@ export function selectBestKeyword(keywords: KeywordWithGrid[]): KeywordWithGrid 
       keyword: kw,
       score: totalScore,
       avgPos: avgPosition,
-      localPackCoverage,
-      localPackCount,
+      localPackCoverage: tier1Coverage, // Keep for compatibility
+      localPackCount: tier1Count,
+      tier1Coverage,
+      tier2Coverage,
+      tier3Coverage,
+      tieredScore,
       improvementScore,
       improvementDetails,
-      improved: stats.improved,
-      worsened: stats.worsened,
-      totalCells: stats.totalCells
+      improved: improvedCount,
+      worsened: worsenedCount,
+      totalCells: totalCells
     }
   })
   
-  // Sort by score (highest is best now)
+  // Sort by score (highest is best)
   scored.sort((a, b) => b.score - a.score)
   
   // Show ranking
   console.log(`📈 [Keyword Ranking] Results (best to worst):\n`)
   scored.forEach((item, index) => {
     const medal = index === 0 ? '🏆' : index === 1 ? '🥈' : index === 2 ? '🥉' : `${index + 1}.`
-    console.log(`   ${medal} "${item.keyword.keyword}" - Score: ${item.score.toFixed(2)} | Avg: ${item.avgPos.toFixed(1)} | Pack: ${item.localPackCoverage.toFixed(0)}%`)
+    const changeIndicator = item.improved > item.worsened ? '📈' : item.worsened > item.improved ? '📉' : '➡️'
+    console.log(`   ${medal} "${item.keyword.keyword}" - Score: ${item.score.toFixed(2)} | Avg: ${item.avgPos.toFixed(1)} | Top3: ${item.tier1Coverage.toFixed(0)}% ${changeIndicator}`)
   })
   
   const best = scored[0]
   console.log(`\n✅ [Best Keyword Selected] "${best.keyword.keyword}"`)
+  console.log(`   ├─ Grid Size: ${best.totalCells} cells (${Math.sqrt(best.totalCells).toFixed(0)}×${Math.sqrt(best.totalCells).toFixed(0)})`)
   console.log(`   ├─ Average Position: ${best.avgPos.toFixed(2)}`)
-  console.log(`   ├─ Local Pack Coverage: ${best.localPackCoverage.toFixed(1)}% (${best.localPackCount}/${best.totalCells} cells in top 3)`)
-  console.log(`   ├─ Improved Cells: ${best.improved}`)
+  console.log(`   ├─ Top 3 Coverage: ${best.tier1Coverage.toFixed(1)}% (${best.localPackCount} cells)`)
+  console.log(`   ├─ Top 10 Coverage: ${(best.tier1Coverage + best.tier2Coverage).toFixed(1)}%`)
+  console.log(`   ├─ Improved/Worsened: ${best.improved}/${best.worsened} cells`)
   console.log(`   └─ Final Score: ${best.score.toFixed(2)}`)
   console.log(`   ════════════════════════════════════════\n`)
   
