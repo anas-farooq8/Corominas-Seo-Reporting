@@ -3,7 +3,7 @@
  * Handles grid data processing, aggregation, and comparison logic
  */
 
-import type { GMBGridReportResponse, GMBGridCoord } from "./api"
+import type { GMBGridReportResponse } from "./api"
 
 // ============================================
 // Type Definitions
@@ -35,11 +35,6 @@ export interface GridComparison {
   previousPosition: number | null
   currentPosition: number | null
   change: number | null // negative = improved, positive = worsened, null = new or lost
-}
-
-export interface MonthlyGridData {
-  aggregated: AggregatedGrid
-  comparison: GridComparison[]
 }
 
 // ============================================
