@@ -664,7 +664,6 @@ export function selectBestKeyword(keywords: KeywordWithGrid[]): KeywordWithGrid 
       keyword: kw,
       score: totalScore,
       avgPos: avgPosition,
-      localPackCoverage: tier1Coverage, // Keep for compatibility
       localPackCount: tier1Count,
       tier1Coverage,
       tier2Coverage,

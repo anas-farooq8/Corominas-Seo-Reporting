@@ -25,26 +25,6 @@ import { getCachedDashboardData, saveDashboardCache } from "@/lib/cache/dashboar
 // ============================================
 
 /**
- * KPI Card Data for GMB Grid metrics
- */
-export interface GMBKPICardData {
-  localPackCoverage: {
-    current: number // Percentage (0-100)
-    previous: number // Percentage (0-100)
-    change: number // Percentage point change
-    isIncrease: boolean
-    periodLabel: string
-  }
-  averagePosition: {
-    current: number
-    previous: number
-    change: number
-    isIncrease: boolean
-    periodLabel: string
-  }
-}
-
-/**
  * Simplified heatmap cell data for storage
  */
 export interface GMBHeatmapCell {
@@ -64,7 +44,6 @@ export interface GMBGridDashboardCacheData {
   radius: number
   centerLat: number
   centerLng: number
-  kpiCards: GMBKPICardData
   heatmapData: GMBHeatmapCell[]
   monthLabels: {
     last: string
@@ -81,94 +60,6 @@ export type GMBGridDashboardData = GMBGridDashboardCacheData & {
 // ============================================
 // Helper Functions
 // ============================================
-
-/**
- * Calculate KPI cards from grid data
- */
-function calculateGMBKPICards(
-  lastMonthCells: GMBHeatmapCell[],
-  monthLabels: { last: string, previous: string }
-): GMBKPICardData {
-  // Filter cells with valid data
-  const currentCells = lastMonthCells.filter(c => c.last !== null)
-  const previousCells = lastMonthCells.filter(c => c.previous !== null)
-  
-  if (currentCells.length === 0) {
-    return {
-      localPackCoverage: {
-        current: 0,
-        previous: 0,
-        change: 0,
-        isIncrease: false,
-        periodLabel: `${monthLabels.last} vs ${monthLabels.previous}`
-      },
-      averagePosition: {
-        current: 0,
-        previous: 0,
-        change: 0,
-        isIncrease: false,
-        periodLabel: `${monthLabels.last} vs ${monthLabels.previous}`
-      }
-    }
-  }
-  
-  // Current month Local Pack coverage
-  const currentTop3Count = currentCells.filter(c => c.last! <= 3).length
-  const currentCoverage = (currentTop3Count / currentCells.length) * 100
-  
-  // Previous month Local Pack coverage
-  let previousCoverage = 0
-  if (previousCells.length > 0) {
-    const previousTop3Count = previousCells.filter(c => c.previous! <= 3).length
-    previousCoverage = (previousTop3Count / previousCells.length) * 100
-  }
-  
-  // Coverage change
-  const coverageChange = currentCoverage - previousCoverage
-  
-  // Average Position
-  const currentAvgPosition = currentCells.reduce((sum, c) => sum + c.last!, 0) / currentCells.length
-  const previousAvgPosition = previousCells.length > 0
-    ? previousCells.reduce((sum, c) => sum + c.previous!, 0) / previousCells.length
-    : null
-  
-  // Position change (only calculate if we have previous data)
-  const positionChange = previousAvgPosition !== null && previousAvgPosition > 0
-    ? currentAvgPosition - previousAvgPosition
-    : 0
-  
-  console.log('\n=== GMB KPI CALCULATIONS ===')
-  console.log(`Local Pack Coverage (Top 3):`)
-  console.log(`  Current: ${currentTop3Count}/${currentCells.length} = ${currentCoverage.toFixed(1)}%`)
-  console.log(`  Previous: ${previousCells.length > 0 ? `${previousCells.filter(c => c.previous! <= 3).length}/${previousCells.length} = ${previousCoverage.toFixed(1)}%` : 'N/A'}`)
-  console.log(`  Change: ${coverageChange >= 0 ? '+' : ''}${coverageChange.toFixed(1)}%`)
-  console.log(`Average Position:`)
-  console.log(`  Current: ${currentAvgPosition.toFixed(2)}`)
-  console.log(`  Previous: ${previousAvgPosition !== null ? previousAvgPosition.toFixed(2) : 'N/A'}`)
-  console.log(`  Change: ${positionChange >= 0 ? '+' : ''}${positionChange.toFixed(2)}`)
-  console.log('============================\n')
-  
-  return {
-    localPackCoverage: {
-      current: currentCoverage,
-      previous: previousCoverage,
-      change: Math.abs(coverageChange),
-      isIncrease: coverageChange > 0,
-      periodLabel: previousCells.length > 0 
-        ? `${monthLabels.last} vs ${monthLabels.previous}`
-        : `${monthLabels.last} only`
-    },
-    averagePosition: {
-      current: currentAvgPosition,
-      previous: previousAvgPosition ?? 0,
-      change: Math.abs(positionChange),
-      isIncrease: positionChange > 0,
-      periodLabel: previousCells.length > 0 
-        ? `${monthLabels.last} vs ${monthLabels.previous}`
-        : `${monthLabels.last} only`
-    }
-  }
-}
 
 /**
  * Process keyword data and filter scans by month
@@ -435,9 +326,6 @@ export async function fetchGMBGridDashboardData(
       ? heatmapData.reduce((sum, c) => sum + c.lng, 0) / heatmapData.length
       : 0
     
-    // Calculate KPI cards
-    const kpiCards = calculateGMBKPICards(heatmapData, monthLabels)
-    
     // Build final data structure
     const dashboardData: GMBGridDashboardCacheData = {
       keyword: bestKeyword.keyword,
@@ -446,7 +334,6 @@ export async function fetchGMBGridDashboardData(
       radius: bestKeyword.lastMonthGrid.distance,
       centerLat,
       centerLng,
-      kpiCards,
       heatmapData,
       monthLabels
     }

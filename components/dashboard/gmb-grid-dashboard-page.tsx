@@ -1,11 +1,9 @@
 "use client"
 
-import { useState, useEffect, useMemo } from "react"
+import { useState, useEffect } from "react"
 import { LoadingSpinner } from "@/components/ui/loading-spinner"
 import { ErrorDisplay } from "@/components/ui/error-display"
 import { GMBGridHeatmap } from "./gmb-grid-heatmap"
-import { KPICard } from "./kpi-card"
-import { Target, MapPin } from "lucide-react"
 import type { GMBGridDashboardData } from "@/lib/actions/gmb-dashboard"
 
 interface GMBGridDashboardPageProps {
@@ -72,45 +70,6 @@ export function GMBGridDashboardPage({
       isMounted = false
     }
   }, [datasourceId, externalData])
-  
-  // Memoize KPI calculations
-  const localPackKPI = useMemo(() => {
-    if (!data || !data.kpiCards) return null
-    
-    const kpi = data.kpiCards.localPackCoverage
-    
-    return {
-      change: {
-        change: kpi.change,
-        isIncrease: kpi.isIncrease
-      },
-      currentValue: kpi.current,
-      previousValue: kpi.previous,
-      currentLabel: data.monthLabels.last,
-      previousLabel: data.monthLabels.previous,
-      comparisonLabel: kpi.periodLabel,
-      formatValue: (value: number) => `${value.toFixed(1)}%`
-    }
-  }, [data])
-
-  const avgPositionKPI = useMemo(() => {
-    if (!data || !data.kpiCards) return null
-    
-    const kpi = data.kpiCards.averagePosition
-    
-    return {
-      change: {
-        change: kpi.change,
-        isIncrease: !kpi.isIncrease // Invert: improvement (lower position) shows as green
-      },
-      currentValue: kpi.current,
-      previousValue: kpi.previous,
-      currentLabel: data.monthLabels.last,
-      previousLabel: data.monthLabels.previous,
-      comparisonLabel: kpi.periodLabel,
-      formatValue: (value: number) => value.toFixed(2)
-    }
-  }, [data])
 
   if (loading) {
     return (
@@ -132,7 +91,7 @@ export function GMBGridDashboardPage({
   }
 
   return (
-    <div className={`space-y-4 sm:space-y-6 ${!noPadding && (showMetadata || showKPIs) ? 'p-3 sm:p-4 md:p-6 lg:p-8' : ''}`}>
+    <div className={`space-y-4 sm:space-y-6 ${!noPadding && showMetadata ? 'p-3 sm:p-4 md:p-6 lg:p-8' : ''}`}>
       {showMetadata && (
         <div>
           <h2 className="text-lg sm:text-xl md:text-2xl font-bold text-foreground">
@@ -143,37 +102,6 @@ export function GMBGridDashboardPage({
               {data.address}
             </p>
           )}
-        </div>
-      )}
-
-      {/* KPI Cards */}
-      {showKPIs && localPackKPI && avgPositionKPI && (
-        <div className="grid gap-2 sm:gap-3 grid-cols-2">
-          <KPICard
-            title="Local Pack Coverage"
-            icon={<MapPin className="h-3 w-3 sm:h-3.5 sm:w-3.5 flex-shrink-0" />}
-            currentValue={localPackKPI.currentValue}
-            previousValue={localPackKPI.previousValue}
-            currentLabel={localPackKPI.currentLabel}
-            previousLabel={localPackKPI.previousLabel}
-            colorScheme="green"
-            percentageChange={localPackKPI.change}
-            comparisonLabel={localPackKPI.comparisonLabel}
-            formatValue={localPackKPI.formatValue}
-          />
-
-          <KPICard
-            title="Avg Grid Position"
-            icon={<Target className="h-3 w-3 sm:h-3.5 sm:w-3.5 flex-shrink-0" />}
-            currentValue={avgPositionKPI.currentValue}
-            previousValue={avgPositionKPI.previousValue}
-            currentLabel={avgPositionKPI.currentLabel}
-            previousLabel={avgPositionKPI.previousLabel}
-            colorScheme="blue"
-            percentageChange={avgPositionKPI.change}
-            comparisonLabel={avgPositionKPI.comparisonLabel}
-            formatValue={avgPositionKPI.formatValue}
-          />
         </div>
       )}
 
