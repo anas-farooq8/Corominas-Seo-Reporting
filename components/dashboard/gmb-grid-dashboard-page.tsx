@@ -136,8 +136,8 @@ export function GMBGridDashboardPage({
               metricsData.kpiCards.engagements.change === 0 
                 ? "No changes"
                 : metricsData.kpiCards.engagements.isIncrease
-                  ? `+${Math.abs(metricsData.kpiCards.engagements.current - metricsData.kpiCards.engagements.previous).toFixed(0)} from last period`
-                  : `${Math.abs(metricsData.kpiCards.engagements.current - metricsData.kpiCards.engagements.previous).toFixed(0)} from last period`
+                  ? `+${Math.abs(metricsData.kpiCards.engagements.current - metricsData.kpiCards.engagements.previous).toFixed(0)} from last month`
+                  : `-${Math.abs(metricsData.kpiCards.engagements.current - metricsData.kpiCards.engagements.previous).toFixed(0)} from last month`
             }
           />
 
