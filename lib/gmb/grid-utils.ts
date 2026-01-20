@@ -410,10 +410,41 @@ export function selectBestKeyword(keywords: KeywordWithGrid[]): KeywordWithGrid 
   const keywordsWithData = keywords.filter(kw => kw.lastMonthGrid !== null)
   
   if (keywordsWithData.length === 0) {
-    // If no current data, try previous month
+    // FIX #5: If no current data, score previous month data properly instead of arbitrary selection
     const keywordsWithPrevData = keywords.filter(kw => kw.previousMonthGrid !== null)
     if (keywordsWithPrevData.length === 0) return null
-    return keywordsWithPrevData[0] // Return first with any data
+    
+    // Score previous month data the same way (without improvement scores since no comparison)
+    console.log(`\n⚠️ [Keyword Scoring] No current month data. Scoring ${keywordsWithPrevData.length} keywords using previous month only...\n`)
+    
+    const scoredPrev = keywordsWithPrevData.map((kw, index) => {
+      const prevCells = kw.previousMonthGrid?.cells ?? []
+      const totalCells = prevCells.length
+      
+      // Score based on previous month only
+      const avgPosition = kw.gridStats.averagePosition ?? 21
+      const avgPositionScore = (21 - avgPosition) * 6
+      
+      const tier1Count = prevCells.filter(c => c.position <= 3).length
+      const tier2Count = prevCells.filter(c => c.position > 3 && c.position <= 10).length
+      const tier3Count = prevCells.filter(c => c.position > 10 && c.position <= 20).length
+      
+      const tier1Coverage = totalCells > 0 ? (tier1Count / totalCells) * 100 : 0
+      const tier2Coverage = totalCells > 0 ? (tier2Count / totalCells) * 100 : 0
+      const tier3Coverage = totalCells > 0 ? (tier3Count / totalCells) * 100 : 0
+      
+      const tieredScore = tier1Coverage * 2.0 + tier2Coverage * 0.6 + tier3Coverage * 0.15
+      const totalScore = avgPositionScore + tieredScore // No improvement component
+      
+      console.log(`   ${index + 1}. "${kw.keyword}" - Score: ${totalScore.toFixed(2)} (previous month only)`)
+      
+      return { keyword: kw, score: totalScore }
+    })
+    
+    scoredPrev.sort((a, b) => b.score - a.score)
+    console.log(`\n✅ [Best Keyword Selected] "${scoredPrev[0].keyword.keyword}" (from previous month data)\n`)
+    
+    return scoredPrev[0].keyword
   }
   
   // Score each keyword
@@ -463,17 +494,20 @@ export function selectBestKeyword(keywords: KeywordWithGrid[]): KeywordWithGrid 
         const key = `${cell.lat.toFixed(6)},${cell.lng.toFixed(6)}`
         const prevPosition = prevCellsMap.get(key)
         
-        if (prevPosition !== undefined && prevPosition !== 21 && cell.position !== 21) {
+        // FIX #3: Include improvements from "not ranked" (21) to visible positions
+        // This captures important SEO wins when keywords break into rankings
+        if (prevPosition !== undefined) {
           const change = prevPosition - cell.position // Positive = improved, negative = worsened
           
           if (change > 0) {
-            // IMPROVED
+            // IMPROVED (including 21 → visible)
             const magnitude = change * change // Square it
             totalImprovementMagnitude += magnitude
             improvementDetails.push({ from: prevPosition, to: cell.position, magnitude, type: 'improved' })
             improvedCount++
-          } else if (change < 0) {
-            // WORSENED - penalize but less than we reward improvements
+          } else if (change < 0 && prevPosition !== 21 && cell.position !== 21) {
+            // WORSENED - penalize but only for visible → visible declines
+            // Don't penalize visible → 21 (already handled by current performance score drop)
             const magnitude = change * change * -0.3 // Negative penalty, 30% weight
             totalImprovementMagnitude += magnitude
             improvementDetails.push({ from: prevPosition, to: cell.position, magnitude, type: 'worsened' })
