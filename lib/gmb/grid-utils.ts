@@ -627,32 +627,39 @@ export function selectBestKeyword(keywords: KeywordWithGrid[]): KeywordWithGrid 
     console.log(`      │  • Top 20: ${tier3Coverage.toFixed(1)}% (${tier3Count} cells) → ${(tier3Coverage * 0.15).toFixed(1)} pts`)
     console.log(`      │  • Total Tier Score: ${tieredScore.toFixed(1)}`)
     
-    if (improvedCount > 0 || worsenedCount > 0) {
-      console.log(`      ├─ Month-over-Month Changes:`)
-      if (improvedCount > 0) {
-        console.log(`      │  ✅ Improved: ${improvedCount} cells`)
-        const topImprovements = improvementDetails.filter(d => d.type === 'improved').slice(0, 3)
-        topImprovements.forEach(imp => {
-          console.log(`      │     • ${imp.from}→${imp.to} (magnitude: ${imp.magnitude})`)
-        })
-        if (improvedCount > 3) {
-          console.log(`      │     • ... and ${improvedCount - 3} more`)
+    if (kw.previousMonthGrid) {
+      // Has comparison data
+      if (improvedCount > 0 || worsenedCount > 0) {
+        console.log(`      ├─ Month-over-Month Changes:`)
+        if (improvedCount > 0) {
+          console.log(`      │  ✅ Improved: ${improvedCount} cells`)
+          const topImprovements = improvementDetails.filter(d => d.type === 'improved').slice(0, 3)
+          topImprovements.forEach(imp => {
+            console.log(`      │     • ${imp.from}→${imp.to} (magnitude: ${imp.magnitude})`)
+          })
+          if (improvedCount > 3) {
+            console.log(`      │     • ... and ${improvedCount - 3} more`)
+          }
         }
-      }
-      if (worsenedCount > 0) {
-        console.log(`      │  ❌ Worsened: ${worsenedCount} cells`)
-        const topDeclines = improvementDetails.filter(d => d.type === 'worsened').slice(0, 2)
-        topDeclines.forEach(imp => {
-          console.log(`      │     • ${imp.from}→${imp.to} (penalty: ${imp.magnitude.toFixed(1)})`)
-        })
-        if (worsenedCount > 2) {
-          console.log(`      │     • ... and ${worsenedCount - 2} more`)
+        if (worsenedCount > 0) {
+          console.log(`      │  ❌ Worsened: ${worsenedCount} cells`)
+          const topDeclines = improvementDetails.filter(d => d.type === 'worsened').slice(0, 2)
+          topDeclines.forEach(imp => {
+            console.log(`      │     • ${imp.from}→${imp.to} (penalty: ${imp.magnitude.toFixed(1)})`)
+          })
+          if (worsenedCount > 2) {
+            console.log(`      │     • ... and ${worsenedCount - 2} more`)
+          }
         }
+        console.log(`      ├─ Raw Improvement: ${totalImprovementMagnitude.toFixed(1)}`)
+        console.log(`      ├─ Normalized & Capped: ${improvementScore.toFixed(1)} (max ±150)`)
+      } else {
+        console.log(`      ├─ Month-over-Month: No changes (all positions stable)`)
       }
-      console.log(`      ├─ Raw Improvement: ${totalImprovementMagnitude.toFixed(1)}`)
-      console.log(`      ├─ Normalized & Capped: ${improvementScore.toFixed(1)} (max ±150)`)
     } else {
-      console.log(`      ├─ Month-over-Month: No changes`)
+      // No previous month data
+      console.log(`      ├─ Month-over-Month: ⚠️ No previous month data (improvement score = 0)`)
+      console.log(`      ├─ Scored on current performance only`)
     }
     
     console.log(`      └─ 🎯 TOTAL SCORE: ${totalScore.toFixed(2)} (higher is better)`)
