@@ -37,7 +37,11 @@ export default function UnifiedDashboardPage({ params }: { params: Promise<{ id:
     try {
       setLoading(true)
       const response = await fetch(`/api/projects/${projectId}`)
-      if (!response.ok) throw new Error("Failed to fetch project data")
+      if (!response.ok) {
+        const errorText = await response.text()
+        console.error(`[Unified Dashboard] HTTP ${response.status}:`, errorText)
+        throw new Error(`Failed to fetch project data: ${response.status} ${response.statusText}`)
+      }
       const data = await response.json()
       
       setProjectName(data.name)

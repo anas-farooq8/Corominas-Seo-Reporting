@@ -53,7 +53,12 @@ export function CombinedPage1Dashboard({ googleAnalyticsId, semrushId, gbpId }: 
         if (googleAnalyticsId) {
           promises.push(
             fetch(`/api/google-analytics/dashboard/${googleAnalyticsId}`)
-              .then(res => res.json())
+              .then(res => {
+                if (!res.ok) {
+                  throw new Error(`HTTP ${res.status}: ${res.statusText}`)
+                }
+                return res.json()
+              })
               .then(data => isMounted && setGAData(data))
           )
         }
@@ -61,7 +66,12 @@ export function CombinedPage1Dashboard({ googleAnalyticsId, semrushId, gbpId }: 
         if (semrushId) {
           promises.push(
             fetch(`/api/semrush/dashboard/${semrushId}`)
-              .then(res => res.json())
+              .then(res => {
+                if (!res.ok) {
+                  throw new Error(`HTTP ${res.status}: ${res.statusText}`)
+                }
+                return res.json()
+              })
               .then(data => isMounted && setSemrushData(data))
           )
         }
@@ -69,7 +79,12 @@ export function CombinedPage1Dashboard({ googleAnalyticsId, semrushId, gbpId }: 
         if (gbpId) {
           promises.push(
             fetch(`/api/gbp/dashboard/${gbpId}/actions`)
-              .then(res => res.json())
+              .then(res => {
+                if (!res.ok) {
+                  throw new Error(`HTTP ${res.status}: ${res.statusText}`)
+                }
+                return res.json()
+              })
               .then(data => isMounted && setGBPData(data))
           )
         }

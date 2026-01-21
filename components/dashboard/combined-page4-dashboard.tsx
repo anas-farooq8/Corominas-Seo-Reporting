@@ -35,8 +35,17 @@ export function CombinedPage4Dashboard({ gbpId, gmbId }: CombinedPage4DashboardP
         if (gbpId) {
           promises.push(
             fetch(`/api/gbp/dashboard/${gbpId}`)
-              .then(res => res.json())
+              .then(res => {
+                if (!res.ok) {
+                  throw new Error(`HTTP ${res.status}: ${res.statusText}`)
+                }
+                return res.json()
+              })
               .then(data => isMounted && setGBPData(data))
+              .catch(err => {
+                console.error('[GBP] Failed to fetch dashboard data:', err)
+                throw err
+              })
           )
         }
         
@@ -44,7 +53,12 @@ export function CombinedPage4Dashboard({ gbpId, gmbId }: CombinedPage4DashboardP
         if (gmbId) {
           promises.push(
             fetch(`/api/gmb/grid-dashboard/${gmbId}`)
-              .then(res => res.json())
+              .then(res => {
+                if (!res.ok) {
+                  throw new Error(`HTTP ${res.status}: ${res.statusText}`)
+                }
+                return res.json()
+              })
               .then(data => isMounted && setGMBData(data))
               .catch(err => {
                 // Grid data is optional - log error but don't fail
@@ -55,7 +69,12 @@ export function CombinedPage4Dashboard({ gbpId, gmbId }: CombinedPage4DashboardP
           // Fetch GMB metrics data (KPI cards) - IN PARALLEL with grid
           promises.push(
             fetch(`/api/gmb/metrics/${gmbId}`)
-              .then(res => res.json())
+              .then(res => {
+                if (!res.ok) {
+                  throw new Error(`HTTP ${res.status}: ${res.statusText}`)
+                }
+                return res.json()
+              })
               .then(data => isMounted && setGMBMetricsData(data))
               .catch(err => {
                 // Metrics are optional - log error but don't fail

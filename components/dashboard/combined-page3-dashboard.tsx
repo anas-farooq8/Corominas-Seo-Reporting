@@ -34,7 +34,12 @@ export function CombinedPage3Dashboard({ googleAnalyticsId, searchConsoleId }: C
         if (googleAnalyticsId) {
           promises.push(
             fetch(`/api/google-analytics/landing-pages/${googleAnalyticsId}`)
-              .then(res => res.json())
+              .then(res => {
+                if (!res.ok) {
+                  throw new Error(`HTTP ${res.status}: ${res.statusText}`)
+                }
+                return res.json()
+              })
               .then(data => isMounted && setGAData(data))
           )
         }
@@ -42,7 +47,12 @@ export function CombinedPage3Dashboard({ googleAnalyticsId, searchConsoleId }: C
         if (searchConsoleId) {
           promises.push(
             fetch(`/api/search-console/dashboard/${searchConsoleId}`)
-              .then(res => res.json())
+              .then(res => {
+                if (!res.ok) {
+                  throw new Error(`HTTP ${res.status}: ${res.statusText}`)
+                }
+                return res.json()
+              })
               .then(data => isMounted && setGSCData(data))
           )
         }
