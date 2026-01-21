@@ -38,6 +38,7 @@ export interface GBPKPICardData {
 
 export interface GBPDashboardData {
   businessName: string
+  address: string | null
   kpiCards: GBPKPICardData
 }
 
@@ -144,7 +145,7 @@ export async function fetchGBPActionsForPage1(
     const supabase = await createClient()
     const { data: location, error: locationError } = await supabase
       .from("google_business_profile_locations")
-      .select("location_id, business_name")
+      .select("location_id, business_name, address")
       .eq("datasource_id", datasourceId)
       .single()
     
@@ -228,7 +229,7 @@ export async function fetchGBPDashboardData(
     const supabase = await createClient()
     const { data: location, error: locationError } = await supabase
       .from("google_business_profile_locations")
-      .select("location_id, business_name")
+      .select("location_id, business_name, address")
       .eq("datasource_id", datasourceId)
       .single()
     
@@ -270,6 +271,7 @@ export async function fetchGBPDashboardData(
     
     const dashboardData: GBPDashboardData = {
       businessName: businessName,
+      address: location.address || null,
       kpiCards: kpiCards
     }
     

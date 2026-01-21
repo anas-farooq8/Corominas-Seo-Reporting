@@ -71,6 +71,7 @@ export interface GoogleBusinessProfileLocation {
   datasource_id: string
   location_id: string  // Full location ID (e.g., "accounts/123456789/locations/987654321")
   business_name: string
+  address: string | null  // Business address from storefrontAddress API data
   created_at: string
   updated_at: string
 }

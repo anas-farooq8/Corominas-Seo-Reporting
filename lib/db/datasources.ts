@@ -205,7 +205,8 @@ export async function attachGoogleSearchConsoleSite(
 export async function attachGoogleBusinessProfileLocation(
   datasourceId: string,
   locationId: string,
-  businessName: string
+  businessName: string,
+  address?: string | null
 ): Promise<GoogleBusinessProfileLocation> {
   const supabase = await createClient()
   const { data, error } = await supabase
@@ -213,7 +214,8 @@ export async function attachGoogleBusinessProfileLocation(
     .insert({
       datasource_id: datasourceId,
       location_id: locationId,
-      business_name: businessName
+      business_name: businessName,
+      address: address || null
     })
     .select()
     .single()

@@ -13,7 +13,7 @@ export async function GET() {
     
     const { data, error } = await supabase
       .from("google_business_profile_locations")
-      .select("location_id, business_name")
+      .select("location_id, business_name, address")
 
     if (error) {
       console.error("[API] Database error:", error)

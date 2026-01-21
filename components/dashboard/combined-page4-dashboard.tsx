@@ -103,29 +103,28 @@ export function CombinedPage4Dashboard({ gbpId, gmbId }: CombinedPage4DashboardP
     }
   }, [gbpId, gmbId])
 
-  // Determine metadata display (similar to page 1 pattern)
+  // Determine metadata display according to requirements
   const metadata = useMemo(() => {
     if (!gbpData && !gmbData) return null
     
-    // Priority: GBP business name > GMB business name
-    let title = gbpData?.businessName || gmbData?.businessName || ''
+    let title = ''
     let subtitle: string | undefined = undefined
     
-    // Build subtitle based on what's connected
-    const subtitleParts: string[] = []
-    
-    // If GBP is primary title, add GMB business name and address to subtitle
-    if (gbpData?.businessName && gmbData?.businessName && gbpData.businessName !== gmbData.businessName) {
-      subtitleParts.push(gmbData.businessName)
+    // Rule 1: If only GBP is connected
+    if (gbpData && !gmbData) {
+      title = gbpData.businessName
+      subtitle = gbpData.address || undefined
     }
-    
-    // Add address if available
-    const address = gmbData?.address || ''
-    if (address) {
-      subtitleParts.push(address)
+    // Rule 2: If only GMB is connected (even if grid data is available or not)
+    else if (!gbpData && gmbData) {
+      title = gmbData.businessName || ''
+      subtitle = gmbData.address || undefined
     }
-    
-    subtitle = subtitleParts.length > 0 ? subtitleParts.join(' • ') : undefined
+    // Rule 3: If both are connected - show GBP's business name and address
+    else if (gbpData && gmbData) {
+      title = gbpData.businessName
+      subtitle = gbpData.address || undefined
+    }
     
     return {
       title,

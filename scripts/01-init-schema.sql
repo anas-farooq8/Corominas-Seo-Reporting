@@ -98,6 +98,7 @@ CREATE TABLE IF NOT EXISTS google_business_profile_locations (
   datasource_id UUID NOT NULL REFERENCES datasources(id) ON DELETE CASCADE,
   location_id TEXT NOT NULL UNIQUE,  -- Full location ID (e.g., "accounts/123/locations/456")
   business_name TEXT NOT NULL,
+  address TEXT,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );

@@ -150,6 +150,11 @@ export function GBPDashboardPage({
           <h2 className="text-lg sm:text-xl md:text-2xl font-bold text-foreground">
             {data.businessName}
           </h2>
+          {data.address && (
+            <p className="text-sm text-muted-foreground mt-1">
+              {data.address}
+            </p>
+          )}
         </div>
       )}
 

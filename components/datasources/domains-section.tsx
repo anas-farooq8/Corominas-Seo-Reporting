@@ -204,6 +204,14 @@ export function DomainsSection({
             <h4 className="font-semibold text-sm sm:text-base">{location.business_name}</h4>
             
             <div className="space-y-1.5">
+              {location.address && (
+                <div className="flex items-start gap-1.5">
+                  <MapPin className="h-3.5 w-3.5 flex-shrink-0 mt-0.5 text-muted-foreground" />
+                  <div className="flex-1 text-xs text-muted-foreground">
+                    {location.address}
+                  </div>
+                </div>
+              )}
               <div className="flex items-start gap-1.5">
                 <MapPin className="h-3.5 w-3.5 flex-shrink-0 mt-0.5 text-muted-foreground" />
                 <div className="flex-1">

@@ -127,10 +127,11 @@ export async function attachGoogleBusinessProfileLocation(
   datasourceId: string,
   locationId: string,
   businessName: string,
-  projectId: string
+  projectId: string,
+  address?: string | null
 ): Promise<GoogleBusinessProfileLocation> {
   return withActionHandler(
-    () => db.attachGoogleBusinessProfileLocation(datasourceId, locationId, businessName),
+    () => db.attachGoogleBusinessProfileLocation(datasourceId, locationId, businessName, address),
     {
       errorMessage: "Failed to attach Google Business Profile location",
       revalidatePaths: [`/dashboard/projects/${projectId}`]

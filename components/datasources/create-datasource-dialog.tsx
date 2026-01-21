@@ -849,11 +849,15 @@ export function CreateDatasourceDialog({ projectId, existingTypes, onDatasourceA
       if (selectedType === "gbp" && selectedGBPLocation) {
         const location = allGBPLocations.find(l => l.name === selectedGBPLocation)
         if (location) {
+          // Format address using the same function as display
+          const formattedAddress = formatAddress(location.address) || null
+
           await attachGoogleBusinessProfileLocation(
             datasource.id,
             location.name,
             location.locationName,
-            projectId
+            projectId,
+            formattedAddress
           )
         }
       }
