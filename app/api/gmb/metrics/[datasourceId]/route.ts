@@ -6,7 +6,7 @@ export const revalidate = 0
 
 /**
  * GET /api/gmb/metrics/[datasourceId]
- * Fetch Grid My Business KPI metrics (GMB Score, Rating, Reviews, Engagements)
+ * Fetch Grid My Business KPI metrics (GMB Score, Rating, Reviews)
  */
 export async function GET(
   request: Request,

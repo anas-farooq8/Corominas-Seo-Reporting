@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react"
 import { LoadingSpinner } from "@/components/ui/loading-spinner"
 import { ErrorDisplay } from "@/components/ui/error-display"
-import { TrendingUp, Star, MessageSquare, Users } from "lucide-react"
+import { TrendingUp, Star, MessageSquare } from "lucide-react"
 import { GMBGridHeatmap } from "./gmb-grid-heatmap"
 import { GMBKPICard } from "./gmb-kpi-card"
 import type { GMBGridDashboardData } from "@/lib/actions/gmb-dashboard"
@@ -112,7 +112,7 @@ export function GMBGridDashboardPage({
 
       {/* GMB KPI Cards */}
       {showKPIs && metricsData && (
-        <div className="grid gap-3 sm:gap-4 grid-cols-2 md:grid-cols-4">
+        <div className="grid gap-3 sm:gap-4 grid-cols-1 sm:grid-cols-3">
           <GMBKPICard
             title="GMB SCORE"
             icon={<TrendingUp className="h-4 w-4" />}
@@ -127,23 +127,6 @@ export function GMBGridDashboardPage({
                 : metricsData.kpiCards.gmbScore.isIncrease
                   ? `+${Math.abs(metricsData.kpiCards.gmbScore.current - metricsData.kpiCards.gmbScore.previous).toFixed(1)} from last month`
                   : `-${Math.abs(metricsData.kpiCards.gmbScore.current - metricsData.kpiCards.gmbScore.previous).toFixed(1)} from last month`
-            }
-          />
-
-          <GMBKPICard
-            title="ENGAGEMENTS"
-            icon={<Users className="h-4 w-4" />}
-            currentValue={metricsData.kpiCards.engagements.current}
-            change={metricsData.kpiCards.engagements.change}
-            isIncrease={metricsData.kpiCards.engagements.isIncrease}
-            colorScheme="green"
-            formatValue={(val) => typeof val === 'number' ? Math.round(val).toString() : String(val)}
-            subtitle={
-              metricsData.kpiCards.engagements.change === 0 
-                ? "No changes"
-                : metricsData.kpiCards.engagements.isIncrease
-                  ? `+${Math.abs(metricsData.kpiCards.engagements.current - metricsData.kpiCards.engagements.previous).toFixed(0)} from last month`
-                  : `-${Math.abs(metricsData.kpiCards.engagements.current - metricsData.kpiCards.engagements.previous).toFixed(0)} from last month`
             }
           />
 

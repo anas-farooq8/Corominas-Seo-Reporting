@@ -1,6 +1,6 @@
 /**
  * GMB Metrics Actions
- * Fetch and process GMB KPI metrics (GMB Score, Rating, Review, Engagement)
+ * Fetch and process GMB KPI metrics (GMB Score, Rating, Review)
  */
 
 import { createClient } from "@/lib/supabase/server"
@@ -28,7 +28,6 @@ export interface GMBMetricsDashboardData {
     gmbScore: GMBKPICard
     rating: GMBKPICard
     reviews: GMBKPICard
-    engagements: GMBKPICard
   }
 }
 
@@ -79,7 +78,7 @@ function processMetricData(
 
 /**
  * Fetch GMB Metrics Dashboard Data
- * Returns KPI card data for GMB Score, Rating, Reviews, and Engagements
+ * Returns KPI card data for GMB Score, Rating, and Reviews
  */
 export async function fetchGMBMetricsDashboardData(
   datasourceId: string
@@ -125,7 +124,7 @@ export async function fetchGMBMetricsDashboardData(
       profile.profile_id,
       1,           // interval: 1
       'month',     // intervalUnit: month
-      'gmbscore,rating,review,engagement'
+      'gmbscore,rating,review'
     )
     
     console.log('[GMB Metrics Dashboard] Metrics response:', JSON.stringify(metricsResponse, null, 2))
@@ -135,7 +134,7 @@ export async function fetchGMBMetricsDashboardData(
       return null
     }
     
-    const { gmbscore, rating, review, engagement } = metricsResponse.data
+    const { gmbscore, rating, review } = metricsResponse.data
     
     // Period label for 1 month comparison
     const periodType = '1-month'
@@ -152,10 +151,6 @@ export async function fetchGMBMetricsDashboardData(
     
     const reviewData = review
       ? processMetricData(review.current, review.history)
-      : { current: 0, previous: 0, change: 0, isIncrease: true }
-    
-    const engagementData = engagement
-      ? processMetricData(engagement.current, engagement.history)
       : { current: 0, previous: 0, change: 0, isIncrease: true }
     
     // Build dashboard data
@@ -175,11 +170,6 @@ export async function fetchGMBMetricsDashboardData(
         },
         reviews: {
           ...reviewData,
-          periodType,
-          periodLabel
-        },
-        engagements: {
-          ...engagementData,
           periodType,
           periodLabel
         }

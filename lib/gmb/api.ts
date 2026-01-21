@@ -161,7 +161,6 @@ export interface GMBMetricsResponse {
     gmbscore?: GMBMetricData
     rating?: GMBMetricData
     review?: GMBMetricData
-    engagement?: GMBMetricData
   }
 }
 
@@ -618,13 +617,13 @@ export { clearTokenCache }
  * @param profileId - The profile ID to fetch metrics for
  * @param interval - Number of intervals to fetch (default: 1)
  * @param intervalUnit - Unit of interval: 'week' or 'month' (default: 'month')
- * @param fields - Comma-separated list of fields to fetch (default: 'gmbscore,rating,review,engagement')
+ * @param fields - Comma-separated list of fields to fetch (default: 'gmbscore,rating,review')
  */
 export async function fetchGMBMetrics(
   profileId: string,
   interval: number = 1,
   intervalUnit: 'week' | 'month' = 'month',
-  fields: string = 'gmbscore,rating,review,engagement'
+  fields: string = 'gmbscore,rating,review'
 ): Promise<GMBMetricsResponse> {
   const workspaceId = process.env.GMB_WORKSPACE_ID
   if (!workspaceId) {
