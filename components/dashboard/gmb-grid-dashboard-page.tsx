@@ -112,7 +112,7 @@ export function GMBGridDashboardPage({
 
       {/* GMB KPI Cards */}
       {showKPIs && metricsData && (
-        <div className="grid gap-3 sm:gap-4 grid-cols-1 sm:grid-cols-3">
+        <div className="grid gap-2 sm:gap-3 grid-cols-3">
           <GMBKPICard
             title="GMB SCORE"
             icon={<TrendingUp className="h-4 w-4" />}

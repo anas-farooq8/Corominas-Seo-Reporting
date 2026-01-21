@@ -63,43 +63,43 @@ export const GMBKPICard = memo(function GMBKPICard({
 
   return (
     <Card className={`${colors.bg} border-none shadow-sm`}>
-      <CardHeader className="pb-2 px-4 pt-4">
+      <CardHeader className="pb-1 sm:pb-2 px-3 sm:px-4 pt-2 sm:pt-4">
         <div className="flex items-center justify-between">
-          <CardTitle className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+          <CardTitle className="text-[9px] sm:text-xs font-medium text-muted-foreground uppercase tracking-wide leading-tight">
             {title}
           </CardTitle>
-          <div className={`p-1.5 rounded-lg ${colors.iconBg}`}>
+          <div className={`p-1 sm:p-1.5 rounded-lg ${colors.iconBg}`}>
             <div className={colors.iconColor}>
               {icon}
             </div>
           </div>
         </div>
       </CardHeader>
-      <CardContent className="pb-4 px-4 pt-1">
-        <div className="flex items-end justify-between">
-          <div>
-            <div className="text-2xl sm:text-3xl font-bold text-foreground">
+      <CardContent className="pb-2 sm:pb-4 px-3 sm:px-4 pt-0.5 sm:pt-1">
+        <div className="flex items-end justify-between gap-1">
+          <div className="min-w-0 flex-1">
+            <div className="text-lg sm:text-2xl md:text-3xl font-bold text-foreground leading-tight">
               {displayValue}
             </div>
             {subtitle && (
-              <p className="text-xs text-muted-foreground mt-1">
+              <p className="text-[10px] sm:text-xs text-muted-foreground mt-0.5 sm:mt-1 leading-tight">
                 {subtitle}
               </p>
             )}
           </div>
           <div
-            className={`flex items-center gap-1 text-sm font-semibold px-2 py-1 rounded-md ${
+            className={`flex items-center gap-0.5 sm:gap-1 text-sm font-semibold px-1.5 sm:px-2 py-0.5 sm:py-1 rounded-md flex-shrink-0 ${
               isIncrease 
                 ? "bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400" 
                 : "bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400"
             }`}
           >
             {isIncrease ? (
-              <ArrowUp className="h-3 w-3" />
+              <ArrowUp className="h-2.5 w-2.5 sm:h-3 sm:w-3" />
             ) : (
-              <ArrowDown className="h-3 w-3" />
+              <ArrowDown className="h-2.5 w-2.5 sm:h-3 sm:w-3" />
             )}
-            <span className="text-xs">{change.toFixed(1)}%</span>
+            <span className="text-[10px] sm:text-xs">{change.toFixed(1)}%</span>
           </div>
         </div>
       </CardContent>
