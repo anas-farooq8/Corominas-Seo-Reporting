@@ -186,23 +186,8 @@ export function selectBestComparisonWindow<T extends { date: string }>(
     const { current, previous, dates, currentStartYYYYMMDD, currentEndYYYYMMDD } = 
       calculateWindowComparison(dailyData, endDate, months, valueExtractor)
     
-    // Skip this comparison if we don't have sufficient data for the previous period
-    // Need at least some data points in the previous period to make a valid comparison
-    const prevDates = calculateWindowDates(endDate, months, months)
-    const previousDataPoints = dailyData.filter(d => {
-      const dateNum = parseInt(d.date)
-      return dateNum >= prevDates.startYYYYMMDD && dateNum <= prevDates.endYYYYMMDD
-    })
-    
-    // If previous period has no data, skip this window
-    if (previousDataPoints.length === 0 || previous === 0) {
-      if (metricName) {
-        console.log(`[${metricName}] ${label}: Insufficient data for comparison (previous period has ${previousDataPoints.length} days, total: ${previous})`)
-        console.log(`  ✗ Skipping due to insufficient data\n`)
-      }
-      continue
-    }
-    
+    // Always do comparison even with limited previous period data
+    // Calculate change, handling case where previous is 0
     const change = previous > 0 ? ((current - previous) / previous) * 100 : 0
     const isIncrease = change >= 0
     
@@ -237,6 +222,9 @@ export function selectBestComparisonWindow<T extends { date: string }>(
       console.log(`[${metricName}] ${label}:`)
       console.log(`  Current:  ${dates.currentStart} to ${dates.currentEnd} (${currentDays} days) = ${current.toFixed(2)}`)
       console.log(`  Previous: ${dates.previousStart} to ${dates.previousEnd} (${previousDays} days) = ${previous.toFixed(2)}`)
+      if (previousDays === 0 || previous === 0) {
+        console.log(`  ⚠ Limited previous period data (using available data for comparison)`)
+      }
       console.log(`  Change: ${change >= 0 ? '+' : ''}${change.toFixed(2)}%`)
     }
     
