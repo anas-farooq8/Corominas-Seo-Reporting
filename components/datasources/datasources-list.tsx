@@ -6,10 +6,11 @@ import { Database } from "lucide-react"
 
 interface DatasourcesListProps {
   datasources: getDataSourcesWithRespectiveData[]
-  onDatasourcesChange?: () => void
+  onDatasourceDeleted?: (datasourceId: string) => void
+  onDomainAttached?: () => void
 }
 
-export function DatasourcesList({ datasources, onDatasourcesChange }: DatasourcesListProps) {
+export function DatasourcesList({ datasources, onDatasourceDeleted, onDomainAttached }: DatasourcesListProps) {
   return (
     <div>
       {datasources.length === 0 ? (
@@ -24,8 +25,8 @@ export function DatasourcesList({ datasources, onDatasourcesChange }: Datasource
             <DatasourceCard
               key={datasource.id}
               datasource={datasource}
-              onDatasourceDeleted={onDatasourcesChange}
-              onDomainAttached={onDatasourcesChange}
+              onDatasourceDeleted={() => onDatasourceDeleted?.(datasource.id)}
+              onDomainAttached={onDomainAttached}
             />
           ))}
         </div>

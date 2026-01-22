@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, use } from "react"
+import { useState, useEffect, use, useTransition } from "react"
 import { useRouter } from "next/navigation"
 import type { ProjectWithDatasources, getDataSourcesWithRespectiveData } from "@/lib/supabase/types"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -9,7 +9,7 @@ import { DatasourcesList } from "@/components/datasources/datasources-list"
 import { CreateDatasourceDialog } from "@/components/datasources/create-datasource-dialog"
 import { LoadingSpinner } from "@/components/ui/loading-spinner"
 import { ErrorDisplay } from "@/components/ui/error-display"
-import { ArrowLeft, BarChart3 } from "lucide-react"
+import { ArrowLeft, BarChart3, Loader2 } from "lucide-react"
 
 export default function ProjectDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const router = useRouter()
@@ -18,6 +18,8 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
   const [datasources, setDatasources] = useState<getDataSourcesWithRespectiveData[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [, startTransition] = useTransition()
+  const [isNavigatingToDashboard, setIsNavigatingToDashboard] = useState(false)
 
   useEffect(() => {
     fetchProjectData()
@@ -35,6 +37,25 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
     } finally {
       setLoading(false)
     }
+  }
+
+  function handleDatasourceDeleted(datasourceId: string) {
+    // Optimistic update - remove immediately from UI
+    setDatasources((prev) => prev.filter((ds) => ds.id !== datasourceId))
+  }
+
+  function handleDatasourceAdded() {
+    // Refetch when adding a new datasource
+    fetchProjectData()
+  }
+
+  function handleDashboardClick() {
+    if (isNavigatingToDashboard || !project) return
+    
+    setIsNavigatingToDashboard(true)
+    startTransition(() => {
+      router.push(`/dashboard/projects/${project.id}/unified-dashboard`)
+    })
   }
 
   return (
@@ -83,17 +104,27 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
                 {datasources.length > 0 && (
                   <Button
                     variant="default"
-                    onClick={() => router.push(`/dashboard/projects/${project.id}/unified-dashboard`)}
+                    onClick={handleDashboardClick}
+                    disabled={isNavigatingToDashboard}
                     className="w-full sm:w-auto h-8 sm:h-9 text-xs sm:text-sm touch-manipulation"
                   >
-                    <BarChart3 className="mr-1.5 h-3.5 w-3.5" />
-                    View Dashboard
+                    {isNavigatingToDashboard ? (
+                      <>
+                        <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
+                        Loading...
+                      </>
+                    ) : (
+                      <>
+                        <BarChart3 className="mr-1.5 h-3.5 w-3.5" />
+                        View Dashboard
+                      </>
+                    )}
                   </Button>
                 )}
                 <CreateDatasourceDialog
                   projectId={project.id}
                   existingTypes={datasources.map((ds) => ds.type)}
-                  onDatasourceAdded={fetchProjectData}
+                  onDatasourceAdded={handleDatasourceAdded}
                 />
               </div>
             )}
@@ -116,7 +147,7 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
           ) : (
             <DatasourcesList
               datasources={datasources}
-              onDatasourcesChange={fetchProjectData}
+              onDatasourceDeleted={handleDatasourceDeleted}
             />
           )}
         </CardContent>

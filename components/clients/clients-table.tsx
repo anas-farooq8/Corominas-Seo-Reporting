@@ -1,11 +1,13 @@
 "use client"
 
+import { useState, useTransition } from "react"
 import { useRouter } from "next/navigation"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Badge } from "@/components/ui/badge"
 import { EditClientDialog } from "./edit-client-dialog"
 import { DeleteClientButton } from "./delete-client-button"
 import type { ClientWithProjects } from "@/lib/supabase/types"
+import { Loader2 } from "lucide-react"
 
 interface ClientsTableProps {
   clients: ClientWithProjects[]
@@ -16,6 +18,18 @@ interface ClientsTableProps {
 
 export function ClientsTable({ clients, onClientUpdated, onClientDeleted, isSearching = false }: ClientsTableProps) {
   const router = useRouter()
+  const [, startTransition] = useTransition()
+  const [navigatingToId, setNavigatingToId] = useState<string | null>(null)
+
+  const handleRowClick = (clientId: string) => {
+    // Prevent multiple clicks
+    if (navigatingToId) return
+    
+    setNavigatingToId(clientId)
+    startTransition(() => {
+      router.push(`/dashboard/clients/${clientId}`)
+    })
+  }
 
   if (clients.length === 0) {
     return (
@@ -39,37 +53,45 @@ export function ClientsTable({ clients, onClientUpdated, onClientDeleted, isSear
             </TableRow>
           </TableHeader>
           <TableBody>
-            {clients.map((client) => (
-              <TableRow
-                key={client.id}
-                className="cursor-pointer hover:bg-muted/50"
-                onClick={() => router.push(`/dashboard/clients/${client.id}`)}
-              >
-                <TableCell className="font-medium text-xs sm:text-sm min-w-[100px]">
-                  <div className="flex flex-col">
-                    <span>{client.name}</span>
-                    <span className="sm:hidden text-[11px] text-muted-foreground mt-0.5">{client.email}</span>
-                  </div>
-                </TableCell>
-                <TableCell className="hidden sm:table-cell text-xs sm:text-sm min-w-[150px]">{client.email}</TableCell>
-                <TableCell className="hidden lg:table-cell text-xs sm:text-sm max-w-[180px] xl:max-w-xs truncate">
-                  {client.notes || <span className="text-muted-foreground">N/A</span>}
-                </TableCell>
-                <TableCell className="text-center">
-                  <Badge variant="secondary" className="text-[11px] sm:text-xs">{client.project_count || 0}</Badge>
-                </TableCell>
-                <TableCell className="text-right">
-                  <div className="flex items-center justify-end gap-0.5 sm:gap-1" onClick={(e) => e.stopPropagation()}>
-                    <EditClientDialog client={client} onClientUpdated={onClientUpdated} />
-                    <DeleteClientButton
-                      clientId={client.id}
-                      clientName={client.name}
-                      onClientDeleted={() => onClientDeleted?.(client.id)}
-                    />
-                  </div>
-                </TableCell>
-              </TableRow>
-            ))}
+            {clients.map((client) => {
+              const isNavigating = navigatingToId === client.id
+              return (
+                <TableRow
+                  key={client.id}
+                  className={`cursor-pointer hover:bg-muted/50 transition-colors ${
+                    isNavigating ? "opacity-50 pointer-events-none" : ""
+                  }`}
+                  onClick={() => handleRowClick(client.id)}
+                >
+                  <TableCell className="font-medium text-xs sm:text-sm min-w-[100px]">
+                    <div className="flex items-center gap-2">
+                      <div className="flex flex-col flex-1">
+                        <span>{client.name}</span>
+                        <span className="sm:hidden text-[11px] text-muted-foreground mt-0.5">{client.email}</span>
+                      </div>
+                      {isNavigating && <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />}
+                    </div>
+                  </TableCell>
+                  <TableCell className="hidden sm:table-cell text-xs sm:text-sm min-w-[150px]">{client.email}</TableCell>
+                  <TableCell className="hidden lg:table-cell text-xs sm:text-sm max-w-[180px] xl:max-w-xs truncate">
+                    {client.notes || <span className="text-muted-foreground">N/A</span>}
+                  </TableCell>
+                  <TableCell className="text-center">
+                    <Badge variant="secondary" className="text-[11px] sm:text-xs">{client.project_count || 0}</Badge>
+                  </TableCell>
+                  <TableCell className="text-right">
+                    <div className="flex items-center justify-end gap-0.5 sm:gap-1" onClick={(e) => e.stopPropagation()}>
+                      <EditClientDialog client={client} onClientUpdated={onClientUpdated} />
+                      <DeleteClientButton
+                        clientId={client.id}
+                        clientName={client.name}
+                        onClientDeleted={() => onClientDeleted?.(client.id)}
+                      />
+                    </div>
+                  </TableCell>
+                </TableRow>
+              )
+            })}
           </TableBody>
         </Table>
       </div>
