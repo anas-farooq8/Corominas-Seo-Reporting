@@ -1,8 +1,12 @@
 /**
- * Unified date range calculation for dashboard data
- * Used by Google Analytics, SEMrush, and other datasources
- * Returns last 24 months of data (last completed month going back 24 months)
- * This allows for 12-month comparisons (current 12 months vs previous 12 months)
+ * Date range calculation utilities
+ * 
+ * This file contains:
+ * - Common date formatting functions (YYYY-MM-DD, YYYYMMDD)
+ * - General date range calculations (last 2 completed months, last completed month)
+ * - Dashboard-specific date ranges (24 months for GA/Semrush, 12 months for landing pages)
+ * - Mangools-specific date range logic based on tracking creation date
+ * - GMB filtering functions by timestamp
  */
 
 // ============================================
@@ -12,7 +16,7 @@
 /**
  * Format date as YYYY-MM-DD
  */
-function formatDateYYYYMMDD(date: Date): string {
+export function formatDateYYYYMMDD(date: Date): string {
   const year = date.getFullYear()
   const month = String(date.getMonth() + 1).padStart(2, '0')
   const day = String(date.getDate()).padStart(2, '0')
@@ -20,9 +24,9 @@ function formatDateYYYYMMDD(date: Date): string {
 }
 
 /**
- * Format date as YYYYMMDD (no separators)
+ * Format date as YYYYMMDD integer (no separators)
  */
-function formatDateYYYYMMDDCompact(date: Date): string {
+export function formatDateYYYYMMDDCompact(date: Date): string {
   const year = date.getFullYear()
   const month = String(date.getMonth() + 1).padStart(2, '0')
   const day = String(date.getDate()).padStart(2, '0')
@@ -284,4 +288,129 @@ export function filterGMBMetricsByMonth<T extends { timestamp: string }>(
     const itemTimestamp = new Date(item.timestamp).getTime()
     return itemTimestamp >= startTimestamp && itemTimestamp <= endTimestamp
   })
+}
+
+/**
+ * Calculate Mangools dashboard date ranges based on tracking creation date
+ * 
+ * IMPORTANT: The returned monthAStart, monthAEnd, monthBStart, monthBEnd are the EXACT dates 
+ * used for API calls and stored in the database. These dates define the comparison periods.
+ * 
+ * Handles 3 scenarios:
+ * 1. Created BEFORE target range -> Use full target range (2 complete months)
+ *    Example: Nov 1-30, 2025 vs Dec 1-31, 2025
+ * 2a. Created AFTER target range, SAME month as today -> Use partial current month (1 API call)
+ *    Example: Jan 1-22, 2026 vs Jan 1-22, 2026 (same data)
+ * 2b. Created AFTER target range, DIFFERENT month -> Use 2 partial months
+ *    Example: Dec 18-31, 2025 vs Jan 1-22, 2026
+ * 
+ * @param trackingCreatedAt - ISO string or null from mangools_domains.tracking_created_at
+ * @returns Date ranges for Month A and Month B, plus metadata
+ */
+export function calculateMangoolsDashboardRanges(trackingCreatedAt: string | null): {
+  monthAStart: Date
+  monthAEnd: Date
+  monthBStart: Date
+  monthBEnd: Date
+  useSameDataForBoth: boolean
+  isLimitedData: boolean
+  limitedDataMessage: string
+  scenario: '1' | '2a' | '2b'
+} {
+  const today = new Date()
+  today.setHours(23, 59, 59, 999) // End of day for inclusive ranges
+  
+  // Get the standard last 2 completed months (our target range)
+  const targetRange = getLast2CompletedMonthsForAPI()
+  const targetMonthAStart = new Date(targetRange.monthAStart)
+  const targetMonthAEnd = new Date(targetRange.monthAEnd)
+  const targetMonthBStart = new Date(targetRange.monthBStart)
+  const targetMonthBEnd = new Date(targetRange.monthBEnd)
+  
+  // Check tracking creation date
+  let trackingCreatedDate: Date | null = null
+  if (trackingCreatedAt) {
+    trackingCreatedDate = new Date(trackingCreatedAt)
+    trackingCreatedDate.setHours(0, 0, 0, 0) // Start of day
+  }
+  
+  // SCENARIO 1: Created BEFORE target range (or no creation date)
+  if (!trackingCreatedDate || trackingCreatedDate <= targetMonthAStart) {
+    return {
+      monthAStart: targetMonthAStart,
+      monthAEnd: targetMonthAEnd,
+      monthBStart: targetMonthBStart,
+      monthBEnd: targetMonthBEnd,
+      useSameDataForBoth: false,
+      isLimitedData: false,
+      limitedDataMessage: '',
+      scenario: '1'
+    }
+  }
+  
+  // Check if created in same month as today
+  const isSameMonth = 
+    trackingCreatedDate.getMonth() === today.getMonth() &&
+    trackingCreatedDate.getFullYear() === today.getFullYear()
+  
+  // SCENARIO 2a: Created in SAME month as today
+  if (isSameMonth) {
+    return {
+      monthAStart: trackingCreatedDate,
+      monthAEnd: today,
+      monthBStart: trackingCreatedDate,
+      monthBEnd: today,
+      useSameDataForBoth: true,
+      isLimitedData: true,
+      limitedDataMessage: `This tracking was recently added. Showing data from ${trackingCreatedDate.toLocaleDateString()} to ${today.toLocaleDateString()}.`,
+      scenario: '2a'
+    }
+  }
+  
+  // SCENARIO 2b: Created in DIFFERENT month from today
+  const monthAStart = trackingCreatedDate
+  const monthAEnd = new Date(trackingCreatedDate.getFullYear(), trackingCreatedDate.getMonth() + 1, 0)
+  const monthBStart = new Date(trackingCreatedDate.getFullYear(), trackingCreatedDate.getMonth() + 1, 1)
+  const monthBEnd = today
+  
+  return {
+    monthAStart,
+    monthAEnd,
+    monthBStart,
+    monthBEnd,
+    useSameDataForBoth: false,
+    isLimitedData: true,
+    limitedDataMessage: `This tracking was recently added. Comparing partial months from ${trackingCreatedDate.toLocaleDateString()}.`,
+    scenario: '2b'
+  }
+}
+
+/**
+ * Format a date range for display in Mangools dashboard
+ * Examples:
+ * - Same month: "1-22 Jan 2026"
+ * - Same year: "18 Dec - 22 Jan 2026"
+ * - Different years: "25 Dec 2025 - 15 Jan 2026"
+ */
+export function formatMangoolsDateRange(start: Date, end: Date): string {
+  const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+  const startDay = start.getDate()
+  const startMonth = monthNames[start.getMonth()]
+  const startYear = start.getFullYear()
+  const endDay = end.getDate()
+  const endMonth = monthNames[end.getMonth()]
+  const endYear = end.getFullYear()
+  
+  // Same month and year: "1-22 Jan 2026"
+  if (start.getMonth() === end.getMonth() && start.getFullYear() === end.getFullYear()) {
+    return `${startDay}-${endDay} ${startMonth} ${startYear}`
+  }
+  // Same year, different months: "18 Dec - 22 Jan 2026"
+  else if (start.getFullYear() === end.getFullYear()) {
+    return `${startDay} ${startMonth} - ${endDay} ${endMonth} ${endYear}`
+  }
+  // Different years: "25 Dec 2025 - 15 Jan 2026"
+  else {
+    return `${startDay} ${startMonth} ${startYear} - ${endDay} ${endMonth} ${endYear}`
+  }
 }

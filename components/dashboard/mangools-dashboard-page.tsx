@@ -115,11 +115,28 @@ export function MangoolsDashboardPage({ datasourceId }: MangoolsDashboardPagePro
           <div className="flex items-center gap-2 text-xs sm:text-sm text-muted-foreground">
             <Calendar className="h-3.5 w-3.5 sm:h-4 sm:w-4 flex-shrink-0" />
             <span className="text-[11px] sm:text-xs md:text-sm">
-              Comparing {data.dateRanges.monthAName} vs {data.dateRanges.monthBName}
+              <span className="font-medium">{data.dateRanges.monthAName}</span> vs <span className="font-medium">{data.dateRanges.monthBName}</span>
             </span>
           </div>
         </div>
       </div>
+
+      {/* Limited Data Warning */}
+      {data.isLimited && (
+        <div className="p-3 sm:p-4 border border-amber-300 bg-amber-50 dark:bg-amber-950/20 dark:border-amber-800 rounded-lg">
+          <div className="flex items-start gap-2">
+            <svg className="h-5 w-5 text-amber-600 dark:text-amber-500 flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            <div className="flex-1">
+              <p className="text-sm font-medium text-amber-900 dark:text-amber-200">Limited Data Available</p>
+              <p className="text-xs text-amber-700 dark:text-amber-400 mt-1">
+                This tracking was recently added. Showing available comparison data.
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Summary Stats - Only render if there are cards to show */}
       {kpiCards.length > 0 && (

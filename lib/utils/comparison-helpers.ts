@@ -1,7 +1,16 @@
 /**
- * Shared comparison and window calculation helpers for dashboard KPIs
- * Used by Google Analytics, SEMrush, and Google Search Console dashboards
+ * Comparison and window calculation helpers for KPI dashboards
+ * 
+ * This file contains:
+ * - Period-based window calculations (1/3/6/12 month comparisons)
+ * - Data filtering by YYYYMMDD date ranges
+ * - Best comparison window selection logic
+ * 
+ * Used by: Google Analytics, SEMrush, Google Search Console
+ * NOT used by: Mangools (uses date-ranges.ts directly), GMB
  */
+
+import { formatDateYYYYMMDD } from './date-ranges'
 
 export type PeriodType = '1-month' | '3-month' | '6-month' | '12-month'
 
@@ -77,16 +86,9 @@ export function calculateWindowDates(
     String(windowEndLastDay.getDate()).padStart(2, '0')
   )
   
-  const formatDate = (date: Date) => {
-    const y = date.getFullYear()
-    const m = String(date.getMonth() + 1).padStart(2, '0')
-    const d = String(date.getDate()).padStart(2, '0')
-    return `${y}-${m}-${d}`
-  }
-  
   return {
-    startDate: formatDate(windowStart),
-    endDate: formatDate(windowEndLastDay),
+    startDate: formatDateYYYYMMDD(windowStart),
+    endDate: formatDateYYYYMMDD(windowEndLastDay),
     startYYYYMMDD,
     endYYYYMMDD
   }
