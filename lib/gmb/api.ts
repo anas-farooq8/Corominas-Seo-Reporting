@@ -622,7 +622,7 @@ export { clearTokenCache }
 export async function fetchGMBMetrics(
   profileId: string,
   interval: number = 1,
-  intervalUnit: 'week' | 'month' = 'month',
+  intervalUnit: 'week' | 'month',
   fields: string = 'gmbscore,rating,review'
 ): Promise<GMBMetricsResponse> {
   const workspaceId = process.env.GMB_WORKSPACE_ID

@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect, use } from "react"
-import { useRouter } from "next/navigation"
+import { useRouter, useSearchParams } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { LoadingSpinner } from "@/components/ui/loading-spinner"
 import { ErrorDisplay } from "@/components/ui/error-display"
@@ -21,6 +21,7 @@ interface PageConfig {
 
 export default function UnifiedDashboardPage({ params }: { params: Promise<{ id: string }> }) {
   const router = useRouter()
+  const searchParams = useSearchParams()
   const { id: projectId } = use(params)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -32,6 +33,12 @@ export default function UnifiedDashboardPage({ params }: { params: Promise<{ id:
   useEffect(() => {
     fetchDashboardData()
   }, [projectId])
+
+  const handlePageChange = (pageId: string) => {
+    setActivePage(pageId)
+    const pageNumber = pageId.replace('page-', '')
+    router.replace(`?page=${pageNumber}`, { scroll: false })
+  }
 
   async function fetchDashboardData() {
     try {
@@ -98,7 +105,17 @@ export default function UnifiedDashboardPage({ params }: { params: Promise<{ id:
       
       setPages(connectedPages)
       if (connectedPages.length > 0) {
-        setActivePage(connectedPages[0].id)
+        const pageParam = searchParams.get('page')
+        const pageId = pageParam ? `page-${pageParam}` : null
+        const pageExists = pageId && connectedPages.some(p => p.id === pageId)
+        const selectedPage = pageExists ? pageId : connectedPages[0].id
+        setActivePage(selectedPage)
+        
+        // Update URL if not already set
+        if (!pageParam) {
+          const pageNumber = selectedPage.replace('page-', '')
+          router.replace(`?page=${pageNumber}`, { scroll: false })
+        }
       }
     } catch (err) {
       console.error("Error fetching dashboard data:", err)
@@ -151,7 +168,7 @@ export default function UnifiedDashboardPage({ params }: { params: Promise<{ id:
             {pages.map((page) => (
               <button
                 key={page.id}
-                onClick={() => setActivePage(page.id)}
+                onClick={() => handlePageChange(page.id)}
                 className={`px-3 sm:px-4 py-2.5 sm:py-3 text-xs sm:text-sm font-medium border-b-2 transition-colors cursor-pointer whitespace-nowrap touch-manipulation ${
                   activePage === page.id
                     ? "border-primary text-primary"
