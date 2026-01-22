@@ -13,6 +13,7 @@ interface GMBKPICardProps {
   colorScheme: 'purple' | 'green' | 'blue' | 'orange'
   formatValue?: (value: number | string) => string
   subtitle?: string
+  dateRange?: string // Optional date range to show the period
 }
 
 const colorClasses = {
@@ -50,7 +51,8 @@ export const GMBKPICard = memo(function GMBKPICard({
   isIncrease,
   colorScheme,
   formatValue,
-  subtitle
+  subtitle,
+  dateRange
 }: GMBKPICardProps) {
   const colors = colorClasses[colorScheme]
   
@@ -84,6 +86,11 @@ export const GMBKPICard = memo(function GMBKPICard({
             {subtitle && (
               <p className="text-[10px] sm:text-xs text-muted-foreground mt-0.5 sm:mt-1 leading-tight">
                 {subtitle}
+              </p>
+            )}
+            {dateRange && (
+              <p className="text-[9px] sm:text-[10px] text-muted-foreground/70 mt-0.5 leading-tight font-mono">
+                {dateRange}
               </p>
             )}
           </div>

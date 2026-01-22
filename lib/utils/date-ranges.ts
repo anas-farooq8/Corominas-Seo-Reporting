@@ -229,3 +229,59 @@ export function filterByMonth<T extends { dateAdded: number }>(
     item.dateAdded >= startTimestamp && item.dateAdded <= endTimestamp
   )
 }
+
+/**
+ * Get the last completed month date range for GMB metrics filtering
+ * Examples:
+ * - If today = 22 Jan 2026 → Dec 1, 2025 to Dec 31, 2025
+ * - If today = 15 Mar 2025 → Feb 1, 2025 to Feb 28, 2025
+ * - If today = 31 Dec 2024 → Nov 1, 2024 to Nov 30, 2024
+ */
+export function getLastCompletedMonthRange(): {
+  start: Date
+  end: Date
+  startTimestamp: number
+  endTimestamp: number
+  label: string
+  startDateStr: string
+  endDateStr: string
+} {
+  const now = new Date()
+  
+  // Get first day of current month
+  const currentMonthStart = new Date(now.getFullYear(), now.getMonth(), 1)
+  
+  // Last completed month end date (last day of previous month)
+  const lastMonthEnd = new Date(currentMonthStart.getTime() - 1)
+  
+  // Last completed month start date (first day of previous month)
+  const lastMonthStart = new Date(lastMonthEnd.getFullYear(), lastMonthEnd.getMonth(), 1)
+  
+  return {
+    start: lastMonthStart,
+    end: lastMonthEnd,
+    startTimestamp: lastMonthStart.getTime(),
+    endTimestamp: new Date(lastMonthEnd.getFullYear(), lastMonthEnd.getMonth(), lastMonthEnd.getDate(), 23, 59, 59, 999).getTime(),
+    label: formatMonthLabel(lastMonthStart),
+    startDateStr: formatDateYYYYMMDD(lastMonthStart),
+    endDateStr: formatDateYYYYMMDD(lastMonthEnd)
+  }
+}
+
+/**
+ * Filter GMB metric history by timestamp within a date range
+ * @param history - Array of metric history items with timestamp (ISO string)
+ * @param startTimestamp - Start timestamp in milliseconds
+ * @param endTimestamp - End timestamp in milliseconds
+ * @returns Filtered array of history items
+ */
+export function filterGMBMetricsByMonth<T extends { timestamp: string }>(
+  history: T[],
+  startTimestamp: number,
+  endTimestamp: number
+): T[] {
+  return history.filter(item => {
+    const itemTimestamp = new Date(item.timestamp).getTime()
+    return itemTimestamp >= startTimestamp && itemTimestamp <= endTimestamp
+  })
+}

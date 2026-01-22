@@ -128,6 +128,7 @@ export function GMBGridDashboardPage({
                   ? `+${Math.abs(metricsData.kpiCards.gmbScore.current - metricsData.kpiCards.gmbScore.previous).toFixed(1)} from last month`
                   : `-${Math.abs(metricsData.kpiCards.gmbScore.current - metricsData.kpiCards.gmbScore.previous).toFixed(1)} from last month`
             }
+            dateRange={metricsData.kpiCards.gmbScore.dateRange}
           />
 
           <GMBKPICard
@@ -145,6 +146,7 @@ export function GMBGridDashboardPage({
                   ? `+${Math.abs(metricsData.kpiCards.rating.current - metricsData.kpiCards.rating.previous).toFixed(1)} from last month`
                   : `-${Math.abs(metricsData.kpiCards.rating.current - metricsData.kpiCards.rating.previous).toFixed(1)} from last month`
             }
+            dateRange={metricsData.kpiCards.rating.dateRange}
           />
 
           <GMBKPICard
@@ -162,6 +164,7 @@ export function GMBGridDashboardPage({
                   ? `+${Math.abs(metricsData.kpiCards.reviews.current - metricsData.kpiCards.reviews.previous).toFixed(0)} from last month`
                   : `-${Math.abs(metricsData.kpiCards.reviews.current - metricsData.kpiCards.reviews.previous).toFixed(0)} from last month`
             }
+            dateRange={metricsData.kpiCards.reviews.dateRange}
           />
         </div>
       )}
