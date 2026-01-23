@@ -8,6 +8,7 @@ import {
 import { getCachedDashboardData, saveDashboardCache } from "@/lib/cache/dashboard-cache"
 import { selectBestComparisonWindow, type WindowResult } from "@/lib/utils/comparison-helpers"
 import { calculateSemrushDateRanges } from "@/lib/utils/date-ranges"
+import type { DashboardOptions } from "@/lib/api/dashboard-handler"
 
 /**
  * Helper to compute totalKeywords from a day object
@@ -90,7 +91,8 @@ function calculateKPICards(
  * @param datasourceId - The datasource ID
  */
 export async function fetchSEMrushDashboard(
-  datasourceId: string
+  datasourceId: string,
+  options?: DashboardOptions
 ): Promise<SEMrushDashboardData | null> {
   try {
     // Get domain from database
@@ -109,7 +111,7 @@ export async function fetchSEMrushDashboard(
     const domain = semrushDomain.domain
     
     // Use new date calculation to get ALL data until last completed month
-    const { endDate: endDateStr } = calculateSemrushDateRanges()
+    const { endDate: endDateStr } = calculateSemrushDateRanges(options?.today)
     
     console.log('[SEMrush Dashboard] Fetching all data up to', endDateStr)
     

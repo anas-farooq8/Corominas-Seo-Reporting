@@ -1,4 +1,4 @@
-import { NextResponse } from "next/server"
+import { NextRequest, NextResponse } from "next/server"
 import { fetchGMBGridDashboardData } from "@/lib/actions/gmb-dashboard"
 
 export const dynamic = "force-dynamic"
@@ -10,15 +10,18 @@ export const revalidate = 0
  * Includes aggregated monthly grids and comparisons
  */
 export async function GET(
-  request: Request,
+  request: NextRequest,
   { params }: { params: Promise<{ datasourceId: string }> }
 ) {
   try {
-    const { datasourceId } = await params
+    const { datasourceId} = await params
     console.log("[API] GMB Grid Dashboard requested for datasource:", datasourceId)
     
+    // Extract today query parameter for report links
+    const today = request.nextUrl.searchParams.get('today') || undefined
+    
     // Fetch grid dashboard data with parallel request concurrency of 5
-    const data = await fetchGMBGridDashboardData(datasourceId, 5)
+    const data = await fetchGMBGridDashboardData(datasourceId, 5, { today })
     
     if (!data) {
       return NextResponse.json(

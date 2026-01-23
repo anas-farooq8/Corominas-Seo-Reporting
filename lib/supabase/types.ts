@@ -86,6 +86,27 @@ export interface GMBProfile {
   updated_at: string
 }
 
+export interface Report {
+  id: string
+  month: number  // 1-12
+  year: number
+  generation_date: string
+  created_at: string
+  updated_at: string
+}
+
+export interface ReportLink {
+  id: string
+  report_id: string
+  client_id: string
+  project_id: string
+  token: string
+  locked_today_date: string | null  // ISO date string (YYYY-MM-DD) or null
+  first_opened_at: string | null
+  created_at: string
+  updated_at: string
+}
+
 // Alias for MangoolsDomain used in datasource components
 export type DatasourceDomain = MangoolsDomain
 
@@ -160,6 +181,15 @@ export interface ProjectInput {
   client_id: string
   name: string
   details?: string | null
+}
+
+export interface ReportWithLinks extends Report {
+  report_links?: ReportLinkWithDetails[]
+}
+
+export interface ReportLinkWithDetails extends ReportLink {
+  client?: Client
+  project?: Project
 }
 
 export interface DatasourceInput {

@@ -12,9 +12,10 @@ import { GMBGridDashboardPage } from "./gmb-grid-dashboard-page"
 interface CombinedPage4DashboardProps {
   gbpId?: string
   gmbId?: string  // This is the datasource ID for GMB
+  today?: string // Optional locked today date (YYYY-MM-DD)
 }
 
-export function CombinedPage4Dashboard({ gbpId, gmbId }: CombinedPage4DashboardProps) {
+export function CombinedPage4Dashboard({ gbpId, gmbId, today }: CombinedPage4DashboardProps) {
   const [gbpData, setGBPData] = useState<GBPDashboardData | null>(null)
   const [gmbData, setGMBData] = useState<GMBGridDashboardData | null>(null)
   const [gmbMetricsData, setGMBMetricsData] = useState<GMBMetricsDashboardData | null>(null)
@@ -30,11 +31,12 @@ export function CombinedPage4Dashboard({ gbpId, gmbId }: CombinedPage4DashboardP
         setError(null)
 
         const promises = []
+        const todayParam = today ? `?today=${today}` : ''
         
         // Fetch GBP data
         if (gbpId) {
           promises.push(
-            fetch(`/api/gbp/dashboard/${gbpId}`)
+            fetch(`/api/gbp/dashboard/${gbpId}${todayParam}`)
               .then(res => {
                 if (!res.ok) {
                   throw new Error(`HTTP ${res.status}: ${res.statusText}`)
@@ -52,7 +54,7 @@ export function CombinedPage4Dashboard({ gbpId, gmbId }: CombinedPage4DashboardP
         // Fetch GMB grid data (heatmap)
         if (gmbId) {
           promises.push(
-            fetch(`/api/gmb/grid-dashboard/${gmbId}`)
+            fetch(`/api/gmb/grid-dashboard/${gmbId}${todayParam}`)
               .then(res => {
                 if (!res.ok) {
                   throw new Error(`HTTP ${res.status}: ${res.statusText}`)
@@ -68,7 +70,7 @@ export function CombinedPage4Dashboard({ gbpId, gmbId }: CombinedPage4DashboardP
           
           // Fetch GMB metrics data (KPI cards) - IN PARALLEL with grid
           promises.push(
-            fetch(`/api/gmb/metrics/${gmbId}`)
+            fetch(`/api/gmb/metrics/${gmbId}${todayParam}`)
               .then(res => {
                 if (!res.ok) {
                   throw new Error(`HTTP ${res.status}: ${res.statusText}`)
@@ -101,7 +103,7 @@ export function CombinedPage4Dashboard({ gbpId, gmbId }: CombinedPage4DashboardP
     return () => {
       isMounted = false
     }
-  }, [gbpId, gmbId])
+  }, [gbpId, gmbId, today])
 
   // Determine metadata display according to requirements
   const metadata = useMemo(() => {

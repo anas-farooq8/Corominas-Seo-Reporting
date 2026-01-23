@@ -21,6 +21,7 @@ import {
   formatMangoolsDateRange,
   getLast2CompletedMonthsForAPI
 } from "@/lib/utils/date-ranges"
+import type { DashboardOptions } from "@/lib/api/dashboard-handler"
 
 /**
  * KPI Card Data for Mangools metrics
@@ -56,7 +57,8 @@ export interface MangoolsDashboardData {
  * @param datasourceId - The datasource ID
  */
 export async function fetchMangoolsDashboardData(
-  datasourceId: string
+  datasourceId: string,
+  options?: DashboardOptions
 ): Promise<MangoolsDashboardData | null> {
   console.log("[Mangools Debug] Starting fetchMangoolsDashboardData for datasourceId:", datasourceId)
   
@@ -94,7 +96,7 @@ export async function fetchMangoolsDashboardData(
     console.log("[Mangools Debug] Cache miss - fetching from API")
     
     // Calculate date ranges based on tracking creation date
-    const ranges = calculateMangoolsDashboardRanges(domain.tracking_created_at)
+    const ranges = calculateMangoolsDashboardRanges(domain.tracking_created_at, options?.today)
     
     console.log("[Mangools Debug] ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
     console.log(`[Mangools Debug] 📍 SCENARIO ${ranges.scenario}`)

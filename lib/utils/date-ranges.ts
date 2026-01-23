@@ -56,8 +56,18 @@ function getEndOfDayTimestamp(date: Date): number {
 /**
  * Get the last day of previous month
  */
-function getLastDayOfPreviousMonth(referenceDate: Date = new Date()): Date {
-  return new Date(referenceDate.getFullYear(), referenceDate.getMonth(), 0)
+function getLastDayOfPreviousMonth(referenceDate?: Date): Date {
+  const refDate = referenceDate || new Date()
+  return new Date(refDate.getFullYear(), refDate.getMonth(), 0)
+}
+
+/**
+ * Parse today string (YYYY-MM-DD) to Date object, or use current date
+ */
+function parseTodayDate(today?: string): Date {
+  if (!today) return new Date()
+  const [year, month, day] = today.split('-').map(Number)
+  return new Date(year, month - 1, day)
 }
 
 // ============================================
@@ -71,12 +81,13 @@ function getLastDayOfPreviousMonth(referenceDate: Date = new Date()): Date {
  * - If today = 31 Dec 2024 → Last: Nov 2024, Previous: Oct 2024
  * - If today = 2 Jan 2025 → Last: Dec 2024, Previous: Nov 2024
  * - If today = 15 Mar 2025 → Last: Feb 2025, Previous: Jan 2025
+ * @param today - Optional today date string (YYYY-MM-DD), defaults to current date
  */
-export function getLast2CompletedMonths(): { 
+export function getLast2CompletedMonths(today?: string): { 
   lastMonth: { start: Date, end: Date, startTimestamp: number, endTimestamp: number, label: string }
   previousMonth: { start: Date, end: Date, startTimestamp: number, endTimestamp: number, label: string }
 } {
-  const now = new Date()
+  const now = parseTodayDate(today)
   
   // Last Month (previous month) - the most recent completed month
   const lastMonthEnd = getLastDayOfPreviousMonth(now)
@@ -108,9 +119,10 @@ export function getLast2CompletedMonths(): {
  * Generic function to calculate N months of data ending at last completed month
  * @param monthsBack - Number of months to go back (e.g., 24, 12)
  * @param logLabel - Label for console logging
+ * @param todayStr - Optional today date string (YYYY-MM-DD), defaults to current date
  */
-function calculateMonthsDateRange(monthsBack: number, logLabel: string) {
-  const today = new Date()
+function calculateMonthsDateRange(monthsBack: number, logLabel: string, todayStr?: string) {
+  const today = parseTodayDate(todayStr)
   
   // Last completed month end date (last day of previous month)
   const endDate = getLastDayOfPreviousMonth(today)
@@ -141,26 +153,30 @@ function calculateMonthsDateRange(monthsBack: number, logLabel: string) {
  * Calculate date ranges for dashboard reports (24 months of data)
  * Returns last completed month going back 24 months
  * This allows for 12-month comparisons (current 12 months vs previous 12 months)
+ * @param today - Optional today date string (YYYY-MM-DD), defaults to current date
  */
-export function calculateDashboardDateRanges() {
-  return calculateMonthsDateRange(24, 'Dashboard Date Ranges')
+export function calculateDashboardDateRanges(today?: string) {
+  return calculateMonthsDateRange(24, 'Dashboard Date Ranges', today)
 }
 
 /**
  * Calculate date ranges for landing pages (12 months of data only)
  * Used for Google Analytics landing pages on Page 3
  * Returns last completed month going back 12 months
+ * @param today - Optional today date string (YYYY-MM-DD), defaults to current date
  */
-export function calculateLandingPagesDateRanges() {
-  return calculateMonthsDateRange(12, 'Landing Pages Date Ranges')
+export function calculateLandingPagesDateRanges(today?: string) {
+  return calculateMonthsDateRange(12, 'Landing Pages Date Ranges', today)
 }
 
 /**
  * Calculate date ranges for SEMrush (all data up to last completed month)
  * Only returns end date - Semrush API will return all historical data
+ * @param today - Optional today date string (YYYY-MM-DD), defaults to current date
  */
-export function calculateSemrushDateRanges() {
-  const endDate = getLastDayOfPreviousMonth()
+export function calculateSemrushDateRanges(today?: string) {
+  const todayDate = parseTodayDate(today)
+  const endDate = getLastDayOfPreviousMonth(todayDate)
   const endDateStr = formatDateYYYYMMDD(endDate)
   
   console.log('[SEMrush] Fetching all data up to:', endDateStr)
@@ -181,14 +197,15 @@ export function calculateSemrushDateRanges() {
  * - If today = 31 Dec 2024 → Month A: Oct 1 - Oct 31, Month B: Nov 1 - Nov 30
  * - If today = 2 Jan 2025 → Month A: Nov 1 - Nov 30, Month B: Dec 1 - Dec 31
  * - If today = 15 Mar 2025 → Month A: Jan 1 - Jan 31, Month B: Feb 1 - Feb 28
+ * @param today - Optional today date string (YYYY-MM-DD), defaults to current date
  */
-export function getLast2CompletedMonthsForAPI(): { 
+export function getLast2CompletedMonthsForAPI(today?: string): { 
   monthAStart: string
   monthAEnd: string
   monthBStart: string
   monthBEnd: string
 } {
-  const months = getLast2CompletedMonths()
+  const months = getLast2CompletedMonths(today)
   
   return {
     monthAStart: formatDateYYYYMMDD(months.previousMonth.start), // Month A is previous month (older)
@@ -219,8 +236,9 @@ export function filterByMonth<T extends { dateAdded: number }>(
  * - If today = 22 Jan 2026 → Dec 1, 2025 to Dec 31, 2025
  * - If today = 15 Mar 2025 → Feb 1, 2025 to Feb 28, 2025
  * - If today = 31 Dec 2024 → Nov 1, 2024 to Nov 30, 2024
+ * @param today - Optional today date string (YYYY-MM-DD), defaults to current date
  */
-export function getLastCompletedMonthRange(): {
+export function getLastCompletedMonthRange(today?: string): {
   start: Date
   end: Date
   startTimestamp: number
@@ -229,7 +247,7 @@ export function getLastCompletedMonthRange(): {
   startDateStr: string
   endDateStr: string
 } {
-  const { lastMonth } = getLast2CompletedMonths()
+  const { lastMonth } = getLast2CompletedMonths(today)
   
   return {
     start: lastMonth.start,
@@ -275,9 +293,10 @@ export function filterGMBMetricsByMonth<T extends { timestamp: string }>(
  *    Example: Dec 18-31, 2025 vs Jan 1-22, 2026
  * 
  * @param trackingCreatedAt - ISO string or null from mangools_domains.tracking_created_at
+ * @param todayStr - Optional today date string (YYYY-MM-DD), defaults to current date
  * @returns Date ranges for Month A and Month B, plus metadata
  */
-export function calculateMangoolsDashboardRanges(trackingCreatedAt: string | null): {
+export function calculateMangoolsDashboardRanges(trackingCreatedAt: string | null, todayStr?: string): {
   monthAStart: Date
   monthAEnd: Date
   monthBStart: Date
@@ -287,11 +306,11 @@ export function calculateMangoolsDashboardRanges(trackingCreatedAt: string | nul
   limitedDataMessage: string
   scenario: '1' | '2a' | '2b'
 } {
-  const today = new Date()
+  const today = parseTodayDate(todayStr)
   today.setHours(23, 59, 59, 999) // End of day for inclusive ranges
   
   // Get the standard last 2 completed months (our target range)
-  const targetRange = getLast2CompletedMonthsForAPI()
+  const targetRange = getLast2CompletedMonthsForAPI(todayStr)
   const targetMonthAStart = new Date(targetRange.monthAStart)
   const targetMonthAEnd = new Date(targetRange.monthAEnd)
   const targetMonthBStart = new Date(targetRange.monthBStart)

@@ -15,7 +15,10 @@ export async function GET(
       )
     }
 
-    const data = await fetchGBPActionsForPage1(datasourceId)
+    // Extract today query parameter for report links
+    const today = request.nextUrl.searchParams.get('today') || undefined
+
+    const data = await fetchGBPActionsForPage1(datasourceId, { today })
 
     if (!data) {
       return NextResponse.json(

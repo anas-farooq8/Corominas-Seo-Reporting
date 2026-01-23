@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabase/server"
 import { fetchSearchConsoleData, type GSCDashboardResponse, type GSCDailyData } from "@/lib/google-search-console/api"
 import { getCachedDashboardData, saveDashboardCache } from "@/lib/cache/dashboard-cache"
 import { calculateDashboardDateRanges } from "@/lib/utils/date-ranges"
+import type { DashboardOptions } from "@/lib/api/dashboard-handler"
 import { calculateWindowDates, type ComparisonWindow, type PeriodType } from "@/lib/utils/comparison-helpers"
 
 /**
@@ -394,7 +395,8 @@ function calculatePositionComparison(dailyData: GSCDailyData[], endDate: string)
  * @param datasourceId - The datasource ID
  */
 export async function fetchGSCDashboardData(
-  datasourceId: string
+  datasourceId: string,
+  options?: DashboardOptions
 ): Promise<GSCDashboardData | null> {
   try {
     // Get site details from database
@@ -413,7 +415,7 @@ export async function fetchGSCDashboardData(
     const siteUrl = site.site_url
     
     // Use the same date calculation as GA for consistency
-    const { startDate: startDateStr, endDate: endDateStr } = calculateDashboardDateRanges()
+    const { startDate: startDateStr, endDate: endDateStr } = calculateDashboardDateRanges(options?.today)
     
     console.log('[GSC Dashboard] Date ranges:', { startDateStr, endDateStr })
     

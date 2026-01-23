@@ -13,9 +13,10 @@ import { Page3LandingPagesDashboard } from "./page3-landing-pages-dashboard"
 interface CombinedPage3DashboardProps {
   googleAnalyticsId?: string
   searchConsoleId?: string
+  today?: string // Optional locked today date (YYYY-MM-DD)
 }
 
-export function CombinedPage3Dashboard({ googleAnalyticsId, searchConsoleId }: CombinedPage3DashboardProps) {
+export function CombinedPage3Dashboard({ googleAnalyticsId, searchConsoleId, today }: CombinedPage3DashboardProps) {
   const [gaData, setGAData] = useState<GALandingPagesDashboardData | null>(null)
   const [gscData, setGSCData] = useState<GSCDashboardData | null>(null)
   const [loading, setLoading] = useState(true)
@@ -30,10 +31,11 @@ export function CombinedPage3Dashboard({ googleAnalyticsId, searchConsoleId }: C
         setError(null)
 
         const promises = []
+        const todayParam = today ? `?today=${today}` : ''
         
         if (googleAnalyticsId) {
           promises.push(
-            fetch(`/api/google-analytics/landing-pages/${googleAnalyticsId}`)
+            fetch(`/api/google-analytics/landing-pages/${googleAnalyticsId}${todayParam}`)
               .then(res => {
                 if (!res.ok) {
                   throw new Error(`HTTP ${res.status}: ${res.statusText}`)
@@ -46,7 +48,7 @@ export function CombinedPage3Dashboard({ googleAnalyticsId, searchConsoleId }: C
         
         if (searchConsoleId) {
           promises.push(
-            fetch(`/api/search-console/dashboard/${searchConsoleId}`)
+            fetch(`/api/search-console/dashboard/${searchConsoleId}${todayParam}`)
               .then(res => {
                 if (!res.ok) {
                   throw new Error(`HTTP ${res.status}: ${res.statusText}`)
@@ -75,7 +77,7 @@ export function CombinedPage3Dashboard({ googleAnalyticsId, searchConsoleId }: C
     return () => {
       isMounted = false
     }
-  }, [googleAnalyticsId, searchConsoleId])
+  }, [googleAnalyticsId, searchConsoleId, today])
 
   // Memoize Search Console KPI calculations
   const gscClicksKPI = useMemo(() => {

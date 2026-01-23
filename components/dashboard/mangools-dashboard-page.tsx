@@ -12,9 +12,10 @@ import type { MangoolsDashboardData } from "@/lib/actions/mangools-dashboard"
 
 interface MangoolsDashboardPageProps {
   datasourceId: string
+  today?: string // Optional locked today date (YYYY-MM-DD)
 }
 
-export function MangoolsDashboardPage({ datasourceId }: MangoolsDashboardPageProps) {
+export function MangoolsDashboardPage({ datasourceId, today }: MangoolsDashboardPageProps) {
   const [data, setData] = useState<MangoolsDashboardData | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -22,13 +23,14 @@ export function MangoolsDashboardPage({ datasourceId }: MangoolsDashboardPagePro
   useEffect(() => {
     // Only load data when this component is mounted (lazy loading)
     fetchDashboardData()
-  }, [datasourceId])
+  }, [datasourceId, today])
 
   async function fetchDashboardData() {
     try {
       setLoading(true)
       setError(null)
-      const response = await fetch(`/api/mangools/dashboard/${datasourceId}`)
+      const todayParam = today ? `?today=${today}` : ''
+      const response = await fetch(`/api/mangools/dashboard/${datasourceId}${todayParam}`)
       if (!response.ok) {
         throw new Error("Failed to fetch dashboard data")
       }

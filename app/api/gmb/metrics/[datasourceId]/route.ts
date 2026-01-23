@@ -1,4 +1,4 @@
-import { NextResponse } from "next/server"
+import { NextRequest, NextResponse } from "next/server"
 import { fetchGMBMetricsDashboardData } from "@/lib/actions/gmb-metrics"
 
 export const dynamic = "force-dynamic"
@@ -9,14 +9,17 @@ export const revalidate = 0
  * Fetch Grid My Business KPI metrics (GMB Score, Rating, Reviews)
  */
 export async function GET(
-  request: Request,
+  request: NextRequest,
   { params }: { params: Promise<{ datasourceId: string }> }
 ) {
   try {
     const { datasourceId } = await params
     console.log("[API] GMB Metrics requested for datasource:", datasourceId)
     
-    const data = await fetchGMBMetricsDashboardData(datasourceId)
+    // Extract today query parameter for report links
+    const today = request.nextUrl.searchParams.get('today') || undefined
+    
+    const data = await fetchGMBMetricsDashboardData(datasourceId, { today })
     
     if (!data) {
       return NextResponse.json(

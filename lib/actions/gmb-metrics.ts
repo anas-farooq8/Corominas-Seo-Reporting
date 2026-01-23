@@ -7,6 +7,7 @@ import { createClient } from "@/lib/supabase/server"
 import { fetchGMBMetrics, type GMBMetricsResponse } from "@/lib/gmb/api"
 import { getCachedDashboardData, saveDashboardCache } from "@/lib/cache/dashboard-cache"
 import { calculateDashboardDateRanges, getLastCompletedMonthRange, filterGMBMetricsByMonth } from "@/lib/utils/date-ranges"
+import type { DashboardOptions } from "@/lib/api/dashboard-handler"
 
 // ============================================
 // Type Definitions
@@ -150,7 +151,8 @@ function processMetricData(
  * Returns KPI card data for GMB Score, Rating, and Reviews
  */
 export async function fetchGMBMetricsDashboardData(
-  datasourceId: string
+  datasourceId: string,
+  options?: DashboardOptions
 ): Promise<GMBMetricsDashboardData | null> {
   try {
     console.log('[GMB Metrics Dashboard] Fetching metrics for datasource:', datasourceId)
@@ -171,7 +173,7 @@ export async function fetchGMBMetricsDashboardData(
     console.log('[GMB Metrics Dashboard] Profile found:', profile.profile_id, profile.business_name)
     
     // Get last completed month range for filtering
-    const lastMonthRange = getLastCompletedMonthRange()
+    const lastMonthRange = getLastCompletedMonthRange(options?.today)
     console.log('[GMB Metrics Dashboard] Target month range:', {
       label: lastMonthRange.label,
       start: lastMonthRange.startDateStr,

@@ -16,9 +16,10 @@ interface CombinedPage1DashboardProps {
   googleAnalyticsId?: string
   semrushId?: string
   gbpId?: string
+  today?: string // Optional locked today date (YYYY-MM-DD)
 }
 
-export function CombinedPage1Dashboard({ googleAnalyticsId, semrushId, gbpId }: CombinedPage1DashboardProps) {
+export function CombinedPage1Dashboard({ googleAnalyticsId, semrushId, gbpId, today }: CombinedPage1DashboardProps) {
   const [gaData, setGAData] = useState<GADashboardData | null>(null)
   const [semrushData, setSemrushData] = useState<SEMrushDashboardData | null>(null)
   const [gbpData, setGBPData] = useState<GBPActionsPage1Data | null>(null)
@@ -49,10 +50,11 @@ export function CombinedPage1Dashboard({ googleAnalyticsId, semrushId, gbpId }: 
         setError(null)
 
         const promises = []
+        const todayParam = today ? `?today=${today}` : ''
         
         if (googleAnalyticsId) {
           promises.push(
-            fetch(`/api/google-analytics/dashboard/${googleAnalyticsId}`)
+            fetch(`/api/google-analytics/dashboard/${googleAnalyticsId}${todayParam}`)
               .then(res => {
                 if (!res.ok) {
                   throw new Error(`HTTP ${res.status}: ${res.statusText}`)
@@ -65,7 +67,7 @@ export function CombinedPage1Dashboard({ googleAnalyticsId, semrushId, gbpId }: 
         
         if (semrushId) {
           promises.push(
-            fetch(`/api/semrush/dashboard/${semrushId}`)
+            fetch(`/api/semrush/dashboard/${semrushId}${todayParam}`)
               .then(res => {
                 if (!res.ok) {
                   throw new Error(`HTTP ${res.status}: ${res.statusText}`)
@@ -78,7 +80,7 @@ export function CombinedPage1Dashboard({ googleAnalyticsId, semrushId, gbpId }: 
 
         if (gbpId) {
           promises.push(
-            fetch(`/api/gbp/dashboard/${gbpId}/actions`)
+            fetch(`/api/gbp/dashboard/${gbpId}/actions${todayParam}`)
               .then(res => {
                 if (!res.ok) {
                   throw new Error(`HTTP ${res.status}: ${res.statusText}`)
@@ -107,7 +109,7 @@ export function CombinedPage1Dashboard({ googleAnalyticsId, semrushId, gbpId }: 
     return () => {
       isMounted = false
     }
-  }, [googleAnalyticsId, semrushId, gbpId])
+  }, [googleAnalyticsId, semrushId, gbpId, today])
 
   // Memoize KPI calculations - using kpiCards from backend (follows Page 4 GSC pattern)
   const semrushKPI = useMemo(() => {

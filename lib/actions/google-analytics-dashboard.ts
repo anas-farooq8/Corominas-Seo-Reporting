@@ -5,6 +5,7 @@ import { getCachedDashboardData, saveDashboardCache } from "@/lib/cache/dashboar
 import { selectBestComparisonWindow, type WindowResult, calculateWindowDates } from "@/lib/utils/comparison-helpers"
 import { calculateDashboardDateRanges } from "@/lib/utils/date-ranges"
 import { getGAPropertyDetails, extractPropertyId } from "@/lib/google-analytics/helpers"
+import type { DashboardOptions } from "@/lib/api/dashboard-handler"
 
 /**
  * KPI Card Data for Google Analytics metrics
@@ -112,7 +113,8 @@ function calculateKPICards(
  * @param datasourceId - The datasource ID
  */
 export async function fetchGADashboardData(
-  datasourceId: string
+  datasourceId: string,
+  options?: DashboardOptions
 ): Promise<GADashboardData | null> {
   try {
     // Get property details from database
@@ -124,7 +126,7 @@ export async function fetchGADashboardData(
     const propertyName = property.name
     
     // Use the same date calculation as all dashboards for consistency
-    const { startDate: startDateStr, endDate: endDateStr } = calculateDashboardDateRanges()
+    const { startDate: startDateStr, endDate: endDateStr } = calculateDashboardDateRanges(options?.today)
     
     // Check cache first
     const cachedData = await getCachedDashboardData(datasourceId, propertyName, startDateStr, endDateStr)

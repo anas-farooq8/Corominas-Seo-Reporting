@@ -7,12 +7,19 @@
 import { NextRequest, NextResponse } from "next/server"
 
 /**
+ * Dashboard options interface
+ */
+export interface DashboardOptions {
+  today?: string // Optional locked today date (YYYY-MM-DD) for report links
+}
+
+/**
  * Generic handler for dashboard data fetching
- * @param fetchFn - Function that fetches dashboard data given a datasourceId
+ * @param fetchFn - Function that fetches dashboard data given a datasourceId and options
  * @param options - Optional configuration for error messages
  */
 export function createDashboardHandler<T>(
-  fetchFn: (datasourceId: string) => Promise<T | null>,
+  fetchFn: (datasourceId: string, options?: DashboardOptions) => Promise<T | null>,
   options?: {
     resourceName?: string
     requireDatasourceId?: boolean
@@ -33,10 +40,13 @@ export function createDashboardHandler<T>(
         )
       }
 
-      const resourceName = options?.resourceName || "dashboard"
-      console.log(`[${resourceName} API] Fetching data for datasource: ${datasourceId}`)
+      // Extract today query parameter for report links
+      const today = request.nextUrl.searchParams.get('today') || undefined
 
-      const data = await fetchFn(datasourceId)
+      const resourceName = options?.resourceName || "dashboard"
+      console.log(`[${resourceName} API] Fetching data for datasource: ${datasourceId}${today ? ` (today: ${today})` : ''}`)
+
+      const data = await fetchFn(datasourceId, { today })
 
       if (!data) {
         return NextResponse.json(

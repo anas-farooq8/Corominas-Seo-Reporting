@@ -11,6 +11,7 @@ import {
   type GMBKeyword
 } from "@/lib/gmb/api"
 import { getLast2CompletedMonths, filterByMonth, formatDateYYYYMMDD } from "@/lib/utils/date-ranges"
+import type { DashboardOptions } from "@/lib/api/dashboard-handler"
 import { 
   aggregateGridScans, 
   compareGrids, 
@@ -20,7 +21,7 @@ import {
 } from "@/lib/gmb/grid-utils"
 import { getCachedDashboardData, saveDashboardCache } from "@/lib/cache/dashboard-cache"
 
-// ============================================
+// ============================================ 
 // Type Definitions
 // ============================================
 
@@ -63,7 +64,7 @@ export type GMBGridDashboardData = GMBGridDashboardCacheData & {
 /**
  * Process keyword data and filter scans by month
  */
-function processKeywordData(keywords: GMBKeyword[]): {
+function processKeywordData(keywords: GMBKeyword[], todayStr?: string): {
   keywordData: Array<{
     keyword: string
     keywordId: string
@@ -72,7 +73,7 @@ function processKeywordData(keywords: GMBKeyword[]): {
   }>
   monthLabels: { last: string, previous: string }
 } {
-  const months = getLast2CompletedMonths()
+  const months = getLast2CompletedMonths(todayStr)
   
   // ============================================
   // 🧪 TESTING ONLY: +1 MONTH OFFSET FOR GMB
@@ -169,7 +170,8 @@ function processKeywordData(keywords: GMBKeyword[]): {
  */
 export async function fetchGMBGridDashboardData(
   datasourceId: string,
-  concurrency: number = 5
+  concurrency: number = 5,
+  options?: DashboardOptions
 ): Promise<GMBGridDashboardData | null> {
   try {
     console.log('[GMB Grid Dashboard] Fetching grid dashboard data for datasource:', datasourceId)
@@ -190,7 +192,7 @@ export async function fetchGMBGridDashboardData(
     console.log('[GMB Grid Dashboard] Profile found:', profile.profile_id, profile.business_name)
     
     // Calculate date range for cache key (last 2 completed months)
-    const last2Months = getLast2CompletedMonths()
+    const last2Months = getLast2CompletedMonths(options?.today)
     const cacheStartDate = formatDateYYYYMMDD(last2Months.previousMonth.start)
     const cacheEndDate = formatDateYYYYMMDD(last2Months.lastMonth.end)
     
@@ -215,7 +217,7 @@ export async function fetchGMBGridDashboardData(
     console.log('[GMB Grid Dashboard] Fetched', keywords.length, 'keywords')
     
     // Process keyword data and filter by months
-    const { keywordData, monthLabels } = processKeywordData(keywords)
+    const { keywordData, monthLabels } = processKeywordData(keywords, options?.today)
     console.log('[GMB Grid Dashboard] Processing grid data for', keywordData.length, 'keywords')
     
     // Collect all scan IDs

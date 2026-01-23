@@ -5,6 +5,7 @@ import { fetchGBPActivityData, type GBPDailyActivityData } from "@/lib/google-bu
 import { getCachedDashboardData, saveDashboardCache } from "@/lib/cache/dashboard-cache"
 import { selectBestComparisonWindow, type WindowResult } from "@/lib/utils/comparison-helpers"
 import { calculateDashboardDateRanges } from "@/lib/utils/date-ranges"
+import type { DashboardOptions } from "@/lib/api/dashboard-handler"
 
 /**
  * KPI Card Data for GBP Activity metrics
@@ -138,7 +139,8 @@ export interface GBPActionsPage1Data {
  * @param datasourceId - The datasource ID
  */
 export async function fetchGBPActionsForPage1(
-  datasourceId: string
+  datasourceId: string,
+  options?: DashboardOptions
 ): Promise<GBPActionsPage1Data | null> {
   try {
     // Get location details from database
@@ -164,7 +166,7 @@ export async function fetchGBPActionsForPage1(
     console.log(`[GBP Page1] Full ID: ${fullLocationId}, API ID: ${locationIdForAPI}`)
     
     // Use the same date calculation as all dashboards for consistency
-    const { startDate: startDateStr, endDate: endDateStr } = calculateDashboardDateRanges()
+    const { startDate: startDateStr, endDate: endDateStr } = calculateDashboardDateRanges(options?.today)
     
     // Check cache first with a unique key for Page 1 aggregated data
     const cacheKey = `${fullLocationId}-page1-actions`
@@ -222,7 +224,8 @@ export async function fetchGBPActionsForPage1(
  * @param datasourceId - The datasource ID
  */
 export async function fetchGBPDashboardData(
-  datasourceId: string
+  datasourceId: string,
+  options?: DashboardOptions
 ): Promise<GBPDashboardData | null> {
   try {
     // Get location details from database
@@ -249,7 +252,7 @@ export async function fetchGBPDashboardData(
     console.log(`[GBP Dashboard] Full ID: ${fullLocationId}, API ID: ${locationIdForAPI}`)
     
     // Use the same date calculation as all dashboards for consistency
-    const { startDate: startDateStr, endDate: endDateStr } = calculateDashboardDateRanges()
+    const { startDate: startDateStr, endDate: endDateStr } = calculateDashboardDateRanges(options?.today)
     
     // Check cache first
     const cachedData = await getCachedDashboardData(datasourceId, fullLocationId, startDateStr, endDateStr)

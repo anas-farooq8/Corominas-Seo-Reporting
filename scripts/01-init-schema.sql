@@ -143,6 +143,35 @@ CREATE TABLE IF NOT EXISTS dashboard_cache (
 );
 
 -- ============================================
+-- REPORTS TABLE
+-- ============================================
+CREATE TABLE IF NOT EXISTS reports (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  month INTEGER NOT NULL CHECK (month >= 1 AND month <= 12),  -- Month (1-12)
+  year INTEGER NOT NULL CHECK (year >= 2000),  -- Year (e.g., 2026)
+  generation_date TIMESTAMP WITH TIME ZONE NOT NULL,  -- When the report was generated
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  UNIQUE(month, year)  -- One report per month/year combination
+);
+
+-- ============================================
+-- REPORT LINKS TABLE
+-- ============================================
+CREATE TABLE IF NOT EXISTS report_links (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  report_id UUID NOT NULL REFERENCES reports(id) ON DELETE CASCADE,
+  client_id UUID NOT NULL REFERENCES clients(id) ON DELETE CASCADE,
+  project_id UUID NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
+  token TEXT NOT NULL UNIQUE,  -- Unique shareable token
+  locked_today_date DATE,  -- The "today" date locked when first opened (NULL until first access)
+  first_opened_at TIMESTAMP WITH TIME ZONE,  -- When the link was first opened
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  UNIQUE(report_id, client_id, project_id)  -- One link per report-client-project combination
+);
+
+-- ============================================
 -- INDEXES
 -- ============================================
 CREATE INDEX IF NOT EXISTS idx_projects_client_id ON projects(client_id);
@@ -165,6 +194,12 @@ CREATE INDEX IF NOT EXISTS idx_dashboard_cache_datasource_id ON dashboard_cache(
 CREATE INDEX IF NOT EXISTS idx_dashboard_cache_resource_id ON dashboard_cache(resource_id);
 CREATE INDEX IF NOT EXISTS idx_dashboard_cache_dates ON dashboard_cache(start_date, end_date);
 CREATE INDEX IF NOT EXISTS idx_dashboard_cache_lookup ON dashboard_cache(datasource_id, resource_id, start_date, end_date);
+CREATE INDEX IF NOT EXISTS idx_reports_month_year ON reports(month, year);
+CREATE INDEX IF NOT EXISTS idx_reports_generation_date ON reports(generation_date);
+CREATE INDEX IF NOT EXISTS idx_report_links_report_id ON report_links(report_id);
+CREATE INDEX IF NOT EXISTS idx_report_links_token ON report_links(token);
+CREATE INDEX IF NOT EXISTS idx_report_links_client_project ON report_links(client_id, project_id);
+CREATE INDEX IF NOT EXISTS idx_report_links_locked_date ON report_links(locked_today_date);
 
 -- ============================================
 -- ROW LEVEL SECURITY (RLS)
@@ -180,6 +215,8 @@ ALTER TABLE google_business_profile_locations ENABLE ROW LEVEL SECURITY;
 ALTER TABLE gmb_profiles ENABLE ROW LEVEL SECURITY;
 ALTER TABLE kvs ENABLE ROW LEVEL SECURITY;
 ALTER TABLE dashboard_cache ENABLE ROW LEVEL SECURITY;
+ALTER TABLE reports ENABLE ROW LEVEL SECURITY;
+ALTER TABLE report_links ENABLE ROW LEVEL SECURITY;
 
 -- ============================================
 -- RLS POLICIES
@@ -227,6 +264,22 @@ CREATE POLICY "authenticated_users_all_kvs" ON kvs
 DROP POLICY IF EXISTS "authenticated_users_all_dashboard_cache" ON dashboard_cache;
 CREATE POLICY "authenticated_users_all_dashboard_cache" ON dashboard_cache
   FOR ALL USING (auth.role() = 'authenticated');
+
+DROP POLICY IF EXISTS "authenticated_users_all_reports" ON reports;
+CREATE POLICY "authenticated_users_all_reports" ON reports
+  FOR ALL USING (auth.role() = 'authenticated');
+
+DROP POLICY IF EXISTS "public_read_report_links" ON report_links;
+CREATE POLICY "public_read_report_links" ON report_links
+  FOR SELECT USING (true);
+
+DROP POLICY IF EXISTS "authenticated_users_write_report_links" ON report_links;
+CREATE POLICY "authenticated_users_write_report_links" ON report_links
+  FOR INSERT USING (auth.role() = 'authenticated');
+
+DROP POLICY IF EXISTS "authenticated_users_update_report_links" ON report_links;
+CREATE POLICY "authenticated_users_update_report_links" ON report_links
+  FOR UPDATE USING (auth.role() = 'authenticated');
 
 -- ============================================
 -- TRIGGERS
@@ -292,4 +345,14 @@ CREATE TRIGGER update_kvs_updated_at
 DROP TRIGGER IF EXISTS update_dashboard_cache_updated_at ON dashboard_cache;
 CREATE TRIGGER update_dashboard_cache_updated_at
   BEFORE UPDATE ON dashboard_cache
+  FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+DROP TRIGGER IF EXISTS update_reports_updated_at ON reports;
+CREATE TRIGGER update_reports_updated_at
+  BEFORE UPDATE ON reports
+  FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+DROP TRIGGER IF EXISTS update_report_links_updated_at ON report_links;
+CREATE TRIGGER update_report_links_updated_at
+  BEFORE UPDATE ON report_links
   FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
