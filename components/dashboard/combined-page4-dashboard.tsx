@@ -51,7 +51,7 @@ export function CombinedPage4Dashboard({ gbpId, gmbId, today }: CombinedPage4Das
           )
         }
         
-        // Fetch GMB grid data (heatmap)
+        // Fetch GMB grid data (heatmap) - optional, may return null
         if (gmbId) {
           promises.push(
             fetch(`/api/gmb/grid-dashboard/${gmbId}${todayParam}`)
@@ -61,10 +61,14 @@ export function CombinedPage4Dashboard({ gbpId, gmbId, today }: CombinedPage4Das
                 }
                 return res.json()
               })
-              .then(data => isMounted && setGMBData(data))
+              .then(data => {
+                if (isMounted && data) {
+                  setGMBData(data)
+                }
+              })
               .catch(err => {
-                // Grid data is optional - log error but don't fail
-                console.warn('[GMB Grid] Failed to fetch grid data (non-critical):', err)
+                console.error('[GMB Grid] Failed to fetch grid data:', err)
+                // Grid data is optional - don't fail the entire page
               })
           )
           
@@ -80,7 +84,7 @@ export function CombinedPage4Dashboard({ gbpId, gmbId, today }: CombinedPage4Das
               .then(data => isMounted && setGMBMetricsData(data))
               .catch(err => {
                 // Metrics are optional - log error but don't fail
-                console.warn('[GMB Metrics] Failed to fetch metrics (non-critical):', err)
+                console.error('[GMB Metrics] Failed to fetch metrics:', err)
               })
           )
         }
@@ -107,23 +111,23 @@ export function CombinedPage4Dashboard({ gbpId, gmbId, today }: CombinedPage4Das
 
   // Determine metadata display according to requirements
   const metadata = useMemo(() => {
-    if (!gbpData && !gmbData) return null
+    if (!gbpData && !gmbData && !gmbMetricsData) return null
     
     let title = ''
     let subtitle: string | undefined = undefined
     
     // Rule 1: If only GBP is connected
-    if (gbpData && !gmbData) {
+    if (gbpData && !gmbData && !gmbMetricsData) {
       title = gbpData.businessName
       subtitle = gbpData.address || undefined
     }
-    // Rule 2: If only GMB is connected (even if grid data is available or not)
-    else if (!gbpData && gmbData) {
-      title = gmbData.businessName || ''
-      subtitle = gmbData.address || undefined
+    // Rule 2: If only GMB is connected (use metrics or grid data)
+    else if (!gbpData && (gmbData || gmbMetricsData)) {
+      title = gmbData?.businessName || gmbMetricsData?.businessName || ''
+      subtitle = gmbData?.address || gmbMetricsData?.address || undefined
     }
     // Rule 3: If both are connected - show GBP's business name and address
-    else if (gbpData && gmbData) {
+    else if (gbpData && (gmbData || gmbMetricsData)) {
       title = gbpData.businessName
       subtitle = gbpData.address || undefined
     }
@@ -132,7 +136,7 @@ export function CombinedPage4Dashboard({ gbpId, gmbId, today }: CombinedPage4Das
       title,
       subtitle
     }
-  }, [gbpData, gmbData])
+  }, [gbpData, gmbData, gmbMetricsData])
 
   if (loading) {
     return (
@@ -142,7 +146,7 @@ export function CombinedPage4Dashboard({ gbpId, gmbId, today }: CombinedPage4Das
     )
   }
 
-  if (error || (!gbpData && !gmbData)) {
+  if (error || (!gbpData && !gmbData && !gmbMetricsData)) {
     return (
       <div className="flex items-center justify-center min-h-[600px] p-4">
         <ErrorDisplay
@@ -153,8 +157,8 @@ export function CombinedPage4Dashboard({ gbpId, gmbId, today }: CombinedPage4Das
     )
   }
 
-  // If only GBP data is available, show native GBP layout
-  if (gbpData && !gmbData) {
+  // If only GBP data is available (no GMB grid or metrics), show native GBP layout
+  if (gbpData && !gmbData && !gmbMetricsData) {
     return (
       <GBPDashboardPage 
         data={gbpData} 
@@ -164,8 +168,8 @@ export function CombinedPage4Dashboard({ gbpId, gmbId, today }: CombinedPage4Das
     )
   }
 
-  // If only GMB data is available, show native GMB grid layout
-  if (gmbData && !gbpData) {
+  // If only GMB data is available (grid or metrics), show native GMB grid layout
+  if ((gmbData || gmbMetricsData) && !gbpData) {
     return (
       <GMBGridDashboardPage 
         data={gmbData}
@@ -204,7 +208,7 @@ export function CombinedPage4Dashboard({ gbpId, gmbId, today }: CombinedPage4Das
       )}
 
       {/* GMB Grid Section - No heading, just content */}
-      {gmbData && (
+      {(gmbData || gmbMetricsData) && (
         <GMBGridDashboardPage 
           data={gmbData}
           metricsData={gmbMetricsData}  // Pass metrics data directly (already fetched in parallel)

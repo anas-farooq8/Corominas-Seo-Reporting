@@ -116,10 +116,6 @@ function processKeywordData(keywords: GMBKeyword[], todayStr?: string): {
   // 🧪 END TESTING CODE
   // ============================================
   
-  console.log(`\n📅 [GMB Dashboard] Filtering scans by month:`)
-  console.log(`   Last Month: ${monthsToUse.lastMonth.label} (${new Date(monthsToUse.lastMonth.startTimestamp).toISOString()} to ${new Date(monthsToUse.lastMonth.endTimestamp).toISOString()})`)
-  console.log(`   Previous Month: ${monthsToUse.previousMonth.label} (${new Date(monthsToUse.previousMonth.startTimestamp).toISOString()} to ${new Date(monthsToUse.previousMonth.endTimestamp).toISOString()})`)
-  
   const keywordData = keywords.map(kw => {
     const lastMonthScans = filterByMonth(
       kw.profileIds,
@@ -132,16 +128,6 @@ function processKeywordData(keywords: GMBKeyword[], todayStr?: string): {
       monthsToUse.previousMonth.startTimestamp,
       monthsToUse.previousMonth.endTimestamp
     )
-    
-    console.log(`   Keyword "${kw.keyword}": ${lastMonthScans.length} scans in ${monthsToUse.lastMonth.label}, ${previousMonthScans.length} scans in ${monthsToUse.previousMonth.label}`)
-    
-    // Debug: Show which scans passed the filter
-    if (lastMonthScans.length > 0) {
-      console.log(`      Last month scans: ${lastMonthScans.map(s => `${s._id.substring(0, 8)} (${new Date(s.dateAdded).toISOString()})`).join(', ')}`)
-    }
-    if (previousMonthScans.length > 0) {
-      console.log(`      Previous month scans: ${previousMonthScans.map(s => `${s._id.substring(0, 8)} (${new Date(s.dateAdded).toISOString()})`).join(', ')}`)
-    }
     
     return {
       keyword: kw.keyword,
@@ -174,8 +160,6 @@ export async function fetchGMBGridDashboardData(
   options?: DashboardOptions
 ): Promise<GMBGridDashboardData | null> {
   try {
-    console.log('[GMB Grid Dashboard] Fetching grid dashboard data for datasource:', datasourceId)
-    
     // Get profile info from database
     const supabase = await createClient()
     const { data: profile, error: profileError } = await supabase
@@ -189,14 +173,10 @@ export async function fetchGMBGridDashboardData(
       return null
     }
     
-    console.log('[GMB Grid Dashboard] Profile found:', profile.profile_id, profile.business_name)
-    
     // Calculate date range for cache key (last 2 completed months)
     const last2Months = getLast2CompletedMonths(options?.today)
     const cacheStartDate = formatDateYYYYMMDD(last2Months.previousMonth.start)
     const cacheEndDate = formatDateYYYYMMDD(last2Months.lastMonth.end)
-    
-    console.log('[GMB Grid Dashboard] Cache date range:', { cacheStartDate, cacheEndDate })
     
     // Check cache first
     const cacheKey = `${profile.profile_id}-gmb-grid`
@@ -210,15 +190,19 @@ export async function fetchGMBGridDashboardData(
     }
     
     // Cache miss - fetch from API
-    console.log('[GMB Grid Dashboard] ⟳ Cache miss - fetching fresh data from API')
-    
     // Fetch keywords from GMB API
     const keywords = await listKeywords(profile.profile_id)
-    console.log('[GMB Grid Dashboard] Fetched', keywords.length, 'keywords')
+    
+    // If no keywords exist, cache null result to avoid repeated API calls
+    if (keywords.length === 0) {
+      console.log('[GMB Grid Dashboard] ⚠️ No keywords configured - caching null result')
+      saveDashboardCache(datasourceId, cacheKey, cacheStartDate, cacheEndDate, null)
+        .catch(err => console.error('[GMB Grid Dashboard] Failed to save null cache:', err))
+      return null
+    }
     
     // Process keyword data and filter by months
     const { keywordData, monthLabels } = processKeywordData(keywords, options?.today)
-    console.log('[GMB Grid Dashboard] Processing grid data for', keywordData.length, 'keywords')
     
     // Collect all scan IDs
     const allLastMonthScanIds: string[] = []
@@ -229,10 +213,15 @@ export async function fetchGMBGridDashboardData(
       allPreviousMonthScanIds.push(...kw.previousMonthScans.map(s => s._id))
     }
     
-    console.log(`[GMB Grid Dashboard] Total scans: ${allLastMonthScanIds.length} last month, ${allPreviousMonthScanIds.length} previous month`)
+    // If no scans available, cache null result to avoid repeated API calls
+    if (allLastMonthScanIds.length === 0 && allPreviousMonthScanIds.length === 0) {
+      console.log('[GMB Grid Dashboard] ⚠️ No scans available - caching null result')
+      saveDashboardCache(datasourceId, cacheKey, cacheStartDate, cacheEndDate, null)
+        .catch(err => console.error('[GMB Grid Dashboard] Failed to save null cache:', err))
+      return null
+    }
     
     // Fetch all grid reports in parallel
-    console.log('[GMB Grid Dashboard] 📅 Fetching grid reports...')
     const [lastMonthReportsAll, previousMonthReportsAll] = await Promise.all([
       fetchGridReportsParallel(allLastMonthScanIds, getFreshAccessToken, getGridReportWithToken, concurrency),
       fetchGridReportsParallel(allPreviousMonthScanIds, getFreshAccessToken, getGridReportWithToken, concurrency)
@@ -275,11 +264,12 @@ export async function fetchGMBGridDashboardData(
     const bestKeyword = selectBestKeyword(keywordsWithGrids)
     
     if (!bestKeyword || !bestKeyword.lastMonthGrid) {
-      console.log('[GMB Grid Dashboard] ⚠️ No grid data available')
+      console.log('[GMB Grid Dashboard] ⚠️ No grid data available - caching null result')
+      // Cache the null result so we don't keep hitting the API
+      saveDashboardCache(datasourceId, cacheKey, cacheStartDate, cacheEndDate, null)
+        .catch(err => console.error('[GMB Grid Dashboard] Failed to save null cache:', err))
       return null
     }
-    
-    console.log(`[GMB Grid Dashboard] 🏆 Best keyword: "${bestKeyword.keyword}"`)
     
     // Build heatmap data
     const heatmapData: GMBHeatmapCell[] = []
@@ -338,12 +328,6 @@ export async function fetchGMBGridDashboardData(
     }
     
     // Save to cache
-    console.log('[GMB Grid Dashboard] Saving to cache:', {
-      keyword: dashboardData.keyword,
-      heatmapCells: dashboardData.heatmapData.length,
-      gridSize: dashboardData.gridSize
-    })
-    
     saveDashboardCache(datasourceId, cacheKey, cacheStartDate, cacheEndDate, dashboardData)
       .catch(err => console.error('[GMB Grid Dashboard] Failed to save cache:', err))
     

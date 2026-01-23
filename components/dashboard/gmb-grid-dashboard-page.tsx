@@ -27,12 +27,21 @@ export function GMBGridDashboardPage({
   noPadding = false
 }: GMBGridDashboardPageProps) {
   const [data, setData] = useState<GMBGridDashboardData | null>(externalData || null)
-  const [loading, setLoading] = useState(!externalData)
+  // If we have externalData or metricsData passed as props, we're not loading
+  // Only show loading if we need to fetch data ourselves (datasourceId provided but no data)
+  const [loading, setLoading] = useState(!externalData && !metricsData && !!datasourceId)
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
-    if (externalData) {
-      setData(externalData)
+    // If data is passed externally, use it and don't fetch
+    if (externalData !== undefined || metricsData !== undefined) {
+      setData(externalData || null)
+      setLoading(false)
+      return
+    }
+    
+    // If no datasourceId provided, can't fetch - just show what we have
+    if (!datasourceId) {
       setLoading(false)
       return
     }
@@ -40,12 +49,9 @@ export function GMBGridDashboardPage({
     let isMounted = true
     
     async function fetchDashboardData() {
-      if (!datasourceId) return
-      
       try {
         setLoading(true)
         setError(null)
-        console.log('[GMB Grid Dashboard] Fetching data for datasource:', datasourceId)
         
         const response = await fetch(`/api/gmb/grid-dashboard/${datasourceId}`)
         if (!response.ok) {
@@ -74,22 +80,24 @@ export function GMBGridDashboardPage({
     return () => {
       isMounted = false
     }
-  }, [datasourceId, externalData])
+  }, [datasourceId, externalData, metricsData])
 
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-[600px]">
-        <LoadingSpinner message="Loading Grid My Business heatmaps..." />
+        <LoadingSpinner message="Loading SEO dashboard data..." />
       </div>
     )
   }
 
-  if (error || !data) {
+  // If we have metrics data but no grid data, that's fine - show metrics only
+  // Only show error if we have neither data nor metricsData
+  if (error || (!data && !metricsData)) {
     return (
       <div className="flex items-center justify-center min-h-[600px] p-4">
         <ErrorDisplay
           title="Dashboard Error"
-          message={error || "Failed to load GMB grid data. Please try again later."}
+          message={error || "Failed to load GMB data. Please try again later."}
         />
       </div>
     )
@@ -100,11 +108,11 @@ export function GMBGridDashboardPage({
       {showMetadata && (
         <div>
           <h2 className="text-lg sm:text-xl md:text-2xl font-bold text-foreground">
-            {data.businessName || metricsData?.businessName || 'Grid My Business'}
+            {data?.businessName || metricsData?.businessName || 'Grid My Business'}
           </h2>
-          {(data.address || metricsData?.address) && (
+          {(data?.address || metricsData?.address) && (
             <p className="text-xs sm:text-sm text-muted-foreground mt-1">
-              {data.address || metricsData?.address}
+              {data?.address || metricsData?.address}
             </p>
           )}
         </div>
@@ -169,17 +177,8 @@ export function GMBGridDashboardPage({
         </div>
       )}
 
-      {/* No Data Message */}
-      {!data.heatmapData || data.heatmapData.length === 0 ? (
-        <div className="text-center py-28 bg-muted/30 rounded-lg">
-          <p className="text-lg text-muted-foreground">
-            No grid data available for monitored keywords
-          </p>
-          <p className="text-sm text-muted-foreground mt-2">
-            Grid data will appear once scans are available
-          </p>
-        </div>
-      ) : (
+      {/* Grid Heatmap Section - Only show if data exists */}
+      {data && data.heatmapData && data.heatmapData.length > 0 && (
         <GMBGridHeatmap data={data} />
       )}
     </div>

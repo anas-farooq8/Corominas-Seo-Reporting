@@ -49,6 +49,12 @@ export async function getCachedDashboardData(
     }
     
     console.log(`✓ Cache hit for datasource ${datasourceId}, resource ${resourceId}`)
+    
+    // If the cached data is our "no data" marker, return null
+    if (data.data && typeof data.data === 'object' && data.data._no_data === true) {
+      return null
+    }
+    
     return data.data
   } catch (error) {
     console.error("Error fetching cached dashboard data:", error)
@@ -75,6 +81,10 @@ export async function saveDashboardCache(
   try {
     const supabase = await createClient()
     
+    // If data is null, save a marker object to indicate "no data available"
+    // This prevents database constraint violations and allows us to cache the "no data" state
+    const dataToSave = data === null ? { _no_data: true } : data
+    
     const { error } = await supabase
       .from("dashboard_cache")
       .upsert({
@@ -82,7 +92,7 @@ export async function saveDashboardCache(
         resource_id: resourceId,
         start_date: startDate,
         end_date: endDate,
-        data: data,
+        data: dataToSave,
         updated_at: new Date().toISOString(),
       }, {
         onConflict: "datasource_id,resource_id,start_date,end_date"

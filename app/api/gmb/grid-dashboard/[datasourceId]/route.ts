@@ -15,7 +15,6 @@ export async function GET(
 ) {
   try {
     const { datasourceId} = await params
-    console.log("[API] GMB Grid Dashboard requested for datasource:", datasourceId)
     
     // Extract today query parameter for report links
     const today = request.nextUrl.searchParams.get('today') || undefined
@@ -23,19 +22,10 @@ export async function GET(
     // Fetch grid dashboard data with parallel request concurrency of 5
     const data = await fetchGMBGridDashboardData(datasourceId, 5, { today })
     
-    if (!data) {
-      return NextResponse.json(
-        { error: "Grid dashboard data not found or no profile configured" },
-        { status: 404 }
-      )
-    }
-    
-    console.log("[API] GMB Grid Dashboard data fetched successfully")
-    console.log("[API] Keyword:", data.keyword, "| Grid cells:", data.heatmapData.length)
-    
+    // Always return 200 - null data means no grid data available (which is valid)
     return NextResponse.json(data)
   } catch (error) {
-    console.error("[API] Error fetching GMB grid dashboard:", error)
+    console.error("[API GMB Grid] Error fetching GMB grid dashboard:", error)
     return NextResponse.json(
       { 
         error: "Failed to fetch Grid My Business grid dashboard",

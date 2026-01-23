@@ -14,7 +14,6 @@ export async function GET(
 ) {
   try {
     const { datasourceId } = await params
-    console.log("[API] GMB Metrics requested for datasource:", datasourceId)
     
     // Extract today query parameter for report links
     const today = request.nextUrl.searchParams.get('today') || undefined
@@ -27,8 +26,6 @@ export async function GET(
         { status: 404 }
       )
     }
-    
-    console.log("[API] GMB Metrics data fetched successfully")
     
     return NextResponse.json(data)
   } catch (error) {
