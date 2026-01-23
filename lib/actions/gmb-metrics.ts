@@ -189,8 +189,14 @@ export async function fetchGMBMetricsDashboardData(
     // Check cache first
     const cacheKey = `${profile.profile_id}-gmb-metrics`
     const cachedData = await getCachedDashboardData(datasourceId, cacheKey, cacheStartDate, cacheEndDate)
+    
+    // If we got the "no data" marker, return null immediately
+    if (cachedData && typeof cachedData === 'object' && cachedData._no_data === true) {
+      return null
+    }
+    
+    // If we have real cached data, return it
     if (cachedData) {
-      console.log('[GMB Metrics Dashboard] ✓ Cache hit - returning cached data')
       return cachedData as GMBMetricsDashboardData
     }
     

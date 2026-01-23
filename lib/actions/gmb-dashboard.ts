@@ -181,8 +181,14 @@ export async function fetchGMBGridDashboardData(
     // Check cache first
     const cacheKey = `${profile.profile_id}-gmb-grid`
     const cachedData = await getCachedDashboardData(datasourceId, cacheKey, cacheStartDate, cacheEndDate)
+    
+    // If we got the "no data" marker, return null immediately
+    if (cachedData && typeof cachedData === 'object' && cachedData._no_data === true) {
+      return null
+    }
+    
+    // If we have real cached data, return it
     if (cachedData) {
-      console.log('[GMB Grid Dashboard] ✓ Cache hit - returning cached data')
       return {
         ...cachedData as GMBGridDashboardCacheData,
         businessName: profile.business_name
