@@ -5,7 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button"
 import { LoadingSpinner } from "@/components/ui/loading-spinner"
 import { ErrorDisplay } from "@/components/ui/error-display"
-import { FileText, Plus, ChevronRight, ChevronDown, ExternalLink, Calendar } from "lucide-react"
+import { FileText, Plus, ChevronRight, ChevronDown, ExternalLink, Calendar, CheckCircle2, Copy, Loader2 } from "lucide-react"
 import type { Report, ReportWithLinks } from "@/lib/supabase/types"
 
 const MONTH_NAMES = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
@@ -19,6 +19,9 @@ export default function ReportsPage() {
   const [expandedReportData, setExpandedReportData] = useState<ReportWithLinks | null>(null)
   const [loadingReportDetails, setLoadingReportDetails] = useState(false)
   const [generating, setGenerating] = useState(false)
+  const [successMessage, setSuccessMessage] = useState<string | null>(null)
+  const [copiedToken, setCopiedToken] = useState<string | null>(null)
+  const [expandedClients, setExpandedClients] = useState<Set<string>>(new Set())
 
   const currentDate = new Date()
   const currentMonth = currentDate.getMonth() + 1
@@ -26,7 +29,6 @@ export default function ReportsPage() {
 
   useEffect(() => {
     fetchReports()
-    checkCurrentMonth()
   }, [])
 
   async function fetchReports() {
@@ -36,21 +38,16 @@ export default function ReportsPage() {
       if (!response.ok) throw new Error("Failed to fetch reports")
       const data = await response.json()
       setReports(data)
+      
+      // Check if current month report exists in the fetched data
+      const currentMonthReport = data.find(
+        (report: Report) => report.month === currentMonth && report.year === currentYear
+      )
+      setCurrentMonthExists(!!currentMonthReport)
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to fetch reports")
     } finally {
       setLoading(false)
-    }
-  }
-
-  async function checkCurrentMonth() {
-    try {
-      const response = await fetch("/api/reports/current-month")
-      if (!response.ok) throw new Error("Failed to check current month")
-      const data = await response.json()
-      setCurrentMonthExists(data.exists)
-    } catch (err) {
-      console.error("Error checking current month:", err)
     }
   }
 
@@ -72,9 +69,12 @@ export default function ReportsPage() {
       await fetchReports()
       setCurrentMonthExists(true)
       
-      alert(`Successfully generated ${data.generated_count} report links!`)
+      // Show success message
+      setSuccessMessage(`Successfully generated ${data.generated_count} report link${data.generated_count !== 1 ? 's' : ''}!`)
+      setTimeout(() => setSuccessMessage(null), 5000)
     } catch (err) {
-      alert(err instanceof Error ? err.message : "Failed to generate reports")
+      setError(err instanceof Error ? err.message : "Failed to generate reports")
+      setTimeout(() => setError(null), 5000)
     } finally {
       setGenerating(false)
     }
@@ -84,9 +84,11 @@ export default function ReportsPage() {
     if (expandedReportId === reportId) {
       setExpandedReportId(null)
       setExpandedReportData(null)
+      setExpandedClients(new Set())
     } else {
       setExpandedReportId(reportId)
       setLoadingReportDetails(true)
+      setExpandedClients(new Set())
       
       try {
         const response = await fetch(`/api/reports/${reportId}`)
@@ -95,17 +97,31 @@ export default function ReportsPage() {
         setExpandedReportData(data)
       } catch (err) {
         console.error("Error fetching report details:", err)
-        alert("Failed to load report details")
+        setError("Failed to load report details")
+        setTimeout(() => setError(null), 5000)
       } finally {
         setLoadingReportDetails(false)
       }
     }
   }
 
+  function toggleClientExpansion(clientId: string) {
+    setExpandedClients(prev => {
+      const newSet = new Set(prev)
+      if (newSet.has(clientId)) {
+        newSet.delete(clientId)
+      } else {
+        newSet.add(clientId)
+      }
+      return newSet
+    })
+  }
+
   function copyLinkToClipboard(token: string) {
     const link = `${window.location.origin}/report/${token}`
     navigator.clipboard.writeText(link)
-    alert("Link copied to clipboard!")
+    setCopiedToken(token)
+    setTimeout(() => setCopiedToken(null), 2000)
   }
 
   // Group report links by client
@@ -144,6 +160,18 @@ export default function ReportsPage() {
         </p>
       </div>
 
+      {/* Success Toast */}
+      {successMessage && (
+        <div className="fixed top-4 right-4 z-50 animate-in slide-in-from-top-2">
+          <Card className="shadow-lg border-green-500/50 bg-green-50 dark:bg-green-950">
+            <CardContent className="flex items-center gap-3 p-4">
+              <CheckCircle2 className="h-5 w-5 text-green-600 dark:text-green-400 flex-shrink-0" />
+              <p className="text-sm font-medium text-green-900 dark:text-green-100">{successMessage}</p>
+            </CardContent>
+          </Card>
+        </div>
+      )}
+
       {/* Current Month Section */}
       <Card>
         <CardHeader>
@@ -169,11 +197,20 @@ export default function ReportsPage() {
               </p>
               <Button 
                 onClick={handleGenerateReports}
-                disabled={generating}
+                disabled={generating || loading}
                 className="w-full sm:w-auto"
               >
-                <Plus className="mr-2 h-4 w-4" />
-                {generating ? "Generating..." : "Generate All Reports"}
+                {generating ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Generating...
+                  </>
+                ) : (
+                  <>
+                    <Plus className="mr-2 h-4 w-4" />
+                    Generate All Reports
+                  </>
+                )}
               </Button>
             </div>
           )}
@@ -206,7 +243,7 @@ export default function ReportsPage() {
                 <div key={report.id} className="border rounded-lg">
                   <button
                     onClick={() => toggleReportExpansion(report.id)}
-                    className="w-full flex items-center justify-between p-4 hover:bg-muted/50 transition-colors"
+                    className="w-full flex items-center justify-between p-4 hover:bg-muted/50 transition-colors cursor-pointer"
                   >
                     <div className="flex items-center gap-3 text-left">
                       {expandedReportId === report.id ? (
@@ -219,7 +256,7 @@ export default function ReportsPage() {
                           {MONTH_NAMES[report.month - 1]} {report.year}
                         </div>
                         <div className="text-sm text-muted-foreground">
-                          Loading...
+                          Click to view details
                         </div>
                       </div>
                     </div>
@@ -237,35 +274,70 @@ export default function ReportsPage() {
                           <div className="text-sm text-muted-foreground mb-4">
                             {expandedReportData.report_links?.length || 0} report{expandedReportData.report_links?.length !== 1 ? 's' : ''} generated
                           </div>
-                          <div className="space-y-4">
+                          <div className="space-y-2">
                             {groupLinksByClient(expandedReportData).map((group) => (
-                              <div key={group.client.id} className="space-y-2">
-                                <div className="font-medium text-sm">{group.client.name}</div>
-                                <div className="pl-4 space-y-1">
-                                  {group.projects.map((proj: any) => (
-                                    <div 
-                                      key={proj.token} 
-                                      className="flex items-center justify-between p-2 rounded hover:bg-muted/50"
-                                    >
-                                      <div className="flex-1">
-                                        <div className="text-sm">{proj.project.name}</div>
-                                        {proj.locked_today_date && (
-                                          <div className="text-xs text-muted-foreground">
-                                            Opened: {new Date(proj.first_opened_at).toLocaleDateString()} 
-                                            {' '}(locked to {proj.locked_today_date})
-                                          </div>
-                                        )}
-                                      </div>
-                                      <Button
-                                        variant="ghost"
-                                        size="sm"
-                                        onClick={() => copyLinkToClipboard(proj.token)}
+                              <div key={group.client.id} className="border rounded-lg">
+                                <button
+                                  onClick={() => toggleClientExpansion(group.client.id)}
+                                  className="w-full flex items-center justify-between p-3 hover:bg-muted/50 transition-colors cursor-pointer"
+                                >
+                                  <div className="flex items-center gap-2 text-left">
+                                    {expandedClients.has(group.client.id) ? (
+                                      <ChevronDown className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                                    ) : (
+                                      <ChevronRight className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                                    )}
+                                    <span className="font-medium text-sm">{group.client.name}</span>
+                                  </div>
+                                  <span className="text-xs text-muted-foreground">
+                                    {group.projects.length} project{group.projects.length !== 1 ? 's' : ''}
+                                  </span>
+                                </button>
+                                
+                                {expandedClients.has(group.client.id) && (
+                                  <div className="border-t p-3 space-y-1 bg-muted/20">
+                                    {group.projects.map((proj: any) => (
+                                      <div 
+                                        key={proj.token} 
+                                        className="flex items-center justify-between p-2 rounded hover:bg-background/80 cursor-default"
                                       >
-                                        <ExternalLink className="h-4 w-4" />
-                                      </Button>
-                                    </div>
-                                  ))}
-                                </div>
+                                        <div className="flex-1">
+                                          <div className="text-sm">{proj.project.name}</div>
+                                          {proj.locked_today_date && (
+                                            <div className="text-xs text-muted-foreground">
+                                              Opened: {new Date(proj.first_opened_at).toLocaleDateString()} 
+                                              {' '}(locked to {proj.locked_today_date})
+                                            </div>
+                                          )}
+                                        </div>
+                                        <div className="flex items-center gap-1">
+                                          <Button
+                                            variant="ghost"
+                                            size="sm"
+                                            onClick={() => window.open(`/report/${proj.token}`, '_blank')}
+                                            className="relative"
+                                            title="Open report in new tab"
+                                          >
+                                            <ExternalLink className="h-4 w-4" />
+                                          </Button>
+                                          <Button
+                                            variant="ghost"
+                                            size="sm"
+                                            onClick={() => copyLinkToClipboard(proj.token)}
+                                            className="relative"
+                                            title="Copy shareable link"
+                                          >
+                                            {copiedToken === proj.token ? (
+                                              <CheckCircle2 className="h-4 w-4 text-green-600" />
+                                            ) : (
+                                              <Copy className="h-4 w-4" />
+                                            )}
+                                          </Button>
+                                        </div>
+                                      </div>
+                                    ))}
+                                  </div>
+                                )}
                               </div>
                             ))}
                           </div>

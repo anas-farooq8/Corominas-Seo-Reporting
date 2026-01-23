@@ -2,7 +2,7 @@
 // Grid My Business (GMB) API Library
 // ============================================
 
-import { getKVS, setKVS } from "@/lib/db/kvs"
+import { getKVS, setKVS, deleteKVS } from "@/lib/db/kvs"
 
 const GMB_REFRESH_TOKEN_KEY = "gmb-refresh-token"
 const GMB_API_BASE = "https://gmb-main-sb7q6jfhda-uc.a.run.app"
@@ -23,44 +23,73 @@ const COMMON_HEADERS = {
 } as const
 
 // ============================================
-// Access Token Cache
+// Access Token Cache (Universal - stored in KVS)
 // ============================================
 
-// In-memory cache for access token
 // Access tokens expire in 1 hour (3600 seconds)
 // We'll cache for 55 minutes to be safe (add 5 minute buffer)
-const TOKEN_CACHE_DURATION = 55 * 60 * 1000 // 55 minutes in milliseconds
+const TOKEN_CACHE_DURATION_MS = 55 * 60 * 1000 // 55 minutes in milliseconds
+const GMB_ACCESS_TOKEN_KEY = "gmb-access-token"
 
-let cachedAccessToken: string | null = null
-let tokenExpiryTime: number | null = null
-
-/**
- * Clear the cached access token
- * This is called when we detect the token is invalid
- */
-function clearTokenCache(): void {
-  cachedAccessToken = null
-  tokenExpiryTime = null
-  console.log("[GMB Token Cache] Cache cleared")
+interface CachedToken {
+  token: string
+  expiresAt: number // Unix timestamp in milliseconds
 }
 
 /**
- * Check if cached token is still valid
+ * Clear the cached access token from KVS
+ * This is called when we detect the token is invalid
  */
-function isCachedTokenValid(): boolean {
-  if (!cachedAccessToken || !tokenExpiryTime) {
-    return false
+async function clearTokenCache(): Promise<void> {
+  await deleteKVS(GMB_ACCESS_TOKEN_KEY)
+}
+
+/**
+ * Get cached access token from KVS (if valid)
+ * Returns null if no cached token exists or if it's expired
+ */
+async function getCachedAccessToken(): Promise<string | null> {
+  try {
+    const cachedData = await getKVS(GMB_ACCESS_TOKEN_KEY)
+    if (!cachedData) {
+      return null
+    }
+
+    // Parse the cached data
+    const cached: CachedToken = JSON.parse(cachedData)
+    
+    // Check if token is expired
+    const now = Date.now()
+    if (now >= cached.expiresAt) {
+      await clearTokenCache()
+      return null
+    }
+
+    console.log("[GMB Token Cache] Using cached token")
+    return cached.token
+  } catch (error) {
+    console.error("[GMB Token Cache] Error reading from cache:", error)
+    // Clear invalid cache entry
+    await clearTokenCache().catch(() => {}) // Ignore errors when clearing
+    return null
   }
-  
-  const now = Date.now()
-  const isValid = now < tokenExpiryTime
-  
-  if (!isValid) {
-    console.log("[GMB Token Cache] Cached token expired")
-    clearTokenCache()
+}
+
+/**
+ * Save access token to KVS with expiry timestamp
+ */
+async function saveCachedAccessToken(token: string): Promise<void> {
+  try {
+    const cached: CachedToken = {
+      token,
+      expiresAt: Date.now() + TOKEN_CACHE_DURATION_MS
+    }
+    await setKVS(GMB_ACCESS_TOKEN_KEY, JSON.stringify(cached))
+    console.log("[GMB Token Cache] Token cached (valid for 55 min)")
+  } catch (error) {
+    console.error("[GMB Token Cache] Cache save failed:", error)
+    // Don't throw - cache failure shouldn't break the flow
   }
-  
-  return isValid
 }
 
 // ============================================
@@ -248,27 +277,27 @@ export async function signInWithPassword(): Promise<GMBAuthResponse> {
  * - Using the same refresh token repeatedly is EXPECTED and SAFE
  * - Google/Firebase will NOT block normal token refresh requests
  * 
- * This function now includes caching:
- * - Returns cached token if still valid (saves API calls)
+ * This function now includes UNIVERSAL caching via KVS:
+ * - Returns cached token from KVS if still valid (saves API calls)
+ * - Cache is shared across ALL serverless instances
  * - If refresh token is invalid, automatically re-authenticates
  * 
  * @param forceRefresh - Force fetching a new token even if cached token is valid
  */
 async function getAccessToken(forceRefresh: boolean = false): Promise<string> {
-  // Check cache first (unless force refresh is requested)
-  if (!forceRefresh && isCachedTokenValid()) {
-    console.log("[GMB Token Cache] Using cached access token")
-    return cachedAccessToken!
+  // Check KVS cache first (unless force refresh is requested)
+  if (!forceRefresh) {
+    const cachedToken = await getCachedAccessToken()
+    if (cachedToken) {
+      return cachedToken
+    }
   }
-  
-  console.log("[GMB Token] Fetching fresh access token...")
   
   const refreshToken = await getKVS(GMB_REFRESH_TOKEN_KEY)
   const apiKey = process.env.GMB_API_KEY
 
   if (!refreshToken) {
     // No refresh token - authenticate to get one
-    console.log("[GMB Token] No refresh token found, authenticating...")
     await signInWithPassword()
     // Recursively call to get the token with new refresh token
     return getAccessToken(true) // Force refresh since we just authenticated
@@ -309,8 +338,8 @@ async function getAccessToken(forceRefresh: boolean = false): Promise<string> {
       
       // If refresh token is invalid, try to re-authenticate
       if (response.status === 400) {
-        console.log("[GMB Token] Refresh token invalid/expired, re-authenticating...")
-        clearTokenCache()
+        console.log("[GMB Token] Refresh token invalid, re-authenticating...")
+        await clearTokenCache()
         await signInWithPassword()
         // Recursively call to get token with new refresh token
         return getAccessToken(true) // Force refresh since we just authenticated
@@ -321,10 +350,8 @@ async function getAccessToken(forceRefresh: boolean = false): Promise<string> {
 
     const data = await response.json() as GMBTokenResponse
 
-    // Cache the new token
-    cachedAccessToken = data.access_token
-    tokenExpiryTime = Date.now() + TOKEN_CACHE_DURATION
-    console.log("[GMB Token Cache] New token cached (valid for 55 minutes)")
+    // Cache the new token in KVS (universal across all instances)
+    await saveCachedAccessToken(data.access_token)
 
     return data.access_token
   } catch (error) {
@@ -405,8 +432,7 @@ async function withRetry<T>(
       // Only force refresh if this is a retry after auth error (attempt > 1)
       const forceRefresh = attempt > 1
       if (forceRefresh) {
-        console.log(`[GMB API] Forcing fresh token due to previous auth error`)
-        clearTokenCache()
+        await clearTokenCache()
       }
       
       const accessToken = await getAccessToken(forceRefresh)
@@ -467,8 +493,8 @@ export async function listProfiles(): Promise<GMBProfile[]> {
       
       // If 401/403, the token is invalid - clear cache and retry
       if ((response.status === 401 || response.status === 403) && attempt < MAX_RETRIES) {
-        console.log(`[GMB API] Authentication error (${response.status}), clearing cache and retrying after ${RETRY_DELAY}ms...`)
-        clearTokenCache()
+        console.log(`[GMB API] Auth error ${response.status}, retrying...`)
+        await clearTokenCache()
         await new Promise(resolve => setTimeout(resolve, RETRY_DELAY))
         throw new Error("AUTH_ERROR_RETRY") // Signal to retry
       }
@@ -519,8 +545,8 @@ export async function listKeywords(profileId: string): Promise<GMBKeyword[]> {
       
       // If 401/403, the token is invalid - clear cache and retry
       if ((response.status === 401 || response.status === 403) && attempt < MAX_RETRIES) {
-        console.log(`[GMB API] Authentication error (${response.status}), clearing cache and retrying after ${RETRY_DELAY}ms...`)
-        clearTokenCache()
+        console.log(`[GMB API] Auth error ${response.status}, retrying...`)
+        await clearTokenCache()
         await new Promise(resolve => setTimeout(resolve, RETRY_DELAY))
         throw new Error("AUTH_ERROR_RETRY") // Signal to retry
       }
@@ -602,7 +628,7 @@ export async function getFreshAccessToken(): Promise<string> {
  * Use this after detecting auth errors to get a fresh token
  */
 export async function forceRefreshAccessToken(): Promise<string> {
-  clearTokenCache()
+  await clearTokenCache()
   return getAccessToken(true)
 }
 
@@ -647,8 +673,8 @@ export async function fetchGMBMetrics(
       
       // If 401/403, the token is invalid - clear cache and retry
       if ((response.status === 401 || response.status === 403) && attempt < MAX_RETRIES) {
-        console.log(`[GMB API] Authentication error (${response.status}), clearing cache and retrying after ${RETRY_DELAY}ms...`)
-        clearTokenCache()
+        console.log(`[GMB API] Auth error ${response.status}, retrying...`)
+        await clearTokenCache()
         await new Promise(resolve => setTimeout(resolve, RETRY_DELAY))
         throw new Error("AUTH_ERROR_RETRY") // Signal to retry
       }

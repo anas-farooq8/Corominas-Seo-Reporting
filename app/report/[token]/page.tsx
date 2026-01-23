@@ -151,9 +151,11 @@ export default function ShareableReportPage({ params }: { params: Promise<{ toke
       {/* Header */}
       <div className="border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
         <div className="flex items-center gap-3 sm:gap-4 p-3 sm:p-4 md:p-6">
-          <div className="flex h-9 w-9 sm:h-10 sm:w-10 items-center justify-center rounded-lg bg-primary/10 flex-shrink-0">
-            <FileText className="h-5 w-5 sm:h-6 sm:w-6 text-primary" />
-          </div>
+          <img 
+            src="https://www.google.com/s2/favicons?domain=corominas-consulting.de&sz=64" 
+            alt="SEO Reporting Logo" 
+            className="h-8 w-8 sm:h-9 sm:w-9 flex-shrink-0"
+          />
           <div className="flex-1 min-w-0">
             <h1 className="text-lg sm:text-xl md:text-2xl lg:text-3xl font-bold text-foreground truncate">
               {loading ? "Loading Report..." : `${reportData?.client?.name} - ${reportData?.project?.name}`}
