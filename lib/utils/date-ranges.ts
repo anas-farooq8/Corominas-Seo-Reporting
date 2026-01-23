@@ -10,6 +10,12 @@
  */
 
 // ============================================
+// Constants
+// ============================================
+
+const MONTH_NAMES = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+
+// ============================================
 // Common Date Formatting Utilities
 // ============================================
 
@@ -37,8 +43,21 @@ export function formatDateYYYYMMDDCompact(date: Date): string {
  * Format month label (e.g., "Dec 2024")
  */
 function formatMonthLabel(date: Date): string {
-  const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
-  return `${monthNames[date.getMonth()]} ${date.getFullYear()}`
+  return `${MONTH_NAMES[date.getMonth()]} ${date.getFullYear()}`
+}
+
+/**
+ * Get timestamp for end of day (23:59:59.999)
+ */
+function getEndOfDayTimestamp(date: Date): number {
+  return new Date(date.getFullYear(), date.getMonth(), date.getDate(), 23, 59, 59, 999).getTime()
+}
+
+/**
+ * Get the last day of previous month
+ */
+function getLastDayOfPreviousMonth(referenceDate: Date = new Date()): Date {
+  return new Date(referenceDate.getFullYear(), referenceDate.getMonth(), 0)
 }
 
 // ============================================
@@ -59,15 +78,12 @@ export function getLast2CompletedMonths(): {
 } {
   const now = new Date()
   
-  // Get first day of current month
-  const currentMonthStart = new Date(now.getFullYear(), now.getMonth(), 1)
-  
   // Last Month (previous month) - the most recent completed month
-  const lastMonthEnd = new Date(currentMonthStart.getTime() - 1) // Last day of previous month
+  const lastMonthEnd = getLastDayOfPreviousMonth(now)
   const lastMonthStart = new Date(lastMonthEnd.getFullYear(), lastMonthEnd.getMonth(), 1)
   
   // Previous Month (2 months ago) - the month before last month
-  const previousMonthEnd = new Date(lastMonthStart.getTime() - 1) // Last day of 2 months ago
+  const previousMonthEnd = getLastDayOfPreviousMonth(lastMonthStart)
   const previousMonthStart = new Date(previousMonthEnd.getFullYear(), previousMonthEnd.getMonth(), 1)
   
   return {
@@ -75,86 +91,32 @@ export function getLast2CompletedMonths(): {
       start: lastMonthStart,
       end: lastMonthEnd,
       startTimestamp: lastMonthStart.getTime(),
-      endTimestamp: new Date(lastMonthEnd.getFullYear(), lastMonthEnd.getMonth(), lastMonthEnd.getDate(), 23, 59, 59, 999).getTime(),
+      endTimestamp: getEndOfDayTimestamp(lastMonthEnd),
       label: formatMonthLabel(lastMonthStart)
     },
     previousMonth: {
       start: previousMonthStart,
       end: previousMonthEnd,
       startTimestamp: previousMonthStart.getTime(),
-      endTimestamp: new Date(previousMonthEnd.getFullYear(), previousMonthEnd.getMonth(), previousMonthEnd.getDate(), 23, 59, 59, 999).getTime(),
+      endTimestamp: getEndOfDayTimestamp(previousMonthEnd),
       label: formatMonthLabel(previousMonthStart)
     }
   }
 }
 
 /**
- * Calculate date ranges for dashboard reports (24 months of data)
- * Returns last completed month going back 24 months
- * This allows for 12-month comparisons (current 12 months vs previous 12 months)
+ * Generic function to calculate N months of data ending at last completed month
+ * @param monthsBack - Number of months to go back (e.g., 24, 12)
+ * @param logLabel - Label for console logging
  */
-export function calculateDashboardDateRanges() {
+function calculateMonthsDateRange(monthsBack: number, logLabel: string) {
   const today = new Date()
   
   // Last completed month end date (last day of previous month)
-  const endDate = new Date(today.getFullYear(), today.getMonth(), 0)
+  const endDate = getLastDayOfPreviousMonth(today)
   
-  // Start date: 24 months before the end date (first day of that month)
-  const startDate = new Date(endDate.getFullYear(), endDate.getMonth() - 23, 1)
-  
-  // Reuse getLast2CompletedMonths for consistency
-  const last2Months = getLast2CompletedMonths()
-  
-  const result = {
-    startDate: formatDateYYYYMMDD(startDate),
-    endDate: formatDateYYYYMMDD(endDate),
-    startDateAPI: formatDateYYYYMMDDCompact(startDate),
-    endDateAPI: formatDateYYYYMMDDCompact(endDate),
-    startDateObj: startDate,
-    endDateObj: endDate,
-    lastMonth: {
-      start: formatDateYYYYMMDD(last2Months.lastMonth.start),
-      end: formatDateYYYYMMDD(last2Months.lastMonth.end),
-      startAPI: formatDateYYYYMMDDCompact(last2Months.lastMonth.start),
-      endAPI: formatDateYYYYMMDDCompact(last2Months.lastMonth.end),
-      startObj: last2Months.lastMonth.start,
-      endObj: last2Months.lastMonth.end
-    },
-    previousMonth: {
-      start: formatDateYYYYMMDD(last2Months.previousMonth.start),
-      end: formatDateYYYYMMDD(last2Months.previousMonth.end),
-      startAPI: formatDateYYYYMMDDCompact(last2Months.previousMonth.start),
-      endAPI: formatDateYYYYMMDDCompact(last2Months.previousMonth.end),
-      startObj: last2Months.previousMonth.start,
-      endObj: last2Months.previousMonth.end
-    }
-  }
-  
-  console.log('[Dashboard Date Ranges]', {
-    today: formatDateYYYYMMDD(today),
-    startDate: result.startDate,
-    endDate: result.endDate,
-    lastMonth: result.lastMonth.start + ' to ' + result.lastMonth.end,
-    previousMonth: result.previousMonth.start + ' to ' + result.previousMonth.end,
-    monthsIncluded: 24
-  })
-  
-  return result
-}
-
-/**
- * Calculate date ranges for landing pages (12 months of data only)
- * Used for Google Analytics landing pages on Page 3
- * Returns last completed month going back 12 months
- */
-export function calculateLandingPagesDateRanges() {
-  const today = new Date()
-  
-  // Last completed month end date (last day of previous month)
-  const endDate = new Date(today.getFullYear(), today.getMonth(), 0)
-  
-  // Start date: 12 months before the end date (first day of that month)
-  const startDate = new Date(endDate.getFullYear(), endDate.getMonth() - 11, 1)
+  // Start date: N months before the end date (first day of that month)
+  const startDate = new Date(endDate.getFullYear(), endDate.getMonth() - (monthsBack - 1), 1)
   
   const result = {
     startDate: formatDateYYYYMMDD(startDate),
@@ -165,14 +127,32 @@ export function calculateLandingPagesDateRanges() {
     endDateObj: endDate
   }
   
-  console.log('[Landing Pages Date Ranges]', {
+  console.log(`[${logLabel}]`, {
     today: formatDateYYYYMMDD(today),
     startDate: result.startDate,
     endDate: result.endDate,
-    monthsIncluded: 12
+    monthsIncluded: monthsBack
   })
   
   return result
+}
+
+/**
+ * Calculate date ranges for dashboard reports (24 months of data)
+ * Returns last completed month going back 24 months
+ * This allows for 12-month comparisons (current 12 months vs previous 12 months)
+ */
+export function calculateDashboardDateRanges() {
+  return calculateMonthsDateRange(24, 'Dashboard Date Ranges')
+}
+
+/**
+ * Calculate date ranges for landing pages (12 months of data only)
+ * Used for Google Analytics landing pages on Page 3
+ * Returns last completed month going back 12 months
+ */
+export function calculateLandingPagesDateRanges() {
+  return calculateMonthsDateRange(12, 'Landing Pages Date Ranges')
 }
 
 /**
@@ -180,9 +160,7 @@ export function calculateLandingPagesDateRanges() {
  * Only returns end date - Semrush API will return all historical data
  */
 export function calculateSemrushDateRanges() {
-  const today = new Date()
-  const endDate = new Date(today.getFullYear(), today.getMonth(), 0) // Last day of previous month
-  
+  const endDate = getLastDayOfPreviousMonth()
   const endDateStr = formatDateYYYYMMDD(endDate)
   
   console.log('[SEMrush] Fetching all data up to:', endDateStr)
@@ -236,6 +214,7 @@ export function filterByMonth<T extends { dateAdded: number }>(
 
 /**
  * Get the last completed month date range for GMB metrics filtering
+ * Reuses getLast2CompletedMonths for consistency
  * Examples:
  * - If today = 22 Jan 2026 → Dec 1, 2025 to Dec 31, 2025
  * - If today = 15 Mar 2025 → Feb 1, 2025 to Feb 28, 2025
@@ -250,25 +229,16 @@ export function getLastCompletedMonthRange(): {
   startDateStr: string
   endDateStr: string
 } {
-  const now = new Date()
-  
-  // Get first day of current month
-  const currentMonthStart = new Date(now.getFullYear(), now.getMonth(), 1)
-  
-  // Last completed month end date (last day of previous month)
-  const lastMonthEnd = new Date(currentMonthStart.getTime() - 1)
-  
-  // Last completed month start date (first day of previous month)
-  const lastMonthStart = new Date(lastMonthEnd.getFullYear(), lastMonthEnd.getMonth(), 1)
+  const { lastMonth } = getLast2CompletedMonths()
   
   return {
-    start: lastMonthStart,
-    end: lastMonthEnd,
-    startTimestamp: lastMonthStart.getTime(),
-    endTimestamp: new Date(lastMonthEnd.getFullYear(), lastMonthEnd.getMonth(), lastMonthEnd.getDate(), 23, 59, 59, 999).getTime(),
-    label: formatMonthLabel(lastMonthStart),
-    startDateStr: formatDateYYYYMMDD(lastMonthStart),
-    endDateStr: formatDateYYYYMMDD(lastMonthEnd)
+    start: lastMonth.start,
+    end: lastMonth.end,
+    startTimestamp: lastMonth.startTimestamp,
+    endTimestamp: lastMonth.endTimestamp,
+    label: lastMonth.label,
+    startDateStr: formatDateYYYYMMDD(lastMonth.start),
+    endDateStr: formatDateYYYYMMDD(lastMonth.end)
   }
 }
 
@@ -393,12 +363,11 @@ export function calculateMangoolsDashboardRanges(trackingCreatedAt: string | nul
  * - Different years: "25 Dec 2025 - 15 Jan 2026"
  */
 export function formatMangoolsDateRange(start: Date, end: Date): string {
-  const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
   const startDay = start.getDate()
-  const startMonth = monthNames[start.getMonth()]
+  const startMonth = MONTH_NAMES[start.getMonth()]
   const startYear = start.getFullYear()
   const endDay = end.getDate()
-  const endMonth = monthNames[end.getMonth()]
+  const endMonth = MONTH_NAMES[end.getMonth()]
   const endYear = end.getFullYear()
   
   // Same month and year: "1-22 Jan 2026"

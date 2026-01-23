@@ -10,7 +10,7 @@ import {
   getGridReportWithToken, 
   type GMBKeyword
 } from "@/lib/gmb/api"
-import { getLast2CompletedMonths, filterByMonth, calculateDashboardDateRanges } from "@/lib/utils/date-ranges"
+import { getLast2CompletedMonths, filterByMonth, formatDateYYYYMMDD } from "@/lib/utils/date-ranges"
 import { 
   aggregateGridScans, 
   compareGrids, 
@@ -189,11 +189,10 @@ export async function fetchGMBGridDashboardData(
     
     console.log('[GMB Grid Dashboard] Profile found:', profile.profile_id, profile.business_name)
     
-    // Calculate date range for cache key (use consistent formatting across all dashboards)
-    // Use calculateDashboardDateRanges() which formats dates correctly without timezone issues
-    const dateRanges = calculateDashboardDateRanges()
-    const cacheStartDate = dateRanges.previousMonth.start
-    const cacheEndDate = dateRanges.lastMonth.end
+    // Calculate date range for cache key (last 2 completed months)
+    const last2Months = getLast2CompletedMonths()
+    const cacheStartDate = formatDateYYYYMMDD(last2Months.previousMonth.start)
+    const cacheEndDate = formatDateYYYYMMDD(last2Months.lastMonth.end)
     
     console.log('[GMB Grid Dashboard] Cache date range:', { cacheStartDate, cacheEndDate })
     
