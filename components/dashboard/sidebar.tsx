@@ -18,7 +18,6 @@ const navigation = [
     name: "Reports",
     href: "/dashboard/reports",
     icon: FileText,
-    comingSoon: true,
   },
 ]
 
@@ -150,11 +149,6 @@ export function Sidebar() {
                   {!isDesktopCollapsed && (
                     <div className="flex items-center justify-between flex-1 whitespace-nowrap">
                       <span>{item.name}</span>
-                      {item.comingSoon && (
-                        <Badge variant="secondary" className="text-xs ml-2">
-                          Soon
-                        </Badge>
-                      )}
                     </div>
                   )}
                 </Link>

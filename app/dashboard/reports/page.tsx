@@ -239,36 +239,37 @@ export default function ReportsPage() {
                           </div>
                           <div className="space-y-4">
                             {groupLinksByClient(expandedReportData).map((group) => (
-                            <div key={group.client.id} className="space-y-2">
-                              <div className="font-medium text-sm">{group.client.name}</div>
-                              <div className="pl-4 space-y-1">
-                                {group.projects.map((proj: any) => (
-                                  <div 
-                                    key={proj.token} 
-                                    className="flex items-center justify-between p-2 rounded hover:bg-muted/50"
-                                  >
-                                    <div className="flex-1">
-                                      <div className="text-sm">{proj.project.name}</div>
-                                      {proj.locked_today_date && (
-                                        <div className="text-xs text-muted-foreground">
-                                          Opened: {new Date(proj.first_opened_at).toLocaleDateString()} 
-                                          {' '}(locked to {proj.locked_today_date})
-                                        </div>
-                                      )}
-                                    </div>
-                                    <Button
-                                      variant="ghost"
-                                      size="sm"
-                                      onClick={() => copyLinkToClipboard(proj.token)}
+                              <div key={group.client.id} className="space-y-2">
+                                <div className="font-medium text-sm">{group.client.name}</div>
+                                <div className="pl-4 space-y-1">
+                                  {group.projects.map((proj: any) => (
+                                    <div 
+                                      key={proj.token} 
+                                      className="flex items-center justify-between p-2 rounded hover:bg-muted/50"
                                     >
-                                      <ExternalLink className="h-4 w-4" />
-                                    </Button>
-                                  </div>
-                                ))}
+                                      <div className="flex-1">
+                                        <div className="text-sm">{proj.project.name}</div>
+                                        {proj.locked_today_date && (
+                                          <div className="text-xs text-muted-foreground">
+                                            Opened: {new Date(proj.first_opened_at).toLocaleDateString()} 
+                                            {' '}(locked to {proj.locked_today_date})
+                                          </div>
+                                        )}
+                                      </div>
+                                      <Button
+                                        variant="ghost"
+                                        size="sm"
+                                        onClick={() => copyLinkToClipboard(proj.token)}
+                                      >
+                                        <ExternalLink className="h-4 w-4" />
+                                      </Button>
+                                    </div>
+                                  ))}
+                                </div>
                               </div>
-                            </div>
-                          ))}
-                        </div>
+                            ))}
+                          </div>
+                        </>
                       ) : (
                         <p className="text-sm text-muted-foreground">No data available</p>
                       )}

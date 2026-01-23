@@ -275,11 +275,11 @@ CREATE POLICY "public_read_report_links" ON report_links
 
 DROP POLICY IF EXISTS "authenticated_users_write_report_links" ON report_links;
 CREATE POLICY "authenticated_users_write_report_links" ON report_links
-  FOR INSERT USING (auth.role() = 'authenticated');
+  FOR INSERT WITH CHECK (auth.role() = 'authenticated');
 
 DROP POLICY IF EXISTS "authenticated_users_update_report_links" ON report_links;
 CREATE POLICY "authenticated_users_update_report_links" ON report_links
-  FOR UPDATE USING (auth.role() = 'authenticated');
+  FOR UPDATE USING (auth.role() = 'authenticated') WITH CHECK (auth.role() = 'authenticated');
 
 -- ============================================
 -- TRIGGERS
