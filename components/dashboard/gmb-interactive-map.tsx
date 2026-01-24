@@ -24,40 +24,59 @@ interface GMBInteractiveMapProps {
  * Get heatmap color based on position with gradient
  * Uses smooth color transition from green (1) to red (20+)
  */
-function getHeatmapColor(position: number): { background: string; text: string } {
-  // Clamp position to max 21 for color calculation
-  const pos = Math.min(position, 21)
-  
-  // Use gradient from green (1) through yellow (7-8) to orange (12-14) to red (20+)
+function getHeatmapColor(
+  position: number
+): { background: string; text: string } {
+  const pos = Math.max(1, position)
+
   let r: number, g: number, b: number
-  
-  if (pos <= 3) {
-    // Green range (1-3)
-    const t = (pos - 1) / 2 // 0 to 1
-    r = Math.round(34 + t * 100)  // 34 to 134
-    g = Math.round(197 - t * 10)  // 197 to 187
-    b = Math.round(94 - t * 20)   // 94 to 74
-  } else if (pos <= 10) {
-    // Green to Yellow range (4-10)
-    const t = (pos - 3) / 7 // 0 to 1
-    r = Math.round(134 + t * 100) // 134 to 234
-    g = Math.round(187 - t * 8)   // 187 to 179
-    b = Math.round(74 - t * 66)   // 74 to 8
-  } else if (pos <= 20) {
-    // Yellow/Orange to Red range (11-20)
-    const t = (pos - 10) / 10 // 0 to 1
-    r = Math.round(234 + t * 5)   // 234 to 239
-    g = Math.round(179 - t * 95)  // 179 to 84
-    b = Math.round(8)             // Stay at 8
+
+  if (pos <= 6) {
+    // COOL green → emerald → light green
+    const t = (pos - 1) / 5
+    r = Math.round(26 + t * (106 - 26))
+    g = Math.round(188 + t * (223 - 188))
+    b = Math.round(156 + t * (138 - 156))
+
+  } else if (pos <= 9) {
+    // Yellow
+    const t = (pos - 6) / 3
+    r = 241
+    g = Math.round(210 - t * 20)
+    b = Math.round(40 - t * 25)
+
+  } else if (pos <= 12) {
+    // Orange
+    const t = (pos - 9) / 3
+    r = 243
+    g = Math.round(175 - t * 30)
+    b = Math.round(40 - t * 25)
+
+  } else if (pos <= 16) {
+    // Dark orange → red
+    const t = (pos - 12) / 4
+    r = Math.round(240 - t * 10)
+    g = Math.round(145 - t * 75)
+    b = Math.round(40 - t * 20)
+
+  } else if (pos <= 19) {
+    // Strong red (17–19)
+    const t = (pos - 16) / 3
+    r = 231
+    g = Math.round(76 - t * 16)
+    b = Math.round(60 - t * 16)
+
   } else {
-    // Deep red for 20+
-    r = 239
-    g = 68
-    b = 68
+    // Deep red (20+)
+    r = 192
+    g = 57
+    b = 43
   }
-  
-  const background = `rgb(${r}, ${g}, ${b})`
-  return { background, text: '#ffffff' }
+
+  return {
+    background: `rgb(${r}, ${g}, ${b})`,
+    text: '#ffffff'
+  }
 }
 
 // Global state for Google Maps script loading
