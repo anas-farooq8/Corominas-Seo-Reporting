@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useMemo, useCallback } from "react"
+import { useMemo } from "react"
 import { LoadingSpinner } from "@/components/ui/loading-spinner"
 import { ErrorDisplay } from "@/components/ui/error-display"
 import { Calendar, MousePointer, Eye, TrendingUp, Target } from "lucide-react"
@@ -9,75 +9,48 @@ import type { GSCDashboardData } from "@/lib/actions/search-console-dashboard"
 import { formatDateRange } from "@/lib/utils/dashboard-helpers"
 import { KPICard } from "./kpi-card"
 import { Page3LandingPagesDashboard } from "./page3-landing-pages-dashboard"
+import { useCachedFetch } from "@/lib/hooks/useCachedFetch"
 
 interface CombinedPage3DashboardProps {
   googleAnalyticsId?: string
   searchConsoleId?: string
   today?: string // Optional locked today date (YYYY-MM-DD)
+  clearOnMount?: boolean // Whether to clear cache on mount (for page refresh)
 }
 
-export function CombinedPage3Dashboard({ googleAnalyticsId, searchConsoleId, today }: CombinedPage3DashboardProps) {
-  const [gaData, setGAData] = useState<GALandingPagesDashboardData | null>(null)
-  const [gscData, setGSCData] = useState<GSCDashboardData | null>(null)
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
+export function CombinedPage3Dashboard({ 
+  googleAnalyticsId, 
+  searchConsoleId, 
+  today,
+  clearOnMount = false 
+}: CombinedPage3DashboardProps) {
+  const todayParam = today ? `?today=${today}` : ''
+  
+  // Fetch Google Analytics Landing Pages data with caching
+  const {
+    data: gaData,
+    loading: gaLoading,
+    error: gaError
+  } = useCachedFetch<GALandingPagesDashboardData>(
+    googleAnalyticsId ? `/api/google-analytics/landing-pages/${googleAnalyticsId}${todayParam}` : null,
+    `page3:ga-landing:${googleAnalyticsId}:${today || 'live'}`,
+    { clearOnMount }
+  )
 
-  useEffect(() => {
-    let isMounted = true
+  // Fetch Search Console data with caching
+  const {
+    data: gscData,
+    loading: gscLoading,
+    error: gscError
+  } = useCachedFetch<GSCDashboardData>(
+    searchConsoleId ? `/api/search-console/dashboard/${searchConsoleId}${todayParam}` : null,
+    `page3:gsc:${searchConsoleId}:${today || 'live'}`,
+    { clearOnMount }
+  )
 
-    async function fetchAllData() {
-      try {
-        setLoading(true)
-        setError(null)
-
-        const promises = []
-        const todayParam = today ? `?today=${today}` : ''
-        
-        if (googleAnalyticsId) {
-          promises.push(
-            fetch(`/api/google-analytics/landing-pages/${googleAnalyticsId}${todayParam}`)
-              .then(res => {
-                if (!res.ok) {
-                  throw new Error(`HTTP ${res.status}: ${res.statusText}`)
-                }
-                return res.json()
-              })
-              .then(data => isMounted && setGAData(data))
-          )
-        }
-        
-        if (searchConsoleId) {
-          promises.push(
-            fetch(`/api/search-console/dashboard/${searchConsoleId}${todayParam}`)
-              .then(res => {
-                if (!res.ok) {
-                  throw new Error(`HTTP ${res.status}: ${res.statusText}`)
-                }
-                return res.json()
-              })
-              .then(data => isMounted && setGSCData(data))
-          )
-        }
-
-        await Promise.all(promises)
-      } catch (err) {
-        console.error("Error fetching dashboard data:", err)
-        if (isMounted) {
-          setError(err instanceof Error ? err.message : "Failed to load dashboard")
-        }
-      } finally {
-        if (isMounted) {
-          setLoading(false)
-        }
-      }
-    }
-
-    fetchAllData()
-
-    return () => {
-      isMounted = false
-    }
-  }, [googleAnalyticsId, searchConsoleId, today])
+  // Combine loading and error states
+  const loading = gaLoading || gscLoading
+  const error = gaError || gscError
 
   // Memoize Search Console KPI calculations
   const gscClicksKPI = useMemo(() => {

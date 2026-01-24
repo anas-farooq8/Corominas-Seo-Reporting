@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useMemo } from "react"
+import { useMemo } from "react"
 import { LoadingSpinner } from "@/components/ui/loading-spinner"
 import { ErrorDisplay } from "@/components/ui/error-display"
 import type { GBPDashboardData } from "@/lib/actions/gbp-dashboard"
@@ -8,108 +8,59 @@ import type { GMBGridDashboardData } from "@/lib/actions/gmb-dashboard"
 import type { GMBMetricsDashboardData } from "@/lib/actions/gmb-metrics"
 import { GBPDashboardPage } from "./gbp-dashboard-page"
 import { GMBGridDashboardPage } from "./gmb-grid-dashboard-page"
+import { useCachedFetch } from "@/lib/hooks/useCachedFetch"
 
 interface CombinedPage4DashboardProps {
   gbpId?: string
   gmbId?: string  // This is the datasource ID for GMB
   today?: string // Optional locked today date (YYYY-MM-DD)
+  clearOnMount?: boolean // Whether to clear cache on mount (for page refresh)
 }
 
-export function CombinedPage4Dashboard({ gbpId, gmbId, today }: CombinedPage4DashboardProps) {
-  const [gbpData, setGBPData] = useState<GBPDashboardData | null>(null)
-  const [gmbData, setGMBData] = useState<GMBGridDashboardData | null>(null)
-  const [gmbMetricsData, setGMBMetricsData] = useState<GMBMetricsDashboardData | null>(null)
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
+export function CombinedPage4Dashboard({ 
+  gbpId, 
+  gmbId, 
+  today,
+  clearOnMount = false 
+}: CombinedPage4DashboardProps) {
+  const todayParam = today ? `?today=${today}` : ''
+  
+  // Fetch GBP data with caching
+  const {
+    data: gbpData,
+    loading: gbpLoading,
+    error: gbpError
+  } = useCachedFetch<GBPDashboardData>(
+    gbpId ? `/api/gbp/dashboard/${gbpId}${todayParam}` : null,
+    `page4:gbp:${gbpId}:${today || 'live'}`,
+    { clearOnMount }
+  )
 
-  useEffect(() => {
-    let isMounted = true
+  // Fetch GMB Grid data with caching (optional)
+  const {
+    data: gmbData,
+    loading: gmbLoading
+  } = useCachedFetch<GMBGridDashboardData>(
+    gmbId ? `/api/gmb/grid-dashboard/${gmbId}${todayParam}` : null,
+    `page4:gmb-grid:${gmbId}:${today || 'live'}`,
+    { clearOnMount }
+  )
 
-    async function fetchAllData() {
-      try {
-        setLoading(true)
-        setError(null)
+  // Fetch GMB Metrics data with caching (optional)
+  const {
+    data: gmbMetricsData,
+    loading: gmbMetricsLoading
+  } = useCachedFetch<GMBMetricsDashboardData>(
+    gmbId ? `/api/gmb/metrics/${gmbId}${todayParam}` : null,
+    `page4:gmb-metrics:${gmbId}:${today || 'live'}`,
+    { clearOnMount }
+  )
 
-        const promises = []
-        const todayParam = today ? `?today=${today}` : ''
-        
-        // Fetch GBP data
-        if (gbpId) {
-          promises.push(
-            fetch(`/api/gbp/dashboard/${gbpId}${todayParam}`)
-              .then(res => {
-                if (!res.ok) {
-                  throw new Error(`HTTP ${res.status}: ${res.statusText}`)
-                }
-                return res.json()
-              })
-              .then(data => isMounted && setGBPData(data))
-              .catch(err => {
-                console.error('[GBP] Failed to fetch dashboard data:', err)
-                throw err
-              })
-          )
-        }
-        
-        // Fetch GMB grid data (heatmap) - optional, may return null
-        if (gmbId) {
-          promises.push(
-            fetch(`/api/gmb/grid-dashboard/${gmbId}${todayParam}`)
-              .then(res => {
-                if (!res.ok) {
-                  throw new Error(`HTTP ${res.status}: ${res.statusText}`)
-                }
-                return res.json()
-              })
-              .then(data => {
-                if (isMounted && data) {
-                  setGMBData(data)
-                }
-              })
-              .catch(err => {
-                console.error('[GMB Grid] Failed to fetch grid data:', err)
-                // Grid data is optional - don't fail the entire page
-              })
-          )
-          
-          // Fetch GMB metrics data (KPI cards) - IN PARALLEL with grid
-          promises.push(
-            fetch(`/api/gmb/metrics/${gmbId}${todayParam}`)
-              .then(res => {
-                if (!res.ok) {
-                  throw new Error(`HTTP ${res.status}: ${res.statusText}`)
-                }
-                return res.json()
-              })
-              .then(data => isMounted && setGMBMetricsData(data))
-              .catch(err => {
-                // Metrics are optional - log error but don't fail
-                console.error('[GMB Metrics] Failed to fetch metrics:', err)
-              })
-          )
-        }
+  // Combine loading and error states
+  const loading = gbpLoading || gmbLoading || gmbMetricsLoading
+  const error = gbpError
 
-        await Promise.all(promises)
-      } catch (err) {
-        console.error("Error fetching dashboard data:", err)
-        if (isMounted) {
-          setError(err instanceof Error ? err.message : "Failed to load dashboard")
-        }
-      } finally {
-        if (isMounted) {
-          setLoading(false)
-        }
-      }
-    }
-
-    fetchAllData()
-
-    return () => {
-      isMounted = false
-    }
-  }, [gbpId, gmbId, today])
-
-  // Determine metadata display according to requirements
+  // Determine metadata display
   const metadata = useMemo(() => {
     if (!gbpData && !gmbData && !gmbMetricsData) return null
     

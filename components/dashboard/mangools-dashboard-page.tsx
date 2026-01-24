@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useCachedFetch } from "@/lib/hooks/useCachedFetch"
 import { LoadingSpinner } from "@/components/ui/loading-spinner"
 import { ErrorDisplay } from "@/components/ui/error-display"
 import { Calendar } from "lucide-react"
@@ -13,36 +13,26 @@ import type { MangoolsDashboardData } from "@/lib/actions/mangools-dashboard"
 interface MangoolsDashboardPageProps {
   datasourceId: string
   today?: string // Optional locked today date (YYYY-MM-DD)
+  clearOnMount?: boolean // Whether to clear cache on mount (for page refresh)
 }
 
-export function MangoolsDashboardPage({ datasourceId, today }: MangoolsDashboardPageProps) {
-  const [data, setData] = useState<MangoolsDashboardData | null>(null)
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
-
-  useEffect(() => {
-    // Only load data when this component is mounted (lazy loading)
-    fetchDashboardData()
-  }, [datasourceId, today])
-
-  async function fetchDashboardData() {
-    try {
-      setLoading(true)
-      setError(null)
-      const todayParam = today ? `?today=${today}` : ''
-      const response = await fetch(`/api/mangools/dashboard/${datasourceId}${todayParam}`)
-      if (!response.ok) {
-        throw new Error("Failed to fetch dashboard data")
-      }
-      const dashboardData = await response.json()
-      setData(dashboardData)
-    } catch (err) {
-      console.error("Error fetching dashboard:", err)
-      setError(err instanceof Error ? err.message : "Failed to load dashboard")
-    } finally {
-      setLoading(false)
-    }
-  }
+export function MangoolsDashboardPage({ 
+  datasourceId, 
+  today,
+  clearOnMount = false 
+}: MangoolsDashboardPageProps) {
+  const todayParam = today ? `?today=${today}` : ''
+  
+  const {
+    data,
+    loading,
+    error,
+    refetch
+  } = useCachedFetch<MangoolsDashboardData>(
+    `/api/mangools/dashboard/${datasourceId}${todayParam}`,
+    `page2:mangools:${datasourceId}:${today || 'live'}`,
+    { clearOnMount }
+  )
 
   if (loading) {
     return (
@@ -60,7 +50,7 @@ export function MangoolsDashboardPage({ datasourceId, today }: MangoolsDashboard
           message={error || "Failed to load dashboard data. Please try again later."}
           action={{
             label: "Try Again",
-            onClick: () => fetchDashboardData()
+            onClick: () => refetch()
           }}
         />
       </div>

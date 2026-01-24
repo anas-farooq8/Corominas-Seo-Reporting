@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useMemo, useCallback } from "react"
+import { useState, useMemo, useCallback } from "react"
 import { LoadingSpinner } from "@/components/ui/loading-spinner"
 import { ErrorDisplay } from "@/components/ui/error-display"
 import { TrendingUp, MousePointerClick, Key, Activity } from "lucide-react"
@@ -11,21 +11,23 @@ import { KPICard } from "./kpi-card"
 import { SEMrushChart } from "./semrush-chart"
 import { GoogleAnalyticsDashboardPage } from "./google-analytics-dashboard-page"
 import type { LayerKey } from "./chart-layer-filters"
+import { useCachedFetch } from "@/lib/hooks/useCachedFetch"
 
 interface CombinedPage1DashboardProps {
   googleAnalyticsId?: string
   semrushId?: string
   gbpId?: string
   today?: string // Optional locked today date (YYYY-MM-DD)
+  clearOnMount?: boolean // Whether to clear cache on mount (for page refresh)
 }
 
-export function CombinedPage1Dashboard({ googleAnalyticsId, semrushId, gbpId, today }: CombinedPage1DashboardProps) {
-  const [gaData, setGAData] = useState<GADashboardData | null>(null)
-  const [semrushData, setSemrushData] = useState<SEMrushDashboardData | null>(null)
-  const [gbpData, setGBPData] = useState<GBPActionsPage1Data | null>(null)
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
-  
+export function CombinedPage1Dashboard({ 
+  googleAnalyticsId, 
+  semrushId, 
+  gbpId, 
+  today,
+  clearOnMount = false 
+}: CombinedPage1DashboardProps) {
   // SEMrush chart filters - all enabled by default
   const [visibleLayers, setVisibleLayers] = useState<Record<LayerKey, boolean>>({
     'Top 3': true,
@@ -41,75 +43,44 @@ export function CombinedPage1Dashboard({ googleAnalyticsId, semrushId, gbpId, to
     setVisibleLayers(prev => ({ ...prev, [layer]: !prev[layer] }))
   }, [])
 
-  useEffect(() => {
-    let isMounted = true
+  const todayParam = today ? `?today=${today}` : ''
+  
+  // Fetch Google Analytics data with caching
+  const {
+    data: gaData,
+    loading: gaLoading,
+    error: gaError
+  } = useCachedFetch<GADashboardData>(
+    googleAnalyticsId ? `/api/google-analytics/dashboard/${googleAnalyticsId}${todayParam}` : null,
+    `page1:ga:${googleAnalyticsId}:${today || 'live'}`,
+    { clearOnMount }
+  )
 
-    async function fetchAllData() {
-      try {
-        setLoading(true)
-        setError(null)
+  // Fetch SEMrush data with caching
+  const {
+    data: semrushData,
+    loading: semrushLoading,
+    error: semrushError
+  } = useCachedFetch<SEMrushDashboardData>(
+    semrushId ? `/api/semrush/dashboard/${semrushId}${todayParam}` : null,
+    `page1:semrush:${semrushId}:${today || 'live'}`,
+    { clearOnMount }
+  )
 
-        const promises = []
-        const todayParam = today ? `?today=${today}` : ''
-        
-        if (googleAnalyticsId) {
-          promises.push(
-            fetch(`/api/google-analytics/dashboard/${googleAnalyticsId}${todayParam}`)
-              .then(res => {
-                if (!res.ok) {
-                  throw new Error(`HTTP ${res.status}: ${res.statusText}`)
-                }
-                return res.json()
-              })
-              .then(data => isMounted && setGAData(data))
-          )
-        }
-        
-        if (semrushId) {
-          promises.push(
-            fetch(`/api/semrush/dashboard/${semrushId}${todayParam}`)
-              .then(res => {
-                if (!res.ok) {
-                  throw new Error(`HTTP ${res.status}: ${res.statusText}`)
-                }
-                return res.json()
-              })
-              .then(data => isMounted && setSemrushData(data))
-          )
-        }
+  // Fetch GBP data with caching
+  const {
+    data: gbpData,
+    loading: gbpLoading,
+    error: gbpError
+  } = useCachedFetch<GBPActionsPage1Data>(
+    gbpId ? `/api/gbp/dashboard/${gbpId}/actions${todayParam}` : null,
+    `page1:gbp:${gbpId}:${today || 'live'}`,
+    { clearOnMount }
+  )
 
-        if (gbpId) {
-          promises.push(
-            fetch(`/api/gbp/dashboard/${gbpId}/actions${todayParam}`)
-              .then(res => {
-                if (!res.ok) {
-                  throw new Error(`HTTP ${res.status}: ${res.statusText}`)
-                }
-                return res.json()
-              })
-              .then(data => isMounted && setGBPData(data))
-          )
-        }
-
-        await Promise.all(promises)
-      } catch (err) {
-        console.error("Error fetching dashboard data:", err)
-        if (isMounted) {
-          setError(err instanceof Error ? err.message : "Failed to load dashboard")
-        }
-      } finally {
-        if (isMounted) {
-          setLoading(false)
-        }
-      }
-    }
-
-    fetchAllData()
-
-    return () => {
-      isMounted = false
-    }
-  }, [googleAnalyticsId, semrushId, gbpId, today])
+  // Combine loading and error states
+  const loading = gaLoading || semrushLoading || gbpLoading
+  const error = gaError || semrushError || gbpError
 
   // Memoize KPI calculations - using kpiCards from backend (follows Page 4 GSC pattern)
   const semrushKPI = useMemo(() => {
