@@ -38,11 +38,21 @@ export function CreateProjectDialog({ clientId, onProjectAdded }: CreateProjectD
     setLoading(true)
     setError(null)
 
+    // Validate and sanitize inputs
+    const trimmedName = formData.name.trim()
+    const trimmedDetails = formData.details.trim()
+
+    if (!trimmedName) {
+      setError("Please enter a project name")
+      setLoading(false)
+      return
+    }
+
     try {
       const project = await createProject({
         client_id: clientId,
-        name: formData.name,
-        details: formData.details || null,
+        name: trimmedName,
+        details: trimmedDetails || null,
       })
 
       setFormData({ name: "", details: "" })

@@ -655,9 +655,10 @@ export function CreateDatasourceDialog({ projectId, existingTypes, onDatasourceA
 
   // Filter domains based on search query
   const filteredDomains = useMemo(() => {
-    if (!searchQuery.trim()) return domains
+    const trimmedQuery = searchQuery.trim()
+    if (!trimmedQuery) return domains
     
-    const query = searchQuery.toLowerCase()
+    const query = trimmedQuery.toLowerCase()
     return domains.filter(domain => 
       domain.domain.toLowerCase().includes(query) ||
       domain.location?.label.toLowerCase().includes(query)
@@ -666,9 +667,10 @@ export function CreateDatasourceDialog({ projectId, existingTypes, onDatasourceA
 
   // Filter sites based on search query
   const filteredSites = useMemo(() => {
-    if (!siteSearchQuery.trim()) return sites
+    const trimmedQuery = siteSearchQuery.trim()
+    if (!trimmedQuery) return sites
     
-    const query = siteSearchQuery.toLowerCase()
+    const query = trimmedQuery.toLowerCase()
     return sites.filter(site => 
       site.siteUrl.toLowerCase().includes(query)
     )
@@ -676,9 +678,10 @@ export function CreateDatasourceDialog({ projectId, existingTypes, onDatasourceA
 
   // Filter GBP accounts and locations based on search query
   const filteredGBPAccounts = useMemo(() => {
-    if (!gbpLocationSearchQuery.trim()) return gbpAccounts
+    const trimmedQuery = gbpLocationSearchQuery.trim()
+    if (!trimmedQuery) return gbpAccounts
     
-    const query = gbpLocationSearchQuery.toLowerCase()
+    const query = trimmedQuery.toLowerCase()
     return gbpAccounts.map(account => ({
       ...account,
       locations: account.locations.filter(location => 
@@ -707,9 +710,10 @@ export function CreateDatasourceDialog({ projectId, existingTypes, onDatasourceA
 
   // Filter GMB profiles based on search query
   const filteredGMBProfiles = useMemo(() => {
-    if (!gmbProfileSearchQuery.trim()) return gmbProfiles
+    const trimmedQuery = gmbProfileSearchQuery.trim()
+    if (!trimmedQuery) return gmbProfiles
     
-    const query = gmbProfileSearchQuery.toLowerCase()
+    const query = trimmedQuery.toLowerCase()
     return gmbProfiles.filter(profile => 
       profile.businessName.toLowerCase().includes(query) ||
       profile.address?.toLowerCase().includes(query)
@@ -718,9 +722,10 @@ export function CreateDatasourceDialog({ projectId, existingTypes, onDatasourceA
 
   // Filter GA accounts and properties based on search query
   const filteredGAAccounts = useMemo(() => {
-    if (!propertySearchQuery.trim()) return gaAccounts
+    const trimmedQuery = propertySearchQuery.trim()
+    if (!trimmedQuery) return gaAccounts
     
-    const query = propertySearchQuery.toLowerCase()
+    const query = trimmedQuery.toLowerCase()
     return gaAccounts.map(account => ({
       ...account,
       properties: account.properties.filter(property => 

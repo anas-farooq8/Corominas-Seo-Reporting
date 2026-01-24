@@ -68,13 +68,32 @@ export async function getClientWithProjects(id: string): Promise<ClientWithProje
  * Create a new client
  */
 export async function dbCreateClient(input: ClientInput): Promise<Client> {
+  // Validate and sanitize input
+  const trimmedName = input.name?.trim()
+  const trimmedEmail = input.email?.trim().toLowerCase()
+  const trimmedNotes = input.notes?.trim()
+
+  if (!trimmedName) {
+    throw new Error("Client name is required")
+  }
+
+  if (!trimmedEmail) {
+    throw new Error("Client email is required")
+  }
+
+  // Basic email validation
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+  if (!emailRegex.test(trimmedEmail)) {
+    throw new Error("Invalid email address")
+  }
+
   const supabase = await createClient()
   const { data, error } = await supabase
     .from("clients")
     .insert({
-      name: input.name,
-      email: input.email,
-      notes: input.notes || null
+      name: trimmedName,
+      email: trimmedEmail,
+      notes: trimmedNotes || null
     })
     .select()
     .single()
@@ -87,14 +106,38 @@ export async function dbCreateClient(input: ClientInput): Promise<Client> {
  * Update a client
  */
 export async function updateClient(id: string, input: Partial<ClientInput>): Promise<Client> {
+  // Validate and sanitize input
+  const updateData: Partial<ClientInput> = {}
+  
+  if (input.name !== undefined) {
+    const trimmedName = input.name.trim()
+    if (!trimmedName) {
+      throw new Error("Client name cannot be empty")
+    }
+    updateData.name = trimmedName
+  }
+  
+  if (input.email !== undefined) {
+    const trimmedEmail = input.email.trim().toLowerCase()
+    if (!trimmedEmail) {
+      throw new Error("Client email cannot be empty")
+    }
+    // Basic email validation
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+    if (!emailRegex.test(trimmedEmail)) {
+      throw new Error("Invalid email address")
+    }
+    updateData.email = trimmedEmail
+  }
+  
+  if (input.notes !== undefined) {
+    updateData.notes = input.notes ? input.notes.trim() : null
+  }
+
   const supabase = await createClient()
   const { data, error } = await supabase
     .from("clients")
-    .update({
-      name: input.name,
-      email: input.email,
-      notes: input.notes
-    })
+    .update(updateData)
     .eq("id", id)
     .select()
     .single()

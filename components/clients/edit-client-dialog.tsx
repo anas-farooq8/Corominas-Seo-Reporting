@@ -39,11 +39,36 @@ export function EditClientDialog({ client, onClientUpdated }: EditClientDialogPr
     setLoading(true)
     setError(null)
 
+    // Validate and sanitize inputs
+    const trimmedName = formData.name.trim()
+    const trimmedEmail = formData.email.trim().toLowerCase()
+    const trimmedNotes = formData.notes.trim()
+
+    if (!trimmedName) {
+      setError("Please enter a client name")
+      setLoading(false)
+      return
+    }
+
+    if (!trimmedEmail) {
+      setError("Please enter an email address")
+      setLoading(false)
+      return
+    }
+
+    // Basic email validation
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+    if (!emailRegex.test(trimmedEmail)) {
+      setError("Please enter a valid email address")
+      setLoading(false)
+      return
+    }
+
     try {
       const updatedClient = await updateClient(client.id, {
-        name: formData.name,
-        email: formData.email,
-        notes: formData.notes || null,
+        name: trimmedName,
+        email: trimmedEmail,
+        notes: trimmedNotes || null,
       })
 
       setOpen(false)

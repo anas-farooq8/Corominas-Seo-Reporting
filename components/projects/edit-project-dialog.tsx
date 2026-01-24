@@ -38,10 +38,20 @@ export function EditProjectDialog({ project, onProjectUpdated }: EditProjectDial
     setLoading(true)
     setError(null)
 
+    // Validate and sanitize inputs
+    const trimmedName = formData.name.trim()
+    const trimmedDetails = formData.details.trim()
+
+    if (!trimmedName) {
+      setError("Please enter a project name")
+      setLoading(false)
+      return
+    }
+
     try {
       const updatedProject = await updateProject(project.id, {
-        name: formData.name,
-        details: formData.details || null,
+        name: trimmedName,
+        details: trimmedDetails || null,
       })
 
       setOpen(false)

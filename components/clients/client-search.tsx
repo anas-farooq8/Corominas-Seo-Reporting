@@ -16,7 +16,9 @@ export function ClientSearch({ clients, onClientUpdated, onClientDeleted }: Clie
   const [searchTerm, setSearchTerm] = useState("")
 
   const filteredClients = clients.filter((client) => {
-    const search = searchTerm.toLowerCase()
+    const search = searchTerm.trim().toLowerCase()
+    if (!search) return true
+    
     return (
       client.name.toLowerCase().includes(search) ||
       client.email.toLowerCase().includes(search) ||

@@ -83,13 +83,25 @@ export async function getProjectWithDatasources(id: string): Promise<ProjectWith
  * Create a new project
  */
 export async function dbCreateProject(input: ProjectInput): Promise<Project> {
+  // Validate and sanitize input
+  const trimmedName = input.name?.trim()
+  const trimmedDetails = input.details?.trim()
+
+  if (!trimmedName) {
+    throw new Error("Project name is required")
+  }
+
+  if (!input.client_id) {
+    throw new Error("Client ID is required")
+  }
+
   const supabase = await createClient()
   const { data, error } = await supabase
     .from("projects")
     .insert({
       client_id: input.client_id,
-      name: input.name,
-      details: input.details || null
+      name: trimmedName,
+      details: trimmedDetails || null
     })
     .select()
     .single()
@@ -102,13 +114,25 @@ export async function dbCreateProject(input: ProjectInput): Promise<Project> {
  * Update a project
  */
 export async function updateProject(id: string, input: Partial<ProjectInput>): Promise<Project> {
+  // Validate and sanitize input
+  const updateData: Partial<ProjectInput> = {}
+  
+  if (input.name !== undefined) {
+    const trimmedName = input.name.trim()
+    if (!trimmedName) {
+      throw new Error("Project name cannot be empty")
+    }
+    updateData.name = trimmedName
+  }
+  
+  if (input.details !== undefined) {
+    updateData.details = input.details ? input.details.trim() : null
+  }
+
   const supabase = await createClient()
   const { data, error } = await supabase
     .from("projects")
-    .update({
-      name: input.name,
-      details: input.details
-    })
+    .update(updateData)
     .eq("id", id)
     .select()
     .single()
