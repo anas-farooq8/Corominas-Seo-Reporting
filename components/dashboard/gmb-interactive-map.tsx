@@ -21,13 +21,43 @@ interface GMBInteractiveMapProps {
 }
 
 /**
- * Get heatmap color based on position
+ * Get heatmap color based on position with gradient
+ * Uses smooth color transition from green (1) to red (20+)
  */
 function getHeatmapColor(position: number): { background: string; text: string } {
-  if (position <= 3) return { background: '#22c55e', text: '#ffffff' } // Green
-  if (position <= 10) return { background: '#eab308', text: '#ffffff' } // Yellow
-  if (position <= 20) return { background: '#f97316', text: '#ffffff' } // Orange
-  return { background: '#ef4444', text: '#ffffff' } // Red (20+)
+  // Clamp position to max 21 for color calculation
+  const pos = Math.min(position, 21)
+  
+  // Use gradient from green (1) through yellow (7-8) to orange (12-14) to red (20+)
+  let r: number, g: number, b: number
+  
+  if (pos <= 3) {
+    // Green range (1-3)
+    const t = (pos - 1) / 2 // 0 to 1
+    r = Math.round(34 + t * 100)  // 34 to 134
+    g = Math.round(197 - t * 10)  // 197 to 187
+    b = Math.round(94 - t * 20)   // 94 to 74
+  } else if (pos <= 10) {
+    // Green to Yellow range (4-10)
+    const t = (pos - 3) / 7 // 0 to 1
+    r = Math.round(134 + t * 100) // 134 to 234
+    g = Math.round(187 - t * 8)   // 187 to 179
+    b = Math.round(74 - t * 66)   // 74 to 8
+  } else if (pos <= 20) {
+    // Yellow/Orange to Red range (11-20)
+    const t = (pos - 10) / 10 // 0 to 1
+    r = Math.round(234 + t * 5)   // 234 to 239
+    g = Math.round(179 - t * 95)  // 179 to 84
+    b = Math.round(8)             // Stay at 8
+  } else {
+    // Deep red for 20+
+    r = 239
+    g = 68
+    b = 68
+  }
+  
+  const background = `rgb(${r}, ${g}, ${b})`
+  return { background, text: '#ffffff' }
 }
 
 // Global state for Google Maps script loading
