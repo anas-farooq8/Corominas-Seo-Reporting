@@ -142,19 +142,27 @@ export function GMBGridHeatmap({ data }: GMBGridHeatmapProps) {
           <h4 className="text-xs font-semibold mb-2 text-muted-foreground text-center">Position Colors</h4>
           <div className="flex flex-wrap justify-center gap-3 text-xs">
             <div className="flex items-center gap-1.5">
-              <span className="w-3 h-3 bg-green-500 rounded-full"></span>
+              <svg width="12" height="15" viewBox="0 0 40 50" className="inline-block">
+                <path d="M20,2 C11.163,2 4,9.163 4,18 C4,23.5 7,29 20,48 C33,29 36,23.5 36,18 C36,9.163 28.837,2 20,2 Z" fill="rgb(34,197,94)" />
+              </svg>
               <span>1-3</span>
             </div>
             <div className="flex items-center gap-1.5">
-              <span className="w-3 h-3 bg-yellow-500 rounded-full"></span>
+              <svg width="12" height="15" viewBox="0 0 40 50" className="inline-block">
+                <path d="M20,2 C11.163,2 4,9.163 4,18 C4,23.5 7,29 20,48 C33,29 36,23.5 36,18 C36,9.163 28.837,2 20,2 Z" fill="rgb(234,179,8)" />
+              </svg>
               <span>4-10</span>
             </div>
             <div className="flex items-center gap-1.5">
-              <span className="w-3 h-3 bg-orange-500 rounded-full"></span>
+              <svg width="12" height="15" viewBox="0 0 40 50" className="inline-block">
+                <path d="M20,2 C11.163,2 4,9.163 4,18 C4,23.5 7,29 20,48 C33,29 36,23.5 36,18 C36,9.163 28.837,2 20,2 Z" fill="rgb(249,115,22)" />
+              </svg>
               <span>11-20</span>
             </div>
             <div className="flex items-center gap-1.5">
-              <span className="w-3 h-3 bg-red-500 rounded-full"></span>
+              <svg width="12" height="15" viewBox="0 0 40 50" className="inline-block">
+                <path d="M20,2 C11.163,2 4,9.163 4,18 C4,23.5 7,29 20,48 C33,29 36,23.5 36,18 C36,9.163 28.837,2 20,2 Z" fill="rgb(239,68,68)" />
+              </svg>
               <span>20+</span>
             </div>
           </div>

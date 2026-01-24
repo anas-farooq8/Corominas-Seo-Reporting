@@ -239,28 +239,45 @@ export function GMBInteractiveMap({
           const label = marker.position <= 20 ? marker.position.toString() : '20+'
           
           if (useAdvancedMarkers) {
-            // Create simple circular marker
+            // Create map pin marker with SVG
             const markerContent = document.createElement('div')
             markerContent.style.cssText = `
-              width: 36px;
-              height: 36px;
-              background-color: ${colors.background};
-              border-radius: 50%;
-              display: flex;
-              align-items: center;
-              justify-content: center;
-              box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+              width: 40px;
+              height: 50px;
+              position: relative;
               cursor: pointer;
             `
             
-            // Add label text
+            // Create SVG map pin
+            const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg')
+            svg.setAttribute('width', '40')
+            svg.setAttribute('height', '50')
+            svg.setAttribute('viewBox', '0 0 40 50')
+            svg.style.cssText = 'filter: drop-shadow(0 2px 4px rgba(0,0,0,0.3));'
+            
+            // Map pin path: circular top tapering to soft point at bottom
+            const path = document.createElementNS('http://www.w3.org/2000/svg', 'path')
+            path.setAttribute('d', 'M20,2 C11.163,2 4,9.163 4,18 C4,23.5 7,29 20,48 C33,29 36,23.5 36,18 C36,9.163 28.837,2 20,2 Z')
+            path.setAttribute('fill', colors.background)
+            path.setAttribute('stroke', 'none')
+            svg.appendChild(path)
+            
+            markerContent.appendChild(svg)
+            
+            // Add label text centered in the circular top
             const labelDiv = document.createElement('div')
             labelDiv.textContent = label
             labelDiv.style.cssText = `
+              position: absolute;
+              top: 50%;
+              left: 50%;
+              transform: translate(-50%, -50%);
+              margin-top: -8px;
               color: ${colors.text};
               font-size: 13px;
               font-weight: bold;
               line-height: 1;
+              pointer-events: none;
             `
             markerContent.appendChild(labelDiv)
             
@@ -273,7 +290,7 @@ export function GMBInteractiveMap({
 
             newMarkers.push(advancedMarker)
           } else {
-            // Fallback to old Marker API - use circle
+            // Fallback to old Marker API - use custom SVG path for map pin
             const googleMarker = new google.maps.Marker({
               map,
               position: { lat: marker.lat, lng: marker.lng },
@@ -285,14 +302,14 @@ export function GMBInteractiveMap({
                 fontWeight: 'bold'
               },
               icon: {
-                path: google.maps.SymbolPath.CIRCLE,
+                path: 'M 20,2 C 11.163,2 4,9.163 4,18 C 4,23.5 7,29 20,48 C 33,29 36,23.5 36,18 C 36,9.163 28.837,2 20,2 Z',
                 fillColor: colors.background,
                 fillOpacity: 1,
-                strokeColor: colors.background,
+                strokeColor: 'none',
                 strokeWeight: 0,
-                scale: 18,
-                anchor: new google.maps.Point(0, 0),
-                labelOrigin: new google.maps.Point(0, 0)
+                scale: 0.8,
+                anchor: new google.maps.Point(20, 48),
+                labelOrigin: new google.maps.Point(20, 16)
               }
             })
 
