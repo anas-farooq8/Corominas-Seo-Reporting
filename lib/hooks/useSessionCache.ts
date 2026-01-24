@@ -37,6 +37,7 @@ export function useSessionCache<T = any>(
   const { ttl, clearOnMount = false } = options
   const [cachedData, setCachedData] = useState<T | null>(null)
   const [isCacheValid, setIsCacheValid] = useState(false)
+  const [isInitialized, setIsInitialized] = useState(false)
   const hasMounted = useRef(false)
 
   // Get full storage key with prefix to avoid collisions
@@ -112,6 +113,7 @@ export function useSessionCache<T = any>(
     if (clearOnMount) {
       console.log(`[Storage] 🔄 Clear on mount`)
       clearCache()
+      setIsInitialized(true)
       return
     }
 
@@ -122,6 +124,7 @@ export function useSessionCache<T = any>(
       setCachedData(data)
       setIsCacheValid(true)
     }
+    setIsInitialized(true)
   }, [clearOnMount, clearCache, readCache])
 
   return {
@@ -133,6 +136,10 @@ export function useSessionCache<T = any>(
      * Whether valid cache exists for this key
      */
     isCacheValid,
+    /**
+     * Whether the cache initialization is complete
+     */
+    isInitialized,
     /**
      * Write data to cache
      */
