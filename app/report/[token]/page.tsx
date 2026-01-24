@@ -29,7 +29,6 @@ export default function ShareableReportPage({ params }: { params: Promise<{ toke
   const [pages, setPages] = useState<PageConfig[]>([])
   const [activePage, setActivePage] = useState<string>("")
   const [lockedToday, setLockedToday] = useState<string>("")
-  const [isInitialLoad, setIsInitialLoad] = useState(true)
 
   useEffect(() => {
     fetchReportData()
@@ -37,7 +36,6 @@ export default function ShareableReportPage({ params }: { params: Promise<{ toke
 
   const handlePageChange = (pageId: string) => {
     setActivePage(pageId)
-    setIsInitialLoad(false) // Mark that we've switched pages at least once
     const pageNumber = pageId.replace('page-', '')
     router.replace(`?page=${pageNumber}`, { scroll: false })
   }
@@ -121,8 +119,8 @@ export default function ShareableReportPage({ params }: { params: Promise<{ toke
         const pageExists = pageId && connectedPages.some(p => p.id === pageId)
         const selectedPage = pageExists ? pageId : connectedPages[0].id
         setActivePage(selectedPage)
-        setIsInitialLoad(true) // This is the initial load
         
+        // Update URL if not already set
         if (!pageParam) {
           const pageNumber = selectedPage.replace('page-', '')
           router.replace(`?page=${pageNumber}`, { scroll: false })
@@ -199,75 +197,48 @@ export default function ShareableReportPage({ params }: { params: Promise<{ toke
           </div>
         ) : (
           <>
-            {/* Page 1: Combined Dashboard - Keep mounted, hide with CSS */}
-            {pages.some(p => p.datasourceType === "combined") && (() => {
+            {activePageConfig?.datasourceType === "combined" && (() => {
               const googleAnalyticsDs = datasources.find((ds: any) => ds.type === "google_analytics")
               const semrushDs = datasources.find((ds: any) => ds.type === "semrush")
               const gbpDs = datasources.find((ds: any) => ds.type === "gbp")
-              const isActive = activePageConfig?.datasourceType === "combined"
               
               return (
-                <div className={isActive ? "block" : "hidden"}>
-                  <CombinedPage1Dashboard 
-                    googleAnalyticsId={googleAnalyticsDs?.id}
-                    semrushId={semrushDs?.id}
-                    gbpId={gbpDs?.id}
-                    today={lockedToday}
-                    clearOnMount={isInitialLoad && isActive}
-                  />
-                </div>
+                <CombinedPage1Dashboard 
+                  googleAnalyticsId={googleAnalyticsDs?.id}
+                  semrushId={semrushDs?.id}
+                  gbpId={gbpDs?.id}
+                  today={lockedToday}
+                />
               )
             })()}
-
-            {/* Page 2: Mangools - Keep mounted, hide with CSS */}
-            {pages.some(p => p.datasourceType === "mangools") && (() => {
-              const mangoolsPage = pages.find(p => p.datasourceType === "mangools")
-              const isActive = activePageConfig?.datasourceType === "mangools"
-              
-              return (
-                <div className={isActive ? "block" : "hidden"}>
-                  <MangoolsDashboardPage 
-                    datasourceId={mangoolsPage!.datasourceId}
-                    today={lockedToday}
-                    clearOnMount={isInitialLoad && isActive}
-                  />
-                </div>
-              )
-            })()}
-
-            {/* Page 3: Landing Pages + Search Console - Keep mounted, hide with CSS */}
-            {pages.some(p => p.datasourceType === "combined_page3") && (() => {
+            {activePageConfig?.datasourceType === "mangools" && (
+              <MangoolsDashboardPage 
+                datasourceId={activePageConfig.datasourceId}
+                today={lockedToday}
+              />
+            )}
+            {activePageConfig?.datasourceType === "combined_page3" && (() => {
               const googleAnalyticsDs = datasources.find((ds: any) => ds.type === "google_analytics")
               const searchConsoleDs = datasources.find((ds: any) => ds.type === "google_search_console")
-              const isActive = activePageConfig?.datasourceType === "combined_page3"
               
               return (
-                <div className={isActive ? "block" : "hidden"}>
-                  <CombinedPage3Dashboard 
-                    googleAnalyticsId={googleAnalyticsDs?.id}
-                    searchConsoleId={searchConsoleDs?.id}
-                    today={lockedToday}
-                    clearOnMount={isInitialLoad && isActive}
-                  />
-                </div>
+                <CombinedPage3Dashboard 
+                  googleAnalyticsId={googleAnalyticsDs?.id}
+                  searchConsoleId={searchConsoleDs?.id}
+                  today={lockedToday}
+                />
               )
             })()}
-
-            {/* Page 4: GBP + GMB - Keep mounted, hide with CSS */}
-            {pages.some(p => p.datasourceType === "combined_page4") && (() => {
+            {activePageConfig?.datasourceType === "combined_page4" && (() => {
               const gbpDs = datasources.find((ds: any) => ds.type === "gbp")
               const gmbDs = datasources.find((ds: any) => ds.type === "gmb")
-              const isActive = activePageConfig?.datasourceType === "combined_page4"
               
               return (
-                <div className={isActive ? "block" : "hidden"}>
-                  <CombinedPage4Dashboard 
-                    gbpId={gbpDs?.id}
-                    gmbId={gmbDs?.id}
-                    today={lockedToday}
-                    clearOnMount={isInitialLoad && isActive}
-                  />
-                </div>
+                <CombinedPage4Dashboard 
+                  gbpId={gbpDs?.id}
+                  gmbId={gmbDs?.id}
+                  today={lockedToday}
+                />
               )
             })()}
           </>
