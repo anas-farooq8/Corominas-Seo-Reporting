@@ -34,12 +34,13 @@ function getHeatmapColor(position: number): { background: string; text: string }
 declare global {
   interface Window {
     googleMapsLoadPromise?: Promise<void>
+    initGoogleMaps?: () => void
     google?: any
   }
 }
 
 /**
- * Load Google Maps script only once globally
+ * Load Google Maps script only once globally with proper async callback
  */
 function loadGoogleMapsScript(apiKey: string): Promise<void> {
   if (typeof window.google !== 'undefined' && window.google.maps) {
@@ -72,14 +73,20 @@ function loadGoogleMapsScript(apiKey: string): Promise<void> {
   }
 
   window.googleMapsLoadPromise = new Promise((resolve, reject) => {
+    // Set up callback before loading script
+    window.initGoogleMaps = () => {
+      resolve()
+      delete window.initGoogleMaps
+    }
+
     const script = document.createElement('script')
-    script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&loading=async&libraries=marker&v=weekly`
+    script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&loading=async&libraries=marker&v=weekly&callback=initGoogleMaps`
     script.async = true
     script.defer = true
     
-    script.onload = () => resolve()
     script.onerror = () => {
       window.googleMapsLoadPromise = undefined
+      delete window.initGoogleMaps
       reject(new Error('Failed to load Google Maps script'))
     }
     document.head.appendChild(script)

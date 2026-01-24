@@ -386,7 +386,7 @@ export function Page3LandingPagesDashboard({
                   <th className="pb-3 pt-2 px-2 font-semibold text-primary w-12">
                     <div className="cursor-pointer flex items-center" onClick={handleToggleAll}>
                       <Checkbox
-                        checked={isAllSelected ? true : isSomeSelected ? 'indeterminate' : false}
+                        checked={isAllSelected}
                         className="h-5 w-5 cursor-pointer"
                         onCheckedChange={handleToggleAll}
                       />
