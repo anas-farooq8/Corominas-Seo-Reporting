@@ -1,6 +1,7 @@
 "use server"
 
 import { createClient } from "@/lib/supabase/server"
+import { createServiceClient } from "@/lib/supabase/service"
 import type { Report, ReportLink, ReportWithLinks, ReportLinkWithDetails } from "@/lib/supabase/types"
 import { randomBytes } from "crypto"
 
@@ -92,10 +93,11 @@ export async function getReportWithLinks(reportId: string): Promise<ReportWithLi
 }
 
 /**
- * Get report link by token
+ * Get report link by token (uses service role to bypass RLS)
+ * This is safe because we validate the token exists before returning data
  */
 export async function getReportLinkByToken(token: string): Promise<ReportLinkWithDetails | null> {
-  const supabase = await createClient()
+  const supabase = createServiceClient()
   
   const { data, error } = await supabase
     .from("report_links")
@@ -119,12 +121,13 @@ export async function getReportLinkByToken(token: string): Promise<ReportLinkWit
 
 /**
  * Lock the today date for a report link on first access
+ * Uses service role because report_links is not publicly writable
  */
 export async function lockReportLinkTodayDate(
   linkId: string,
   todayDate: string
 ): Promise<boolean> {
-  const supabase = await createClient()
+  const supabase = createServiceClient()
   
   const { error } = await supabase
     .from("report_links")

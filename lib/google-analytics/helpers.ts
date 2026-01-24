@@ -4,13 +4,16 @@
  */
 
 import { createClient } from "@/lib/supabase/server"
+import { createServiceClient } from "@/lib/supabase/service"
 
 /**
  * Get Google Analytics property details from database
  * Used by both dashboard and landing pages actions
+ * @param datasourceId - The datasource ID
+ * @param useServiceRole - If true, uses service role to bypass RLS (for shareable reports)
  */
-export async function getGAPropertyDetails(datasourceId: string) {
-  const supabase = await createClient()
+export async function getGAPropertyDetails(datasourceId: string, useServiceRole = false) {
+  const supabase = useServiceRole ? createServiceClient() : await createClient()
   const { data: property, error: propertyError } = await supabase
     .from("google_analytics_properties")
     .select("name, display_name, time_zone, currency_code")

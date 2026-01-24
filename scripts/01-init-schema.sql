@@ -6,6 +6,14 @@
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
 -- ============================================
+-- ADMINS TABLE
+-- ============================================
+CREATE TABLE IF NOT EXISTS admins (
+  user_id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- ============================================
 -- CLIENTS TABLE
 -- ============================================
 CREATE TABLE IF NOT EXISTS clients (
@@ -204,6 +212,7 @@ CREATE INDEX IF NOT EXISTS idx_report_links_locked_date ON report_links(locked_t
 -- ============================================
 -- ROW LEVEL SECURITY (RLS)
 -- ============================================
+ALTER TABLE admins ENABLE ROW LEVEL SECURITY;
 ALTER TABLE clients ENABLE ROW LEVEL SECURITY;
 ALTER TABLE projects ENABLE ROW LEVEL SECURITY;
 ALTER TABLE datasources ENABLE ROW LEVEL SECURITY;
@@ -221,76 +230,91 @@ ALTER TABLE report_links ENABLE ROW LEVEL SECURITY;
 -- ============================================
 -- RLS POLICIES
 -- ============================================
-DROP POLICY IF EXISTS "authenticated_users_all_clients" ON clients;
-CREATE POLICY "authenticated_users_all_clients" ON clients
-  FOR ALL USING (auth.role() = 'authenticated');
 
-DROP POLICY IF EXISTS "authenticated_users_all_projects" ON projects;
-CREATE POLICY "authenticated_users_all_projects" ON projects
-  FOR ALL USING (auth.role() = 'authenticated');
+-- Helper function to check if current user is an admin (optimized for performance)
+CREATE OR REPLACE FUNCTION public.is_admin()
+RETURNS BOOLEAN
+LANGUAGE sql
+SECURITY DEFINER
+SET search_path = public, pg_temp
+STABLE
+AS $$
+  SELECT EXISTS (
+    SELECT 1
+    FROM public.admins
+    WHERE admins.user_id = (select auth.uid())
+  );
+$$;
 
-DROP POLICY IF EXISTS "authenticated_users_all_datasources" ON datasources;
-CREATE POLICY "authenticated_users_all_datasources" ON datasources
-  FOR ALL USING (auth.role() = 'authenticated');
+-- Admins table: NO policies = no access via anon key
+-- The is_admin() function uses SECURITY DEFINER to bypass RLS
+-- Add/remove admins via SQL Editor or service role only
 
-DROP POLICY IF EXISTS "authenticated_users_all_mangools_domains" ON mangools_domains;
-CREATE POLICY "authenticated_users_all_mangools_domains" ON mangools_domains
-  FOR ALL USING (auth.role() = 'authenticated');
+-- Clients: Admin-only access
+CREATE POLICY "admins_only_clients" ON clients
+  FOR ALL USING (public.is_admin());
 
-DROP POLICY IF EXISTS "authenticated_users_all_ga_properties" ON google_analytics_properties;
-CREATE POLICY "authenticated_users_all_ga_properties" ON google_analytics_properties
-  FOR ALL USING (auth.role() = 'authenticated');
+-- Projects: Admin-only access
+CREATE POLICY "admins_only_projects" ON projects
+  FOR ALL USING (public.is_admin());
 
-DROP POLICY IF EXISTS "authenticated_users_all_semrush_domains" ON semrush_domains;
-CREATE POLICY "authenticated_users_all_semrush_domains" ON semrush_domains
-  FOR ALL USING (auth.role() = 'authenticated');
+-- Datasources: Admin-only access
+CREATE POLICY "admins_only_datasources" ON datasources
+  FOR ALL USING (public.is_admin());
 
-DROP POLICY IF EXISTS "authenticated_users_all_gsc_sites" ON google_search_console_sites;
-CREATE POLICY "authenticated_users_all_gsc_sites" ON google_search_console_sites
-  FOR ALL USING (auth.role() = 'authenticated');
+-- Mangools Domains: Admin-only access
+CREATE POLICY "admins_only_mangools_domains" ON mangools_domains
+  FOR ALL USING (public.is_admin());
 
-DROP POLICY IF EXISTS "authenticated_users_all_gbp_locations" ON google_business_profile_locations;
-CREATE POLICY "authenticated_users_all_gbp_locations" ON google_business_profile_locations
-  FOR ALL USING (auth.role() = 'authenticated');
+-- Google Analytics Properties: Admin-only access
+CREATE POLICY "admins_only_ga_properties" ON google_analytics_properties
+  FOR ALL USING (public.is_admin());
 
-DROP POLICY IF EXISTS "authenticated_users_all_gmb_profiles" ON gmb_profiles;
-CREATE POLICY "authenticated_users_all_gmb_profiles" ON gmb_profiles
-  FOR ALL USING (auth.role() = 'authenticated');
+-- Semrush Domains: Admin-only access
+CREATE POLICY "admins_only_semrush_domains" ON semrush_domains
+  FOR ALL USING (public.is_admin());
 
-DROP POLICY IF EXISTS "authenticated_users_all_kvs" ON kvs;
-CREATE POLICY "authenticated_users_all_kvs" ON kvs
-  FOR ALL USING (auth.role() = 'authenticated');
+-- Google Search Console Sites: Admin-only access
+CREATE POLICY "admins_only_gsc_sites" ON google_search_console_sites
+  FOR ALL USING (public.is_admin());
 
-DROP POLICY IF EXISTS "authenticated_users_all_dashboard_cache" ON dashboard_cache;
-CREATE POLICY "authenticated_users_all_dashboard_cache" ON dashboard_cache
-  FOR ALL USING (auth.role() = 'authenticated');
+-- Google Business Profile Locations: Admin-only access
+CREATE POLICY "admins_only_gbp_locations" ON google_business_profile_locations
+  FOR ALL USING (public.is_admin());
 
-DROP POLICY IF EXISTS "authenticated_users_all_reports" ON reports;
-CREATE POLICY "authenticated_users_all_reports" ON reports
-  FOR ALL USING (auth.role() = 'authenticated');
+-- GMB Profiles: Admin-only access
+CREATE POLICY "admins_only_gmb_profiles" ON gmb_profiles
+  FOR ALL USING (public.is_admin());
 
-DROP POLICY IF EXISTS "public_read_report_links" ON report_links;
-CREATE POLICY "public_read_report_links" ON report_links
-  FOR SELECT USING (true);
+-- KVS: Admin-only access
+CREATE POLICY "admins_only_kvs" ON kvs
+  FOR ALL USING (public.is_admin());
 
-DROP POLICY IF EXISTS "authenticated_users_write_report_links" ON report_links;
-CREATE POLICY "authenticated_users_write_report_links" ON report_links
-  FOR INSERT WITH CHECK (auth.role() = 'authenticated');
+-- Dashboard Cache: Admin-only access (shareable reports use service role via API)
+CREATE POLICY "admins_only_dashboard_cache" ON dashboard_cache
+  FOR ALL USING (public.is_admin());
 
-DROP POLICY IF EXISTS "authenticated_users_update_report_links" ON report_links;
-CREATE POLICY "authenticated_users_update_report_links" ON report_links
-  FOR UPDATE USING (auth.role() = 'authenticated') WITH CHECK (auth.role() = 'authenticated');
+-- Reports: Admin-only access
+CREATE POLICY "admins_only_reports" ON reports
+  FOR ALL USING (public.is_admin());
+
+-- Report Links: Admin-only access (shareable reports use service role via API)
+CREATE POLICY "admins_only_report_links" ON report_links
+  FOR ALL USING (public.is_admin());
 
 -- ============================================
 -- TRIGGERS
 -- ============================================
-CREATE OR REPLACE FUNCTION update_updated_at_column()
-RETURNS TRIGGER AS $$
+CREATE OR REPLACE FUNCTION public.update_updated_at_column()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+SET search_path = public, pg_temp
+AS $$
 BEGIN
-  NEW.updated_at = NOW();
+  NEW.updated_at := NOW();
   RETURN NEW;
 END;
-$$ LANGUAGE plpgsql;
+$$;
 
 DROP TRIGGER IF EXISTS update_clients_updated_at ON clients;
 CREATE TRIGGER update_clients_updated_at

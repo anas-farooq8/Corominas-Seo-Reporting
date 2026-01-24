@@ -4,6 +4,7 @@
  */
 
 import { createClient } from "@/lib/supabase/server"
+import { createServiceClient } from "@/lib/supabase/service"
 import { fetchGMBMetrics, type GMBMetricsResponse } from "@/lib/gmb/api"
 import { getCachedDashboardData, saveDashboardCache } from "@/lib/cache/dashboard-cache"
 import { calculateDashboardDateRanges, getLastCompletedMonthRange, filterGMBMetricsByMonth } from "@/lib/utils/date-ranges"
@@ -157,8 +158,8 @@ export async function fetchGMBMetricsDashboardData(
   try {
     console.log('[GMB Metrics Dashboard] Fetching metrics for datasource:', datasourceId)
     
-    // Get profile info from database
-    const supabase = await createClient()
+    // Get profile info from database (use service role for shareable reports)
+    const supabase = options?.today ? createServiceClient() : await createClient()
     const { data: profile, error: profileError } = await supabase
       .from("gmb_profiles")
       .select("profile_id, business_name, address")
@@ -186,9 +187,10 @@ export async function fetchGMBMetricsDashboardData(
     
     console.log('[GMB Metrics Dashboard] Cache date range:', { cacheStartDate, cacheEndDate })
     
-    // Check cache first
+    // Check cache first (use service role for shareable reports)
     const cacheKey = `${profile.profile_id}-gmb-metrics`
-    const cachedData = await getCachedDashboardData(datasourceId, cacheKey, cacheStartDate, cacheEndDate)
+    const useServiceRole = !!options?.today
+    const cachedData = await getCachedDashboardData(datasourceId, cacheKey, cacheStartDate, cacheEndDate, useServiceRole)
     
     // If we got the "no data" marker, return null immediately
     if (cachedData && typeof cachedData === 'object' && cachedData._no_data === true) {

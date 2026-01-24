@@ -1,6 +1,7 @@
 "use server"
 
 import { createClient } from "@/lib/supabase/server"
+import { createServiceClient } from "@/lib/supabase/service"
 import { fetchGBPActivityData, type GBPDailyActivityData } from "@/lib/google-business-profile/api"
 import { getCachedDashboardData, saveDashboardCache } from "@/lib/cache/dashboard-cache"
 import { selectBestComparisonWindow, type WindowResult } from "@/lib/utils/comparison-helpers"
@@ -143,8 +144,8 @@ export async function fetchGBPActionsForPage1(
   options?: DashboardOptions
 ): Promise<GBPActionsPage1Data | null> {
   try {
-    // Get location details from database
-    const supabase = await createClient()
+    // Get location details from database (use service role for shareable reports)
+    const supabase = options?.today ? createServiceClient() : await createClient()
     const { data: location, error: locationError } = await supabase
       .from("google_business_profile_locations")
       .select("location_id, business_name, address")
@@ -170,7 +171,8 @@ export async function fetchGBPActionsForPage1(
     
     // Check cache first with a unique key for Page 1 aggregated data
     const cacheKey = `${fullLocationId}-page1-actions`
-    const cachedData = await getCachedDashboardData(datasourceId, cacheKey, startDateStr, endDateStr)
+    const useServiceRole = !!options?.today
+    const cachedData = await getCachedDashboardData(datasourceId, cacheKey, startDateStr, endDateStr, useServiceRole)
     if (cachedData) {
       console.log('[GBP Page1] Cache hit - returning aggregated actions')
       return cachedData as GBPActionsPage1Data
@@ -228,8 +230,8 @@ export async function fetchGBPDashboardData(
   options?: DashboardOptions
 ): Promise<GBPDashboardData | null> {
   try {
-    // Get location details from database
-    const supabase = await createClient()
+    // Get location details from database (use service role for shareable reports)
+    const supabase = options?.today ? createServiceClient() : await createClient()
     const { data: location, error: locationError } = await supabase
       .from("google_business_profile_locations")
       .select("location_id, business_name, address")
@@ -254,8 +256,9 @@ export async function fetchGBPDashboardData(
     // Use the same date calculation as all dashboards for consistency
     const { startDate: startDateStr, endDate: endDateStr } = calculateDashboardDateRanges(options?.today)
     
-    // Check cache first
-    const cachedData = await getCachedDashboardData(datasourceId, fullLocationId, startDateStr, endDateStr)
+    // Check cache first (use service role for shareable reports)
+    const useServiceRole = !!options?.today
+    const cachedData = await getCachedDashboardData(datasourceId, fullLocationId, startDateStr, endDateStr, useServiceRole)
     if (cachedData) {
       return cachedData as GBPDashboardData
     }

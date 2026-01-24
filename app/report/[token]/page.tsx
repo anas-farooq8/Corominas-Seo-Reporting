@@ -54,8 +54,8 @@ export default function ShareableReportPage({ params }: { params: Promise<{ toke
       setReportData(linkData.link)
       setLockedToday(linkData.today)
       
-      // Fetch project data
-      const projectResponse = await fetch(`/api/projects/${linkData.link.project_id}`)
+      // Fetch project data (using special shareable endpoint)
+      const projectResponse = await fetch(`/api/reports/project/${linkData.link.project_id}`)
       if (!projectResponse.ok) {
         throw new Error("Failed to load report data")
       }

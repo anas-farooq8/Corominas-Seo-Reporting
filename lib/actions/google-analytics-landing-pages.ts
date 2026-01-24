@@ -26,8 +26,11 @@ export async function fetchGALandingPagesDashboard(
   options?: DashboardOptions
 ): Promise<GALandingPagesDashboardData | null> {
   try {
+    // Use service role if this is a shareable report (has locked today date)
+    const useServiceRole = !!options?.today
+    
     // Get property details from database
-    const property = await getGAPropertyDetails(datasourceId)
+    const property = await getGAPropertyDetails(datasourceId, useServiceRole)
     if (!property) {
       return null
     }
@@ -39,7 +42,7 @@ export async function fetchGALandingPagesDashboard(
     
     // Check cache first (use a different resource ID for landing pages)
     const resourceId = `${propertyName}-landing-pages`
-    const cachedData = await getCachedDashboardData(datasourceId, resourceId, startDateStr, endDateStr)
+    const cachedData = await getCachedDashboardData(datasourceId, resourceId, startDateStr, endDateStr, useServiceRole)
     if (cachedData) {
       console.log("✓ Returning cached GA landing pages data")
       return cachedData as GALandingPagesDashboardData

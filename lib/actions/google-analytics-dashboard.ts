@@ -117,8 +117,11 @@ export async function fetchGADashboardData(
   options?: DashboardOptions
 ): Promise<GADashboardData | null> {
   try {
+    // Use service role if this is a shareable report (has locked today date)
+    const useServiceRole = !!options?.today
+    
     // Get property details from database
-    const property = await getGAPropertyDetails(datasourceId)
+    const property = await getGAPropertyDetails(datasourceId, useServiceRole)
     if (!property) {
       return null
     }
@@ -128,8 +131,8 @@ export async function fetchGADashboardData(
     // Use the same date calculation as all dashboards for consistency
     const { startDate: startDateStr, endDate: endDateStr } = calculateDashboardDateRanges(options?.today)
     
-    // Check cache first
-    const cachedData = await getCachedDashboardData(datasourceId, propertyName, startDateStr, endDateStr)
+    // Check cache first (use service role for shareable reports)
+    const cachedData = await getCachedDashboardData(datasourceId, propertyName, startDateStr, endDateStr, useServiceRole)
     if (cachedData) {
       return cachedData as GADashboardData
     }

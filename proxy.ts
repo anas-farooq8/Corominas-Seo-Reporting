@@ -32,29 +32,53 @@ export async function proxy(request: NextRequest) {
     data: { user },
   } = await supabase.auth.getUser()
 
-  // Protect dashboard routes
+  // Protect dashboard routes - require admin access
   if (request.nextUrl.pathname.startsWith("/dashboard")) {
     if (!user) {
       const url = request.nextUrl.clone()
       url.pathname = "/login"
       return NextResponse.redirect(url)
     }
-  }
 
-  // Redirect to dashboard if already logged in and trying to access login
-  if (request.nextUrl.pathname === "/login") {
-    if (user) {
+    // Check if user is admin using RPC function
+    const { data: isAdmin, error: adminCheckError } = await supabase.rpc('is_admin')
+
+    if (adminCheckError || !isAdmin) {
+      await supabase.auth.signOut()
       const url = request.nextUrl.clone()
-      url.pathname = "/dashboard"
+      url.pathname = "/login"
+      url.searchParams.set("error", "not_admin")
       return NextResponse.redirect(url)
     }
   }
 
-  // Redirect root to dashboard or login
+  // Redirect to dashboard if already logged in as admin and trying to access login
+  if (request.nextUrl.pathname === "/login") {
+    if (user) {
+      // Check if user is admin before redirecting
+      const { data: isAdmin } = await supabase.rpc('is_admin')
+      if (isAdmin) {
+        const url = request.nextUrl.clone()
+        url.pathname = "/dashboard"
+        return NextResponse.redirect(url)
+      }
+      // If not admin, let them stay on login page (don't redirect)
+    }
+  }
+
+  // Redirect root to dashboard or login based on user and admin status
   if (request.nextUrl.pathname === "/") {
-    const url = request.nextUrl.clone()
-    url.pathname = user ? "/dashboard" : "/login"
-    return NextResponse.redirect(url)
+    if (user) {
+      // Check if user is admin before redirecting to dashboard
+      const { data: isAdmin } = await supabase.rpc('is_admin')
+      const url = request.nextUrl.clone()
+      url.pathname = isAdmin ? "/dashboard" : "/login"
+      return NextResponse.redirect(url)
+    } else {
+      const url = request.nextUrl.clone()
+      url.pathname = "/login"
+      return NextResponse.redirect(url)
+    }
   }
 
   return supabaseResponse

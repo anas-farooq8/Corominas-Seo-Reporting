@@ -1,6 +1,7 @@
 "use server"
 
 import { createClient } from "@/lib/supabase/server"
+import { createServiceClient } from "@/lib/supabase/service"
 import { 
   fetchTrackingDetail,
   fetchTrackingStats
@@ -63,8 +64,8 @@ export async function fetchMangoolsDashboardData(
   console.log("[Mangools Debug] Starting fetchMangoolsDashboardData for datasourceId:", datasourceId)
   
   try {
-    // Get the tracking_id and tracking_created_at from database
-    const supabase = await createClient()
+    // Get the tracking_id and tracking_created_at from database (use service role for shareable reports)
+    const supabase = options?.today ? createServiceClient() : await createClient()
     const { data: domain, error: domainError } = await supabase
       .from("mangools_domains")
       .select("tracking_id, tracking_created_at, domain")
@@ -88,7 +89,8 @@ export async function fetchMangoolsDashboardData(
     console.log("[Mangools Debug] Target range (for cache):", cacheStartDate, "to", cacheEndDate)
     
     // Check cache first (using target dates, not scenario dates)
-    const cachedData = await getCachedDashboardData(datasourceId, trackingId, cacheStartDate, cacheEndDate)
+    const useServiceRole = !!options?.today
+    const cachedData = await getCachedDashboardData(datasourceId, trackingId, cacheStartDate, cacheEndDate, useServiceRole)
     if (cachedData) {
       console.log("[Mangools Debug] Cache hit - returning cached data")
       return cachedData as MangoolsDashboardData

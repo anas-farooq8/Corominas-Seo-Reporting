@@ -1,6 +1,7 @@
 "use server"
 
 import { createClient } from "@/lib/supabase/server"
+import { createServiceClient } from "@/lib/supabase/service"
 import { 
   fetchSEMrushDashboardData,
   type SEMrushParsedDailyData 
@@ -95,8 +96,8 @@ export async function fetchSEMrushDashboard(
   options?: DashboardOptions
 ): Promise<SEMrushDashboardData | null> {
   try {
-    // Get domain from database
-    const supabase = await createClient()
+    // Get domain from database (use service role for shareable reports)
+    const supabase = options?.today ? createServiceClient() : await createClient()
     const { data: semrushDomain, error: domainError } = await supabase
       .from("semrush_domains")
       .select("domain")
@@ -116,7 +117,8 @@ export async function fetchSEMrushDashboard(
     console.log('[SEMrush Dashboard] Fetching all data up to', endDateStr)
     
     // Check cache first (use endDate as both start and end for "all data" cache key)
-    const cachedData = await getCachedDashboardData(datasourceId, domain, endDateStr, endDateStr)
+    const useServiceRole = !!options?.today
+    const cachedData = await getCachedDashboardData(datasourceId, domain, endDateStr, endDateStr, useServiceRole)
     if (cachedData) {
       console.log('[SEMrush Dashboard] Cache hit - restoring data')
       // Restore totalKeywords getter to cached dailyData

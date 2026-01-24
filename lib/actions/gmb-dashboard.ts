@@ -4,6 +4,7 @@
  */
 
 import { createClient } from "@/lib/supabase/server"
+import { createServiceClient } from "@/lib/supabase/service"
 import { 
   listKeywords, 
   getFreshAccessToken, 
@@ -160,8 +161,8 @@ export async function fetchGMBGridDashboardData(
   options?: DashboardOptions
 ): Promise<GMBGridDashboardData | null> {
   try {
-    // Get profile info from database
-    const supabase = await createClient()
+    // Get profile info from database (use service role for shareable reports)
+    const supabase = options?.today ? createServiceClient() : await createClient()
     const { data: profile, error: profileError } = await supabase
       .from("gmb_profiles")
       .select("profile_id, business_name, address")
@@ -178,9 +179,10 @@ export async function fetchGMBGridDashboardData(
     const cacheStartDate = formatDateYYYYMMDD(last2Months.previousMonth.start)
     const cacheEndDate = formatDateYYYYMMDD(last2Months.lastMonth.end)
     
-    // Check cache first
+    // Check cache first (use service role for shareable reports)
     const cacheKey = `${profile.profile_id}-gmb-grid`
-    const cachedData = await getCachedDashboardData(datasourceId, cacheKey, cacheStartDate, cacheEndDate)
+    const useServiceRole = !!options?.today
+    const cachedData = await getCachedDashboardData(datasourceId, cacheKey, cacheStartDate, cacheEndDate, useServiceRole)
     
     // If we got the "no data" marker, return null immediately
     if (cachedData && typeof cachedData === 'object' && cachedData._no_data === true) {

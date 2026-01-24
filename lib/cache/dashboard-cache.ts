@@ -1,6 +1,7 @@
 "use server"
 
 import { createClient } from "@/lib/supabase/server"
+import { createServiceClient } from "@/lib/supabase/service"
 
 /**
  * Dashboard Cache Entry
@@ -22,16 +23,18 @@ export interface DashboardCacheEntry {
  * @param resourceId - The resource ID (tracking_id for Mangools, property name for GA)
  * @param startDate - Start date in YYYY-MM-DD format
  * @param endDate - End date in YYYY-MM-DD format
+ * @param useServiceRole - If true, uses service role to bypass RLS (for shareable reports)
  * @returns Cached data or null if not found
  */
 export async function getCachedDashboardData(
   datasourceId: string,
   resourceId: string,
   startDate: string,
-  endDate: string
+  endDate: string,
+  useServiceRole = false
 ): Promise<any | null> {
   try {
-    const supabase = await createClient()
+    const supabase = useServiceRole ? createServiceClient() : await createClient()
     
     const { data, error } = await supabase
       .from("dashboard_cache")
@@ -64,6 +67,7 @@ export async function getCachedDashboardData(
 
 /**
  * Save dashboard data to cache
+ * Uses service role since only backend should write to cache
  * @param datasourceId - The datasource ID
  * @param resourceId - The resource ID (tracking_id for Mangools, property name for GA)
  * @param startDate - Start date in YYYY-MM-DD format
@@ -79,7 +83,7 @@ export async function saveDashboardCache(
   data: any
 ): Promise<boolean> {
   try {
-    const supabase = await createClient()
+    const supabase = createServiceClient()
     
     // If data is null, save a marker object to indicate "no data available"
     // This prevents database constraint violations and allows us to cache the "no data" state

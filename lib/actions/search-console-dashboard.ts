@@ -1,6 +1,7 @@
 "use server"
 
 import { createClient } from "@/lib/supabase/server"
+import { createServiceClient } from "@/lib/supabase/service"
 import { fetchSearchConsoleData, type GSCDashboardResponse, type GSCDailyData } from "@/lib/google-search-console/api"
 import { getCachedDashboardData, saveDashboardCache } from "@/lib/cache/dashboard-cache"
 import { calculateDashboardDateRanges } from "@/lib/utils/date-ranges"
@@ -399,8 +400,8 @@ export async function fetchGSCDashboardData(
   options?: DashboardOptions
 ): Promise<GSCDashboardData | null> {
   try {
-    // Get site details from database
-    const supabase = await createClient()
+    // Get site details from database (use service role for shareable reports)
+    const supabase = options?.today ? createServiceClient() : await createClient()
     const { data: site, error: siteError } = await supabase
       .from("google_search_console_sites")
       .select("site_url")
@@ -421,7 +422,8 @@ export async function fetchGSCDashboardData(
     
     // Check cache first (store KPI cards only since we have no graph)
     const resourceId = `${siteUrl}-kpi`
-    const cachedData = await getCachedDashboardData(datasourceId, resourceId, startDateStr, endDateStr)
+    const useServiceRole = !!options?.today
+    const cachedData = await getCachedDashboardData(datasourceId, resourceId, startDateStr, endDateStr, useServiceRole)
     if (cachedData) {
       console.log("✓ Returning cached GSC dashboard data")
       return cachedData as GSCDashboardData

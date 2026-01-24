@@ -1,7 +1,7 @@
 "use client"
 
-import { useState } from "react"
-import { useRouter } from "next/navigation"
+import { useState, useEffect } from "react"
+import { useRouter, useSearchParams } from "next/navigation"
 import { createClient } from "@/lib/supabase/client"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -17,6 +17,15 @@ export default function LoginPage() {
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
   const router = useRouter()
+  const searchParams = useSearchParams()
+
+  useEffect(() => {
+    const errorParam = searchParams.get('error')
+    if (errorParam === 'not_admin') {
+      setError('Access denied: You are not authorized to access this dashboard. Please contact an administrator.')
+      setLoading(false) // Reset loading state to allow user to try again
+    }
+  }, [searchParams])
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -68,7 +77,26 @@ export default function LoginPage() {
       }
 
       if (data.session) {
-        // Success - redirect to dashboard
+        // Check if user is admin before redirecting using RPC function
+        const { data: isAdmin, error: adminCheckError } = await supabase
+          .rpc('is_admin')
+
+        if (adminCheckError) {
+          console.error("Admin check error:", adminCheckError)
+          setError('Failed to verify admin status. Please try again.')
+          setLoading(false)
+          return
+        }
+
+        if (!isAdmin) {
+          // Not an admin - sign out and show error
+          await supabase.auth.signOut()
+          setError('Access denied: You are not authorized to access this dashboard. Please contact an administrator.')
+          setLoading(false)
+          return
+        }
+
+        // Success - user is authenticated AND authorized
         router.push("/dashboard")
         router.refresh()
       }

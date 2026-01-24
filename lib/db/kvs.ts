@@ -1,8 +1,9 @@
 // ============================================
 // Key-Value Store (KVS) Database Operations
 // ============================================
+// KVS stores sensitive data (API keys, tokens) and requires service role access
 
-import { createClient } from "@/lib/supabase/server"
+import { createServiceClient } from "@/lib/supabase/service"
 import { encryptToken, decryptToken } from "@/lib/utils/encryption"
 
 export interface KVSEntry {
@@ -16,9 +17,10 @@ export interface KVSEntry {
 /**
  * Get a value from the KVS
  * Automatically decrypts the value if it exists
+ * Uses service role to bypass RLS (KVS contains sensitive API keys)
  */
 export async function getKVS(key: string): Promise<string | null> {
-  const supabase = await createClient()
+  const supabase = createServiceClient()
   const { data, error } = await supabase
     .from("kvs")
     .select("value")
@@ -51,9 +53,10 @@ export async function getKVS(key: string): Promise<string | null> {
 /**
  * Set a value in the KVS
  * Automatically encrypts the value before storing
+ * Uses service role to bypass RLS (KVS contains sensitive API keys)
  */
 export async function setKVS(key: string, value: string | null): Promise<KVSEntry> {
-  const supabase = await createClient()
+  const supabase = createServiceClient()
   
   let encryptedValue: string | null = null
   if (value !== null && value !== "") {
@@ -86,9 +89,10 @@ export async function setKVS(key: string, value: string | null): Promise<KVSEntr
 
 /**
  * Delete a value from the KVS
+ * Uses service role to bypass RLS (KVS contains sensitive API keys)
  */
 export async function deleteKVS(key: string): Promise<void> {
-  const supabase = await createClient()
+  const supabase = createServiceClient()
   const { error } = await supabase
     .from("kvs")
     .delete()
