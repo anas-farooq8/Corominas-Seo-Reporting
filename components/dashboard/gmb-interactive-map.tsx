@@ -40,7 +40,7 @@ declare global {
 }
 
 /**
- * Load Google Maps script only once globally with proper async callback
+ * Load Google Maps script only once globally with callback support for loading=async
  */
 function loadGoogleMapsScript(apiKey: string): Promise<void> {
   if (typeof window.google !== 'undefined' && window.google.maps) {
@@ -110,7 +110,18 @@ export function GMBInteractiveMap({
   
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-
+  
+  // Debug logging
+  useEffect(() => {
+    console.log('[GMBInteractiveMap] Props:', {
+      centerLat,
+      centerLng,
+      markersCount: markers.length,
+      gridSize,
+      hasGridBounds: !!gridBounds
+    })
+  }, [centerLat, centerLng, markers.length, gridSize, gridBounds])
+  
   // Calculate zoom level based on grid size, radius, and screen size
   const getZoomLevel = (size: number, radiusKm: number = 1): number => {
     // Check if mobile (adjust zoom for smaller screens)
@@ -147,33 +158,31 @@ export function GMBInteractiveMap({
           mapTypeControl: false,
           streetViewControl: false,
           fullscreenControl: false,
-          zoomControl: false, // Remove zoom controls (user can scroll to zoom)
+          zoomControl: false,
           gestureHandling: 'greedy',
           mapId: 'DEMO_MAP_ID' // Required for AdvancedMarkerElement
         })
 
         mapInstanceRef.current = map
 
-        // Draw grid outline with light blue background (passes through center of pins)
+        // Draw grid outline with light blue background
         if (gridBounds) {
           const rectangle = new google.maps.Rectangle({
-            strokeColor: '#bfdbfe', // Match the fill color (no red outline)
+            strokeColor: '#bfdbfe',
             strokeOpacity: 0,
             strokeWeight: 0,
-            fillColor: '#bfdbfe', // Light blue fill
-            fillOpacity: 0.35, // More visible
+            fillColor: '#bfdbfe',
+            fillOpacity: 0.35,
             map,
             bounds: gridBounds,
-            clickable: false, // Don't interfere with map interactions
-            zIndex: 1 // Behind markers
+            clickable: false,
+            zIndex: 1
           })
           rectangleRef.current = rectangle
         }
 
-        // Add markers using AdvancedMarkerElement (new API) or fallback to Marker
+        // Add markers using AdvancedMarkerElement
         const newMarkers: any[] = []
-
-        // Check if AdvancedMarkerElement is available
         const useAdvancedMarkers = window.google?.maps?.marker?.AdvancedMarkerElement
 
         for (const marker of markers) {
@@ -181,56 +190,31 @@ export function GMBInteractiveMap({
           const label = marker.position <= 20 ? marker.position.toString() : '20+'
           
           if (useAdvancedMarkers) {
-            // Create custom HTML content for the marker
+            // Create simple circular marker
             const markerContent = document.createElement('div')
             markerContent.style.cssText = `
-              width: 40px;
-              height: 50px;
-              position: relative;
+              width: 36px;
+              height: 36px;
+              background-color: ${colors.background};
+              border-radius: 50%;
               display: flex;
               align-items: center;
               justify-content: center;
+              box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+              cursor: pointer;
             `
             
-            // Create SVG pin
-            const svgNS = "http://www.w3.org/2000/svg"
-            const svg = document.createElementNS(svgNS, "svg")
-            svg.setAttribute("width", "40")
-            svg.setAttribute("height", "50")
-            svg.setAttribute("viewBox", "0 0 40 50")
-            svg.style.cssText = `
-              position: absolute;
-              top: 0;
-              left: 0;
-            `
-            
-            // Create pin shape path
-            const path = document.createElementNS(svgNS, "path")
-            path.setAttribute("d", "M 20,0 C -2,-12 -8,-15 -8,-20 A 8,8 0 1,1 8,-20 C 8,-15 2,-12 0,0 z")
-            path.setAttribute("transform", "translate(20, 25) scale(2.0)")
-            path.setAttribute("fill", colors.background)
-            path.setAttribute("stroke", "none")
-            
-            svg.appendChild(path)
-            markerContent.appendChild(svg)
-            
-            // Create label text
+            // Add label text
             const labelDiv = document.createElement('div')
             labelDiv.textContent = label
             labelDiv.style.cssText = `
-              position: absolute;
-              top: 5px;
-              left: 50%;
-              transform: translateX(-50%);
               color: ${colors.text};
               font-size: 13px;
               font-weight: bold;
-              pointer-events: none;
-              z-index: 1;
+              line-height: 1;
             `
             markerContent.appendChild(labelDiv)
             
-            // Create AdvancedMarkerElement
             const advancedMarker = new google.maps.marker.AdvancedMarkerElement({
               map,
               position: { lat: marker.lat, lng: marker.lng },
@@ -240,27 +224,26 @@ export function GMBInteractiveMap({
 
             newMarkers.push(advancedMarker)
           } else {
-            // Fallback to old Marker API (suppresses deprecation warnings)
-            const pinPath = "M 0,0 C -2,-12 -8,-15 -8,-20 A 8,8 0 1,1 8,-20 C 8,-15 2,-12 0,0 z"
-            
+            // Fallback to old Marker API - use circle
             const googleMarker = new google.maps.Marker({
               map,
               position: { lat: marker.lat, lng: marker.lng },
               title: `Position: ${marker.position}`,
               label: {
                 text: label,
-                color: '#ffffff',
+                color: colors.text,
                 fontSize: '13px',
                 fontWeight: 'bold'
               },
               icon: {
-                path: pinPath,
+                path: google.maps.SymbolPath.CIRCLE,
                 fillColor: colors.background,
                 fillOpacity: 1,
+                strokeColor: colors.background,
                 strokeWeight: 0,
-                scale: 2.0,
+                scale: 18,
                 anchor: new google.maps.Point(0, 0),
-                labelOrigin: new google.maps.Point(0, -20)
+                labelOrigin: new google.maps.Point(0, 0)
               }
             })
 
@@ -280,16 +263,13 @@ export function GMBInteractiveMap({
     initMap()
 
     return () => {
-      // Handle cleanup for both AdvancedMarkerElement and old Marker API
       markersRef.current.forEach(marker => {
-        if (marker) {
-          if (marker.map !== undefined) {
-            // AdvancedMarkerElement
-            marker.map = null
-          } else if (marker.setMap) {
-            // Old Marker API
-            marker.setMap(null)
-          }
+        if (marker.map !== undefined) {
+          // AdvancedMarkerElement
+          marker.map = null
+        } else if (marker.setMap) {
+          // Old Marker API
+          marker.setMap(null)
         }
       })
       rectangleRef.current?.setMap(null)

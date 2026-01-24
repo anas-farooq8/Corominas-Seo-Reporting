@@ -29,15 +29,23 @@ export function GMBGridHeatmap({ data }: GMBGridHeatmapProps) {
       position: c.last!
     }))
   
-  // Calculate grid bounds (passes through center of markers)
+  // Calculate grid bounds - rectangle passes through the center of edge markers
+  // Top/bottom: through the outermost markers
+  // Left/right: through the outermost markers
   const lats = heatmapData.map(c => c.lat)
   const lngs = heatmapData.map(c => c.lng)
-  const gridBounds = heatmapData.length > 0 ? {
-    north: Math.max(...lats), // Exact coordinates - passes through pin center
-    south: Math.min(...lats),
-    east: Math.max(...lngs),
-    west: Math.min(...lngs)
-  } : undefined
+  
+  let gridBounds: { north: number; south: number; east: number; west: number } | undefined
+  
+  if (heatmapData.length > 0) {
+    // Simply use the min/max coordinates - bounds pass through marker centers
+    gridBounds = {
+      north: Math.max(...lats),
+      south: Math.min(...lats),
+      east: Math.max(...lngs),
+      west: Math.min(...lngs)
+    }
+  }
   
   // Calculate averages for display
   const currentAvg = currentMarkers.length > 0
