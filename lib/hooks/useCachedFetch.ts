@@ -47,7 +47,7 @@ export function useCachedFetch<T = any>(
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [isFromCache, setIsFromCache] = useState(false)
-  const hasFetchedRef = useRef(false)
+  const initRef = useRef(false)
 
   // Skip if URL is null or contains "undefined"
   const shouldSkip = !url || !enabled || url.includes('undefined')
@@ -64,12 +64,6 @@ export function useCachedFetch<T = any>(
       setLoading(false)
       return
     }
-
-    // Prevent duplicate fetches
-    if (hasFetchedRef.current) {
-      return
-    }
-    hasFetchedRef.current = true
 
     try {
       setLoading(true)
@@ -97,8 +91,11 @@ export function useCachedFetch<T = any>(
     }
   }, [shouldSkip, url, writeCache, cacheKey])
 
-  // Load from cache or fetch on mount
+  // Initialize on mount - run only once
   useEffect(() => {
+    if (initRef.current) return
+    initRef.current = true
+
     if (shouldSkip) {
       setLoading(false)
       return
@@ -110,9 +107,8 @@ export function useCachedFetch<T = any>(
       setData(cachedData)
       setIsFromCache(true)
       setLoading(false)
-      hasFetchedRef.current = true // Mark as "fetched" even though from cache
-    } else if (!hasFetchedRef.current) {
-      // Otherwise fetch fresh data (only if we haven't fetched yet)
+    } else {
+      // Otherwise fetch fresh data
       console.log(`[Cache] 🔍 Cache miss: ${cacheKey}`)
       fetchData()
     }
@@ -122,11 +118,10 @@ export function useCachedFetch<T = any>(
     clearSessionCache()
     setData(null)
     setIsFromCache(false)
-    hasFetchedRef.current = false // Reset fetch flag
+    initRef.current = false // Reset init flag
   }, [clearSessionCache])
 
   const refetch = useCallback(async () => {
-    hasFetchedRef.current = false // Reset to allow refetch
     await fetchData()
   }, [fetchData])
 
