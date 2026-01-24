@@ -172,16 +172,21 @@ export async function createReport(
 
 /**
  * Generate report links for all client-project combinations
+ * Only includes projects that have at least one datasource connected
  */
 export async function generateReportLinks(reportId: string): Promise<{ count: number, links: ReportLink[] }> {
   const supabase = await createClient()
   
-  // Get all clients with their projects
+  // Get all clients with their projects and datasources
+  // Only include projects that have at least one datasource
   const { data: clients, error: clientsError } = await supabase
     .from("clients")
     .select(`
       id,
-      projects(id)
+      projects(
+        id,
+        datasources(id)
+      )
     `)
   
   if (clientsError) {
@@ -190,17 +195,22 @@ export async function generateReportLinks(reportId: string): Promise<{ count: nu
   }
   
   // Generate links for each client-project combination
+  // Only for projects that have at least one datasource
   const linksToCreate: any[] = []
   
   for (const client of clients) {
     if (client.projects && Array.isArray(client.projects)) {
       for (const project of client.projects) {
-        linksToCreate.push({
-          report_id: reportId,
-          client_id: client.id,
-          project_id: project.id,
-          token: generateToken()
-        })
+        // Only create link if project has at least one datasource
+        const hasDatasources = project.datasources && Array.isArray(project.datasources) && project.datasources.length > 0
+        if (hasDatasources) {
+          linksToCreate.push({
+            report_id: reportId,
+            client_id: client.id,
+            project_id: project.id,
+            token: generateToken()
+          })
+        }
       }
     }
   }

@@ -303,10 +303,9 @@ export default function ReportsPage() {
                                       >
                                         <div className="flex-1">
                                           <div className="text-sm">{proj.project.name}</div>
-                                          {proj.locked_today_date && (
+                                          {proj.first_opened_at && (
                                             <div className="text-xs text-muted-foreground">
-                                              Opened: {new Date(proj.first_opened_at).toLocaleDateString()} 
-                                              {' '}(locked to {proj.locked_today_date})
+                                              Opened: {new Date(proj.first_opened_at).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' })}
                                             </div>
                                           )}
                                         </div>
