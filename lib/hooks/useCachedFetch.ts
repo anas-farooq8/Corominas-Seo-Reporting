@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react"
+import { useState, useEffect, useCallback, useRef } from "react"
 import { useSessionCache } from "./useSessionCache"
 
 interface UseCachedFetchOptions {
@@ -47,6 +47,10 @@ export function useCachedFetch<T = any>(
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [isFromCache, setIsFromCache] = useState(false)
+  const hasFetchedRef = useRef(false)
+
+  // Skip if URL is null or contains "undefined"
+  const shouldSkip = !url || !enabled || url.includes('undefined')
 
   const {
     cachedData,
@@ -56,10 +60,16 @@ export function useCachedFetch<T = any>(
   } = useSessionCache<T>(cacheKey, { clearOnMount, ttl })
 
   const fetchData = useCallback(async () => {
-    if (!url || !enabled) {
+    if (shouldSkip) {
       setLoading(false)
       return
     }
+
+    // Prevent duplicate fetches
+    if (hasFetchedRef.current) {
+      return
+    }
+    hasFetchedRef.current = true
 
     try {
       setLoading(true)
@@ -85,11 +95,11 @@ export function useCachedFetch<T = any>(
     } finally {
       setLoading(false)
     }
-  }, [url, enabled, writeCache, cacheKey])
+  }, [shouldSkip, url, writeCache, cacheKey])
 
   // Load from cache or fetch on mount
   useEffect(() => {
-    if (!enabled) {
+    if (shouldSkip) {
       setLoading(false)
       return
     }
@@ -100,24 +110,31 @@ export function useCachedFetch<T = any>(
       setData(cachedData)
       setIsFromCache(true)
       setLoading(false)
-    } else {
-      // Otherwise fetch fresh data
+      hasFetchedRef.current = true // Mark as "fetched" even though from cache
+    } else if (!hasFetchedRef.current) {
+      // Otherwise fetch fresh data (only if we haven't fetched yet)
       console.log(`[Cache] 🔍 Cache miss: ${cacheKey}`)
       fetchData()
     }
-  }, [enabled, isCacheValid, cachedData, clearOnMount, fetchData, cacheKey])
+  }, [shouldSkip, isCacheValid, cachedData, clearOnMount, cacheKey, fetchData])
 
   const clearCache = useCallback(() => {
     clearSessionCache()
     setData(null)
     setIsFromCache(false)
+    hasFetchedRef.current = false // Reset fetch flag
   }, [clearSessionCache])
+
+  const refetch = useCallback(async () => {
+    hasFetchedRef.current = false // Reset to allow refetch
+    await fetchData()
+  }, [fetchData])
 
   return {
     data,
     loading,
     error,
-    refetch: fetchData,
+    refetch,
     clearCache,
     isFromCache
   }
