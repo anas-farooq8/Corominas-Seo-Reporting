@@ -108,7 +108,8 @@ export function useCachedFetch<T = any>(
     }
 
     // Now we can make a decision based on cache state
-    if (isCacheValid && cachedData !== null) {
+    // isCacheValid is the source of truth - it means we have cached data (even if it's null)
+    if (isCacheValid) {
       console.log(`[Cache] ⚡ Using cache: ${cacheKey}`)
       setData(cachedData)
       setIsFromCache(true)

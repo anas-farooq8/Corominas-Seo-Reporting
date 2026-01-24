@@ -46,27 +46,27 @@ export function useSessionCache<T = any>(
   }, [cacheKey])
 
   // Read from cache
-  const readCache = useCallback((): T | null => {
-    if (typeof window === 'undefined') return null
+  const readCache = useCallback((): { found: boolean; data: T | null } => {
+    if (typeof window === 'undefined') return { found: false, data: null }
 
     try {
       const storageKey = getStorageKey()
       const cached = sessionStorage.getItem(storageKey)
       
-      if (!cached) return null
+      if (!cached) return { found: false, data: null }
 
       const entry: CacheEntry<T> = JSON.parse(cached)
       
       // Check if TTL has expired
       if (ttl && Date.now() - entry.timestamp > ttl) {
         sessionStorage.removeItem(storageKey)
-        return null
+        return { found: false, data: null }
       }
 
-      return entry.data
+      return { found: true, data: entry.data }
     } catch (error) {
       console.error('Error reading from session cache:', error)
-      return null
+      return { found: false, data: null }
     }
   }, [getStorageKey, ttl])
 
@@ -118,10 +118,10 @@ export function useSessionCache<T = any>(
     }
 
     // Try to read existing cache
-    const data = readCache()
-    if (data !== null) {
+    const result = readCache()
+    if (result.found) {
       console.log(`[Storage] ✅ Found cache`)
-      setCachedData(data)
+      setCachedData(result.data)
       setIsCacheValid(true)
     }
     setIsInitialized(true)
