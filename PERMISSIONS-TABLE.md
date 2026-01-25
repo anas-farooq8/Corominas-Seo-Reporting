@@ -30,22 +30,7 @@
 
 **Notes:**
 - `*` - Only for locking today date on first access
-- `**` - KVS always uses Service Role (backend only, never exposed to frontend)
-
----
-
-## 🔍 Data Fetching Operations
-
-| Action | Admin | Shareable Report | RLS Check |
-|--------|-------|------------------|-----------|
-| **Fetch Google Analytics Property** | 🔵 Anon + JWT | 🔴 Service Role | Admin: ✅ Yes<br>Shareable: ❌ Bypassed |
-| **Fetch Semrush Domain** | 🔵 Anon + JWT | 🔴 Service Role | Admin: ✅ Yes<br>Shareable: ❌ Bypassed |
-| **Fetch Mangools Domain** | 🔵 Anon + JWT | 🔴 Service Role | Admin: ✅ Yes<br>Shareable: ❌ Bypassed |
-| **Fetch GBP Location** | 🔵 Anon + JWT | 🔴 Service Role | Admin: ✅ Yes<br>Shareable: ❌ Bypassed |
-| **Fetch GMB Profile** | 🔵 Anon + JWT | 🔴 Service Role | Admin: ✅ Yes<br>Shareable: ❌ Bypassed |
-| **Fetch Search Console Site** | 🔵 Anon + JWT | 🔴 Service Role | Admin: ✅ Yes<br>Shareable: ❌ Bypassed |
-| **Fetch Project Details** | 🔵 Anon + JWT | 🔴 Service Role | Admin: ✅ Yes<br>Shareable: ❌ Bypassed |
-| **Fetch Client Details** | 🔵 Anon + JWT | 🔴 Service Role | Admin: ✅ Yes<br>Shareable: ❌ Bypassed |
+- `**` - KVS has NO RLS policies. All access requires Service Role (backend only, never exposed to frontend)
 
 ---
 
@@ -66,11 +51,13 @@
 | **Read OAuth Tokens** | 🔴 Service Role | 🔴 Service Role | Backend only |
 | **Write OAuth Tokens** | 🔴 Service Role | 🔴 Service Role | Backend only |
 | **Refresh Tokens** | 🔴 Service Role | 🔴 Service Role | Backend only |
-| **Delete Tokens** | 🔴 Service Role | ⚠️ N/A | Backend only |
-| **Read API Keys** | 🔴 Service Role | 🔴 Service Role | Backend only |
-| **Write API Keys** | 🔴 Service Role | ⚠️ N/A | Backend only |
+| **Delete Tokens** | 🔴 Service Role | 🔴 Service Role | Backend only |
 
-**Critical:** KVS operations ALWAYS happen on backend. Frontend NEVER accesses KVS directly.
+**Critical:** 
+- KVS operations ALWAYS happen on backend. Frontend NEVER accesses KVS directly.
+- KVS has NO RLS policies - all access requires Service Role.
+- Only GMB and GBP OAuth tokens are stored in KVS.
+- Shareable reports trigger token refresh/cache operations indirectly through API calls.
 
 ---
 
@@ -103,18 +90,14 @@
 
 ---
 
-## 🎯 External API Calls (Google, Semrush, etc.)
+## 🎯 External API Calls (Google APIs, that uses kvs table)
 
 | Service | Admin | Shareable Report | Token Source |
 |---------|-------|------------------|--------------|
-| **Google Analytics API** | 🔴 Service Role* | 🔴 Service Role* | KVS (OAuth token) |
-| **Google Search Console API** | 🔴 Service Role* | 🔴 Service Role* | KVS (OAuth token) |
 | **Google Business Profile API** | 🔴 Service Role* | 🔴 Service Role* | KVS (OAuth token) |
-| **Semrush API** | 🔴 Service Role* | 🔴 Service Role* | KVS (API key) |
-| **Mangools API** | 🔴 Service Role* | 🔴 Service Role* | KVS (API key) |
-| **GMB (Grid My Business) API** | 🔴 Service Role* | 🔴 Service Role* | KVS (API token) |
+| **GMB (Grid My Business) API** | 🔴 Service Role* | 🔴 Service Role* | KVS (OAuth token, cached) |
 
-**Note:** `*` Service Role used to READ tokens from KVS. External API calls happen on backend.
+**Note:** `*` Service Role used to READ/WRITE tokens from KVS. External API calls happen on backend.
 
 ---
 
@@ -122,8 +105,9 @@
 
 | Table | Admin | Shareable Report | Policy |
 |-------|-------|------------------|--------|
-| All tables (except admins) | ✅ Checked | ❌ Bypassed | `FOR ALL USING (public.is_admin())` |
-| `admins` table | ❌ No policy | ❌ No policy | N/A (accessed via RPC only) |
+| All tables (except admins, kvs) | ✅ Checked | ❌ Bypassed | `FOR ALL USING (public.is_admin())` |
+| `admins` table | ❌ No policy | ❌ No policy | Accessed via RPC only |
+| `kvs` table | ❌ No policy | ❌ No policy | Service Role access only |
 
 ---
 
@@ -172,94 +156,62 @@ Request has ?today parameter?
 ## 🛡️ Security Summary
 
 ### What Admin Can Access:
-
-| Resource | Access Method | Security |
-|----------|---------------|----------|
-| Dashboard | Login + JWT | RLS checks `is_admin()` |
-| All Tables | Anon + JWT | RLS checks `is_admin()` |
-| Cache Read | Anon + JWT | RLS checks `is_admin()` |
-| Cache Write | Backend Service Role | Reliable writes |
-| KVS | Backend Service Role | Never exposed to browser |
-| External APIs | Backend Service Role | Tokens from KVS |
+- **Dashboard:** Login + JWT, RLS checks `is_admin()`
+- **All Tables:** Anon + JWT (except KVS: Service Role only)
+- **Cache:** Read with Anon + JWT, Write with Service Role
+- **KVS:** Backend Service Role only (never exposed)
+- **External APIs:** Backend Service Role (tokens from KVS or cookies)
 
 ### What Shareable Report Can Access:
-
-| Resource | Access Method | Security |
-|----------|---------------|----------|
-| Report Page | Token in URL | Backend validates token |
-| Report Data | Backend Service Role | Token validated first |
-| All Tables | Backend Service Role | Bypasses RLS (token is auth) |
-| Cache Read | Backend Service Role | Bypasses RLS |
-| Cache Write | Backend Service Role | Same as admin |
-| KVS | Backend Service Role | Never exposed to browser |
-| External APIs | Backend Service Role | Tokens from KVS |
+- **Report Page:** Token in URL (validated on backend)
+- **All Operations:** Backend Service Role (bypasses RLS)
+- **Isolation:** Can only access data for their specific report
+- **KVS:** Backend Service Role only (never exposed)
+- **Safe:** Service role stays on backend, never exposed to frontend
 
 ---
 
 ## 🔒 Security Guarantees
 
 ### ✅ Service Role Secret Protection
-
-| Aspect | Status |
-|--------|--------|
-| **Exposed to Browser** | ❌ NEVER |
-| **In Frontend Code** | ❌ NEVER |
-| **In Environment Variable** | ✅ `SUPABASE_SERVICE_ROLE_KEY` (server-only) |
-| **Used in `"use server"` Files** | ✅ Only server-side |
-| **Used in API Routes** | ✅ Only server-side |
-| **Visible in Network Requests** | ❌ NEVER |
-| **In Browser Bundle** | ❌ NEVER |
+- **NEVER exposed to browser or frontend code**
+- **Only in backend:** `"use server"` files and API routes
+- **Environment variable:** `SUPABASE_SERVICE_ROLE_KEY` (server-only)
+- **Never visible in network requests or browser bundle**
 
 ### ✅ Token Enumeration Protection
-
-| Attack Vector | Status |
-|---------------|--------|
-| **List all report_links** | ❌ Blocked (admin-only RLS) |
-| **Brute force tokens** | ❌ Impossible (64-char hex = 2^256 combinations) |
-| **Extract tokens from database** | ❌ Requires admin access |
-| **Access report without token** | ❌ Token validation required |
+- **Report tokens:** 64-char hex (2^256 combinations) - impossible to brute force
+- **List all report_links:** Blocked by admin-only RLS
+- **Database extraction:** Requires admin access
+- **Token validation:** Required for all report access
 
 ### ✅ Data Access Protection
-
-| Data Type | Admin Access | Public Access |
-|-----------|-------------|---------------|
-| **Client PII** | ✅ Full access | ❌ Blocked |
-| **Report Tokens** | ✅ Can create/view | ❌ Blocked (must have specific token) |
-| **OAuth Tokens** | ❌ Backend only | ❌ Backend only |
-| **API Keys** | ❌ Backend only | ❌ Backend only |
-| **Cached Metrics** | ✅ Can view all | ✅ Only for their report |
-| **Dashboard Data** | ✅ All projects | ✅ Only their project |
+- **Admin:** Full access to all data (via RLS checks)
+- **Public/Shareable:** Only their specific report (via token validation)
+- **OAuth Tokens & API Keys:** Backend only (never exposed to any user)
+- **KVS:** No RLS policy - Service Role access only
 
 ---
 
 ## 📋 Key Takeaways
 
 ### Admin Dashboard:
-- 🔵 **Uses:** Anon Key + JWT for reads
-- 🔴 **Uses:** Service Role for cache writes
-- ✅ **Security:** RLS checks `is_admin()` on every request
-- ✅ **Reliability:** Service role for cache writes (session-independent)
+- **Authentication:** Anon Key + JWT
+- **Database Access:** RLS checks `is_admin()` on every request
+- **Cache:** Read with Anon + JWT, Write with Service Role
+- **KVS:** Service Role only (backend)
 
 ### Shareable Reports:
-- 🔴 **Uses:** Service Role for EVERYTHING
-- ✅ **Security:** Token validation required
-- ✅ **Isolation:** Can only access data for specific report
-- ✅ **Safe:** Service role stays on backend, never exposed
+- **Authentication:** Token validation (backend)
+- **Database Access:** Service Role for everything (bypasses RLS)
+- **Isolation:** Can only access their specific report
+- **KVS:** Service Role only (backend)
 
-### KVS (Secrets):
-- 🔴 **Always:** Service Role only
-- ✅ **Location:** Backend only (`"use server"`)
-- ❌ **Never:** Frontend access
-- ✅ **Safe:** Tokens never exposed to browser
-
-### Cache:
-- 📖 **Read:** Different based on user type
-  - Admin: Anon + JWT (has permission)
-  - Shareable: Service Role (bypasses RLS)
-- ✍️ **Write:** Always Service Role (both admin and shareable)
-  - More reliable
-  - Session-independent
-  - Consistent architecture
+### KVS (Secrets Storage):
+- **Access:** Service Role ONLY (no RLS policies)
+- **Location:** Backend only (`"use server"` files)
+- **Contains:** GMB and GBP OAuth tokens (encrypted)
+- **Security:** Never exposed to frontend or browser
 
 ---
 

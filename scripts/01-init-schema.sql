@@ -286,9 +286,8 @@ CREATE POLICY "admins_only_gbp_locations" ON google_business_profile_locations
 CREATE POLICY "admins_only_gmb_profiles" ON gmb_profiles
   FOR ALL USING (public.is_admin());
 
--- KVS: Admin-only access
-CREATE POLICY "admins_only_kvs" ON kvs
-  FOR ALL USING (public.is_admin());
+-- KVS table: NO policies = no access via anon key
+-- Operations are performed via service role only
 
 -- Dashboard Cache: Admin-only access (shareable reports use service role via API)
 CREATE POLICY "admins_only_dashboard_cache" ON dashboard_cache
