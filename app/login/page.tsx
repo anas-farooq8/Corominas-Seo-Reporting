@@ -98,7 +98,6 @@ function LoginForm() {
 
         // Success - user is authenticated AND authorized
         router.push("/dashboard")
-        router.refresh()
       }
     } catch (err) {
       setError("An unexpected error occurred. Please try again.")
@@ -228,3 +227,4 @@ export default function LoginPage() {
     </Suspense>
   )
 }
+  

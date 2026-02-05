@@ -78,7 +78,7 @@ export function Sidebar() {
     <>
       {/* Mobile Header */}
       <div className="md:hidden fixed top-0 left-0 right-0 z-50 flex h-16 items-center justify-between border-b bg-card px-4">
-        <Link href="/dashboard" className="flex items-center gap-2 font-semibold">
+        <Link href="/dashboard" prefetch={false} className="flex items-center gap-2 font-semibold">
           <img 
             src="https://www.google.com/s2/favicons?domain=corominas-consulting.de&sz=64" 
             alt="Corominas Consulting Logo" 
@@ -116,7 +116,7 @@ export function Sidebar() {
           isDesktopCollapsed ? "md:w-16" : "md:w-64"
         )}>
           <div className="hidden md:flex h-16 items-center justify-center border-b px-3">
-            <Link href="/dashboard" className="flex items-center gap-2 font-semibold">
+            <Link href="/dashboard" prefetch={false} className="flex items-center gap-2 font-semibold">
               <img 
                 src="https://www.google.com/s2/favicons?domain=corominas-consulting.de&sz=64" 
                 alt="Corominas Consulting Logo" 
@@ -136,6 +136,7 @@ export function Sidebar() {
                 <Link
                   key={item.name}
                   href={item.href}
+                  prefetch={false}
                   className={cn(
                     "flex items-center gap-3 rounded-lg px-3 py-3 text-[15px] font-medium transition-colors touch-manipulation",
                     isActive

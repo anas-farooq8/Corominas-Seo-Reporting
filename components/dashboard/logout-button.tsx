@@ -1,7 +1,6 @@
 "use client"
 
 import { useState } from "react"
-import { useRouter } from "next/navigation"
 import { createClient } from "@/lib/supabase/client"
 import { Button } from "@/components/ui/button"
 import { LogOut } from "lucide-react"
@@ -13,18 +12,16 @@ interface LogoutButtonProps {
 
 export function LogoutButton({ collapsed = false }: LogoutButtonProps) {
   const [loading, setLoading] = useState(false)
-  const router = useRouter()
 
   const handleLogout = async () => {
     setLoading(true)
     try {
       const supabase = createClient()
       await supabase.auth.signOut()
-      router.push("/login")
-      router.refresh()
+      // Use window.location.href instead of router.push to prevent duplicate RSC requests
+      window.location.href = "/login"
     } catch (error) {
       console.error("Logout error:", error)
-    } finally {
       setLoading(false)
     }
   }
