@@ -37,7 +37,8 @@ export default function UnifiedDashboardPage({ params }: { params: Promise<{ id:
   const handlePageChange = (pageId: string) => {
     setActivePage(pageId)
     const pageNumber = pageId.replace('page-', '')
-    router.replace(`?page=${pageNumber}`, { scroll: false })
+    // Use shallow routing to prevent RSC requests
+    window.history.replaceState(null, '', `?page=${pageNumber}`)
   }
 
   async function fetchDashboardData() {
@@ -111,10 +112,10 @@ export default function UnifiedDashboardPage({ params }: { params: Promise<{ id:
         const selectedPage = pageExists ? pageId : connectedPages[0].id
         setActivePage(selectedPage)
         
-        // Update URL if not already set
+        // Update URL if not already set (use window.history to avoid duplicate RSC request)
         if (!pageParam) {
           const pageNumber = selectedPage.replace('page-', '')
-          router.replace(`?page=${pageNumber}`, { scroll: false })
+          window.history.replaceState(null, '', `?page=${pageNumber}`)
         }
       }
     } catch (err) {
